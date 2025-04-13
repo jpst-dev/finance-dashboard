@@ -61,7 +61,7 @@
           </h2>
         </div>
         <button
-          @click="showAddInvestment = true"
+          @click="showSelectCrypto = true"
           class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <svg
@@ -84,9 +84,18 @@
       <InvestmentList />
     </div>
 
+    <!-- Select Crypto Modal -->
+    <SelectCryptoModal
+      :show="showSelectCrypto"
+      :cryptocurrencies="availableCryptos"
+      @close="showSelectCrypto = false"
+      @select="handleCryptoSelect"
+    />
+
     <!-- Investment Form Modal -->
     <InvestmentFormModal
       :show="showAddInvestment"
+      :selected-crypto="selectedCrypto"
       @close="showAddInvestment = false"
     />
   </div>
@@ -97,11 +106,23 @@ import { ref } from "vue";
 import { useInvestmentStore } from "@/store/investments";
 import InvestmentList from "@/components/InvestmentList.vue";
 import InvestmentFormModal from "@/components/InvestmentFormModal.vue";
+import SelectCryptoModal from "@/components/SelectCryptoModal.vue";
 import PortfolioHistoryChart from "@/components/PortfolioHistoryChart.vue";
 import PortfolioAllocationChart from "@/components/PortfolioAllocationChart.vue";
+import { getCryptoPrices } from "@/services/cryptoService";
+import type { CryptoPrice } from "@/services/cryptoService";
 
 const investmentStore = useInvestmentStore();
+const showSelectCrypto = ref(false);
 const showAddInvestment = ref(false);
+const selectedCrypto = ref<CryptoPrice | null>(null);
+const availableCryptos = ref<CryptoPrice[]>([]);
+
+const handleCryptoSelect = (crypto: CryptoPrice) => {
+  selectedCrypto.value = crypto;
+  showSelectCrypto.value = false;
+  showAddInvestment.value = true;
+};
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -109,4 +130,27 @@ const formatCurrency = (amount: number) => {
     currency: "USD",
   }).format(amount);
 };
+
+// Fetch available cryptocurrencies when component is mounted
+const fetchAvailableCryptos = async () => {
+  try {
+    const cryptos = await getCryptoPrices([
+      "bitcoin",
+      "ethereum",
+      "binancecoin",
+      "cardano",
+      "solana",
+      "ripple",
+      "polkadot",
+      "dogecoin",
+      "avalanche-2",
+      "chainlink",
+    ]);
+    availableCryptos.value = cryptos;
+  } catch (error) {
+    console.error("Error fetching cryptocurrencies:", error);
+  }
+};
+
+fetchAvailableCryptos();
 </script>

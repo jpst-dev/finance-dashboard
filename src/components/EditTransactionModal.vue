@@ -101,20 +101,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
+import { useToast } from "vue-toastification";
+import type { Transaction } from "@/store/investments";
 
 const props = defineProps<{
   show: boolean;
-  transaction: {
-    id: string;
-    type: "buy" | "sell";
-    amount: number;
-    price: number;
-    date: string;
-  };
+  transaction: Transaction;
 }>();
 
-const emit = defineEmits(["close", "update"]);
+const emit = defineEmits<{
+  (e: "close"): void;
+  (e: "update", transaction: Transaction): void;
+}>();
+
+const toast = useToast();
 
 const form = ref({
   type: "buy" as "buy" | "sell",
@@ -161,7 +162,7 @@ const close = () => {
   emit("close");
 };
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!validateForm()) {
     return;
   }
@@ -176,10 +177,11 @@ const handleSubmit = () => {
     };
 
     emit("update", updatedTransaction);
+    toast.success("Transaction updated successfully!");
     close();
-  } catch (err) {
-    error.value = "Error updating transaction. Please try again.";
-    console.error("Error updating transaction:", err);
+  } catch (error) {
+    console.error("Error updating transaction:", error);
+    toast.error("Failed to update transaction. Please try again.");
   }
 };
 </script>

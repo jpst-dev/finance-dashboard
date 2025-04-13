@@ -99,7 +99,7 @@
               </svg>
             </button>
             <button
-              @click="deleteInvestment(investment.id)"
+              @click="confirmDelete(investment)"
               class="p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"
             >
               <svg
@@ -220,12 +220,21 @@
 
     <CryptoTransactions
       v-if="selectedInvestment"
-      :show="showTransactionsModal"
+      :show="showTransactionModal"
       :symbol="selectedInvestment.symbol"
       :name="selectedInvestment.name"
       :transactions="getInvestmentTransactions(selectedInvestment.symbol)"
       :current-price="selectedInvestment.currentPrice"
       @close="closeTransactions"
+    />
+
+    <ConfirmationModal
+      :show="showDeleteModal"
+      title="Delete Investment"
+      :message="`Are you sure you want to delete your ${investmentToDelete?.name} (${investmentToDelete?.symbol}) investment? This action cannot be undone.`"
+      confirm-button-text="Delete"
+      @close="closeDeleteModal"
+      @confirm="handleDelete"
     />
   </div>
 </template>
@@ -235,16 +244,21 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useInvestmentStore } from "@/store/investments";
 import { storeToRefs } from "pinia";
 import CryptoTransactions from "./CryptoTransactions.vue";
+import ConfirmationModal from "./ConfirmationModal.vue";
 import { CRYPTO_IMAGES } from "@/services/cryptoService";
 import type { Investment } from "@/store/investments";
+import { useToast } from "vue-toastification";
 
 const investmentStore = useInvestmentStore();
 const { investments, transactions, priceChanges } =
   storeToRefs(investmentStore);
+const toast = useToast();
 
-const isLoading = ref(true);
-const showTransactionsModal = ref(false);
+const isLoading = ref(false);
+const showTransactionModal = ref(false);
 const selectedInvestment = ref<Investment | null>(null);
+const showDeleteModal = ref(false);
+const investmentToDelete = ref<Investment | null>(null);
 
 const investmentList = computed(() => {
   if (!investments.value || !Array.isArray(investments.value)) return [];
@@ -257,10 +271,11 @@ const investmentList = computed(() => {
         investment.type === "crypto"
           ? CRYPTO_IMAGES[investment.name.toLowerCase()]
           : undefined,
+      totalValue: investment.amount * investment.currentPrice,
     }))
     .sort((a, b) => {
-      const valueA = a.amount * a.currentPrice;
-      const valueB = b.amount * b.currentPrice;
+      const valueA = a.totalValue;
+      const valueB = b.totalValue;
       return valueB - valueA;
     });
 });
@@ -274,7 +289,6 @@ const formatCurrency = (value: number) => {
 };
 
 const getPriceChange24h = (symbol: string) => {
-  console.log("PRICE CHANGES:", priceChanges.value);
   if (!priceChanges.value || !symbol) return 0;
   return priceChanges.value[symbol.toUpperCase()] || 0;
 };
@@ -300,38 +314,46 @@ const getProfitLossPercentage = (investment: Investment) => {
 
 const showTransactions = (investment: Investment) => {
   selectedInvestment.value = investment;
-  showTransactionsModal.value = true;
+  showTransactionModal.value = true;
 };
 
 const closeTransactions = () => {
-  showTransactionsModal.value = false;
+  showTransactionModal.value = false;
   selectedInvestment.value = null;
 };
 
-const deleteInvestment = async (id: string) => {
-  if (confirm("Are you sure you want to delete this investment?")) {
-    try {
-      await investmentStore.removeInvestment(id);
-    } catch (error) {
-      console.error("Error deleting investment:", error);
-    }
+const confirmDelete = (investment: Investment) => {
+  investmentToDelete.value = investment;
+  showDeleteModal.value = true;
+};
+
+const handleDelete = async () => {
+  if (!investmentToDelete.value) return;
+
+  try {
+    await investmentStore.removeInvestment(investmentToDelete.value.id);
+    toast.success("Investment deleted successfully!");
+  } catch (error) {
+    console.error("Error deleting investment:", error);
+    toast.error("Failed to delete investment. Please try again.");
+  } finally {
+    closeDeleteModal();
   }
 };
 
-onMounted(async () => {
-  try {
-    await investmentStore.initializePriceUpdates();
-    isLoading.value = false;
-  } catch (error) {
-    console.error("Error initializing store:", error);
-    isLoading.value = false;
-  }
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+  investmentToDelete.value = null;
+};
+
+onMounted(() => {
+  investmentStore.initializePriceUpdates();
 });
 
 watch(
   priceChanges,
-  (newPriceChanges) => {
-    console.log("Price changes updated:", newPriceChanges);
+  () => {
+    // Price changes updated, no need to log
   },
   { deep: true }
 );

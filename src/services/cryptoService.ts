@@ -1,8 +1,11 @@
 import axios from "axios";
 
-const API_URL = "https://corsproxy.io/?https://api.coingecko.com/api/v3";
-const CACHE_DURATION = 60000; // 1 minuto
-const RATE_LIMIT_DELAY = 1000; // 1 segundo entre requisições
+const API_URL = "https://api.coingecko.com/api/v3";
+const PROXY_URL = "https://corsproxy.io/?";
+const CACHE_DURATION = 300000; // 5 minutos
+const RATE_LIMIT_DELAY = 10000; // 10 segundos entre requisições
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000; // 2 segundos
 
 interface PriceCache {
   data: CryptoPrice[];
@@ -19,13 +22,105 @@ export interface CryptoPrice {
   image: string;
 }
 
-const CRYPTO_IDS: Record<string, string> = {
-  bitcoin: "BTC",
-  ethereum: "ETH",
-  binancecoin: "BNB",
-  cardano: "ADA",
-  solana: "SOL",
-};
+// Lista de criptomoedas suportadas
+export const SUPPORTED_CRYPTOS = [
+  {
+    id: "bitcoin",
+    symbol: "BTC",
+    name: "Bitcoin",
+    image: "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
+  },
+  {
+    id: "ethereum",
+    symbol: "ETH",
+    name: "Ethereum",
+    image: "https://assets.coingecko.com/coins/images/279/large/ethereum.png",
+  },
+  {
+    id: "binancecoin",
+    symbol: "BNB",
+    name: "Binance Coin",
+    image: "https://assets.coingecko.com/coins/images/825/large/bnb.png",
+  },
+  {
+    id: "cardano",
+    symbol: "ADA",
+    name: "Cardano",
+    image: "https://assets.coingecko.com/coins/images/975/large/cardano.png",
+  },
+  {
+    id: "solana",
+    symbol: "SOL",
+    name: "Solana",
+    image: "https://assets.coingecko.com/coins/images/4128/large/solana.png",
+  },
+  {
+    id: "ripple",
+    symbol: "XRP",
+    name: "XRP",
+    image:
+      "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png",
+  },
+  {
+    id: "polkadot",
+    symbol: "DOT",
+    name: "Polkadot",
+    image: "https://assets.coingecko.com/coins/images/12171/large/polkadot.png",
+  },
+  {
+    id: "dogecoin",
+    symbol: "DOGE",
+    name: "Dogecoin",
+    image: "https://assets.coingecko.com/coins/images/5/large/dogecoin.png",
+  },
+  {
+    id: "avalanche-2",
+    symbol: "AVAX",
+    name: "Avalanche",
+    image:
+      "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png",
+  },
+  {
+    id: "chainlink",
+    symbol: "LINK",
+    name: "Chainlink",
+    image:
+      "https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png",
+  },
+  {
+    id: "polygon",
+    symbol: "MATIC",
+    name: "Polygon",
+    image:
+      "https://assets.coingecko.com/coins/images/4713/large/matic-token-icon.png",
+  },
+  {
+    id: "litecoin",
+    symbol: "LTC",
+    name: "Litecoin",
+    image: "https://assets.coingecko.com/coins/images/2/large/litecoin.png",
+  },
+  {
+    id: "uniswap",
+    symbol: "UNI",
+    name: "Uniswap",
+    image:
+      "https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png",
+  },
+  {
+    id: "monero",
+    symbol: "XMR",
+    name: "Monero",
+    image: "https://assets.coingecko.com/coins/images/69/large/monero_logo.png",
+  },
+  {
+    id: "stellar",
+    symbol: "XLM",
+    name: "Stellar",
+    image:
+      "https://assets.coingecko.com/coins/images/100/large/Stellar_symbol_black_RGB.png",
+  },
+];
 
 export const CRYPTO_IMAGES: Record<string, string> = {
   bitcoin: "https://assets.coingecko.com/coins/images/1/large/bitcoin.png",
@@ -33,6 +128,23 @@ export const CRYPTO_IMAGES: Record<string, string> = {
   binancecoin: "https://assets.coingecko.com/coins/images/825/large/bnb.png",
   cardano: "https://assets.coingecko.com/coins/images/975/large/cardano.png",
   solana: "https://assets.coingecko.com/coins/images/4128/large/solana.png",
+  ripple:
+    "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png",
+  polkadot:
+    "https://assets.coingecko.com/coins/images/12171/large/polkadot.png",
+  dogecoin: "https://assets.coingecko.com/coins/images/5/large/dogecoin.png",
+  avalanche:
+    "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png",
+  chainlink:
+    "https://assets.coingecko.com/coins/images/877/large/chainlink-new-logo.png",
+  polygon:
+    "https://assets.coingecko.com/coins/images/4713/large/matic-token-icon.png",
+  litecoin: "https://assets.coingecko.com/coins/images/2/large/litecoin.png",
+  uniswap:
+    "https://assets.coingecko.com/coins/images/12504/large/uniswap-uni.png",
+  monero: "https://assets.coingecko.com/coins/images/69/large/monero_logo.png",
+  stellar:
+    "https://assets.coingecko.com/coins/images/100/large/Stellar_symbol_black_RGB.png",
 };
 
 export const SYMBOL_TO_ID: Record<string, string> = {
@@ -41,7 +153,19 @@ export const SYMBOL_TO_ID: Record<string, string> = {
   BNB: "binancecoin",
   ADA: "cardano",
   SOL: "solana",
+  XRP: "ripple",
+  DOT: "polkadot",
+  DOGE: "dogecoin",
+  AVAX: "avalanche-2",
+  LINK: "chainlink",
+  MATIC: "polygon",
+  LTC: "litecoin",
+  UNI: "uniswap",
+  XMR: "monero",
+  XLM: "stellar",
 };
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const getCachedPrices = (ids: string[]): CryptoPrice[] | null => {
   const cacheKey = ids.sort().join(",");
@@ -62,22 +186,45 @@ const setCachedPrices = (ids: string[], data: CryptoPrice[]) => {
   };
 };
 
+const fetchWithRetry = async (
+  url: string,
+  retries = MAX_RETRIES
+): Promise<any> => {
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    if (retries > 0 && error.response?.status === 429) {
+      await sleep(RETRY_DELAY);
+      return fetchWithRetry(url, retries - 1);
+    }
+    throw error;
+  }
+};
+
 export const getCryptoPrices = async (
   ids: string[]
 ): Promise<CryptoPrice[]> => {
   try {
+    // Primeiro, tenta obter do cache
     const cachedData = getCachedPrices(ids);
     if (cachedData) {
-      console.log("Returning cached prices");
       return cachedData;
     }
 
-    console.log("Fetching crypto prices for IDs:", ids);
+    // Filtra IDs inválidos ou vazios
+    const validIds = ids.filter((id) => id && id.trim().length > 0);
+    if (validIds.length === 0) {
+      return [];
+    }
 
-    // Construct the query parameters
     const params = new URLSearchParams({
       vs_currency: "usd",
-      ids: ids.join(","),
+      ids: validIds.join(","),
       order: "market_cap_desc",
       per_page: "100",
       page: "1",
@@ -85,44 +232,35 @@ export const getCryptoPrices = async (
       price_change_percentage: "24h",
     });
 
-    // Construct the full URL with the CORS proxy
-    const url = `${API_URL}/coins/markets?${params.toString()}`;
-    console.log("Request URL:", url);
+    const url = `${PROXY_URL}${encodeURIComponent(
+      `${API_URL}/coins/markets?${params.toString()}`
+    )}`;
+    const data = await fetchWithRetry(url);
 
-    const response = await axios.get(url, {
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.data) {
-      throw new Error("No data received from API");
+    if (!data || !Array.isArray(data)) {
+      throw new Error("Invalid data received from API");
     }
 
-    console.log("API Response:", response.data);
+    const prices = data.map((coin: any) => ({
+      symbol: coin.symbol.toUpperCase(),
+      name: coin.name,
+      current_price: coin.current_price,
+      price_change_percentage_24h: coin.price_change_percentage_24h || 0,
+      image: coin.image,
+    }));
 
-    const prices = response.data.map((coin: any) => {
-      const price: CryptoPrice = {
-        symbol: coin.symbol.toUpperCase(),
-        name: coin.name,
-        current_price: coin.current_price,
-        price_change_percentage_24h: coin.price_change_percentage_24h || 0,
-        image: coin.image,
-      };
-      console.log("Processed coin data:", price);
-      return price;
-    });
-
-    setCachedPrices(ids, prices);
+    setCachedPrices(validIds, prices);
     return prices;
   } catch (error) {
-    console.error("Error fetching crypto prices:", error);
-    const cachedData = getCachedPrices(ids);
-    if (cachedData) {
-      console.log("Returning stale cached data due to error");
-      return cachedData;
-    }
-    throw error;
+    // Se houver erro, retorna as moedas pré-definidas com valores padrão
+    console.warn("Error fetching crypto prices, using default values:", error);
+    return SUPPORTED_CRYPTOS.map((crypto) => ({
+      symbol: crypto.symbol,
+      name: crypto.name,
+      current_price: 0,
+      price_change_percentage_24h: 0,
+      image: crypto.image,
+    }));
   }
 };
 
@@ -130,48 +268,34 @@ export const startPriceUpdates = (
   ids: string[],
   callback: (prices: CryptoPrice[]) => void
 ) => {
-  console.log("Starting price updates for IDs:", ids);
-
   let isUpdating = false;
   let lastUpdateTime = 0;
 
   const updatePrices = async () => {
-    // Evitar múltiplas atualizações simultâneas
-    if (isUpdating) {
-      console.log("Update already in progress, skipping");
-      return;
-    }
-
-    // Respeitar o rate limiting
-    const now = Date.now();
-    if (now - lastUpdateTime < RATE_LIMIT_DELAY) {
-      console.log("Rate limit delay, skipping update");
+    if (isUpdating || Date.now() - lastUpdateTime < RATE_LIMIT_DELAY) {
       return;
     }
 
     isUpdating = true;
-    lastUpdateTime = now;
+    lastUpdateTime = Date.now();
 
     try {
       const prices = await getCryptoPrices(ids);
-      console.log("New prices received:", prices);
-      callback(prices);
+      if (prices.length > 0) {
+        callback(prices);
+      }
     } catch (error) {
-      console.error("Error in price update:", error);
+      console.error("Error updating prices:", error);
     } finally {
       isUpdating = false;
     }
   };
 
-  // Initial update
+  // Primeira atualização
   updatePrices();
 
-  // Set up interval for updates
-  const intervalId = setInterval(updatePrices, 30000); // Update every 30 seconds
+  // Atualizações subsequentes
+  const intervalId = setInterval(updatePrices, RATE_LIMIT_DELAY);
 
-  // Return cleanup function
-  return () => {
-    console.log("Cleaning up price updates");
-    clearInterval(intervalId);
-  };
+  return () => clearInterval(intervalId);
 };

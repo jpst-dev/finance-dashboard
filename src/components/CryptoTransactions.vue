@@ -214,14 +214,26 @@
     @close="closeEditModal"
     @update="updateTransaction"
   />
+
+  <ConfirmationModal
+    :show="showDeleteModal"
+    title="Delete Transaction"
+    :message="`Are you sure you want to delete this ${transactionToDelete?.type} transaction of ${transactionToDelete?.amount} ${symbol}?`"
+    confirm-button-text="Delete"
+    @close="closeDeleteModal"
+    @confirm="confirmDelete"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import EditTransactionModal from "./EditTransactionModal.vue";
+import ConfirmationModal from "./ConfirmationModal.vue";
 import { useInvestmentStore } from "@/store/investments";
+import { useToast } from "vue-toastification";
 
 const investmentStore = useInvestmentStore();
+const toast = useToast();
 
 const props = defineProps<{
   show: boolean;
@@ -283,6 +295,8 @@ const formatDate = (date: string) => {
 
 const selectedTransaction = ref(null);
 const showEditModal = ref(false);
+const showDeleteModal = ref(false);
+const transactionToDelete = ref<any>(null);
 
 const editTransaction = (transaction: any) => {
   selectedTransaction.value = {
@@ -302,18 +316,34 @@ const updateTransaction = async (updatedTransaction: any) => {
   try {
     await investmentStore.updateTransaction(updatedTransaction);
     emit("update");
+    toast.success("Transaction updated successfully!");
   } catch (error) {
     console.error("Error updating transaction:", error);
+    toast.error("Failed to update transaction. Please try again.");
   }
 };
 
-const deleteTransaction = async (transaction: any) => {
-  if (confirm("Are you sure you want to delete this transaction?")) {
+const deleteTransaction = (transaction: any) => {
+  transactionToDelete.value = transaction;
+  showDeleteModal.value = true;
+};
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+  transactionToDelete.value = null;
+};
+
+const confirmDelete = async () => {
+  if (transactionToDelete.value) {
     try {
-      await investmentStore.deleteTransaction(transaction.id);
+      await investmentStore.deleteTransaction(transactionToDelete.value.id);
       emit("update");
+      toast.success("Transaction deleted successfully!");
     } catch (error) {
       console.error("Error deleting transaction:", error);
+      toast.error("Failed to delete transaction. Please try again.");
+    } finally {
+      closeDeleteModal();
     }
   }
 };
