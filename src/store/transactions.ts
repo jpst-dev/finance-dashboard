@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 
 interface Transaction {
   id: string;
@@ -9,65 +10,146 @@ interface Transaction {
   category: string;
 }
 
-interface TransactionState {
-  transactions: Transaction[];
-}
+const STORAGE_KEY = "finance_dashboard_transactions";
 
-export const useTransactionStore = defineStore("transactions", {
-  state: (): TransactionState => ({
-    transactions: [
-      {
-        id: "1",
-        type: "income",
-        amount: 5000,
-        description: "Salary",
-        date: "2024-03-01",
-        category: "Salary",
-      },
-      {
-        id: "2",
-        type: "expense",
-        amount: 1500,
-        description: "Rent",
-        date: "2024-03-01",
-        category: "Housing",
-      },
-    ],
-  }),
+export const useTransactionStore = defineStore("transactions", () => {
+  // Load transactions from localStorage
+  const loadTransactions = () => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  };
 
-  getters: {
-    totalIncome: (state) =>
-      state.transactions
-        .filter((t) => t.type === "income")
-        .reduce((sum, t) => sum + t.amount, 0),
+  const transactions = ref<Transaction[]>(loadTransactions());
 
-    totalExpenses: (state) =>
-      state.transactions
-        .filter((t) => t.type === "expense")
-        .reduce((sum, t) => sum + t.amount, 0),
+  // Save transactions to localStorage whenever they change
+  const saveTransactions = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions.value));
+  };
 
-    balance: (state) =>
-      state.transactions.reduce(
+  const addTransaction = (transaction: Omit<Transaction, "id">) => {
+    const newTransaction = {
+      ...transaction,
+      id: Date.now().toString(),
+    };
+    transactions.value.push(newTransaction);
+    saveTransactions();
+  };
+
+  const removeTransaction = (id: string) => {
+    transactions.value = transactions.value.filter((t) => t.id !== id);
+    saveTransactions();
+  };
+
+  const updateTransaction = (updatedTransaction: Transaction) => {
+    const index = transactions.value.findIndex(
+      (t) => t.id === updatedTransaction.id
+    );
+    if (index !== -1) {
+      transactions.value[index] = updatedTransaction;
+      saveTransactions();
+    }
+  };
+
+  // Computed properties
+  const totalIncome = computed(() => {
+    return transactions.value
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + t.amount, 0);
+  });
+
+  const totalExpenses = computed(() => {
+    return transactions.value
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + t.amount, 0);
+  });
+
+  const balance = computed(() => {
+    return totalIncome.value - totalExpenses.value;
+  });
+
+  const recentTransactions = computed(() => {
+    return [...transactions.value]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  });
+
+  const balanceChange = computed(() => {
+    const currentMonth = new Date().getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+    const currentMonthBalance = transactions.value
+      .filter((t) => new Date(t.date).getMonth() === currentMonth)
+      .reduce(
         (sum, t) => (t.type === "income" ? sum + t.amount : sum - t.amount),
         0
-      ),
+      );
 
-    recentTransactions: (state) =>
-      [...state.transactions]
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 5),
-  },
+    const lastMonthBalance = transactions.value
+      .filter((t) => new Date(t.date).getMonth() === lastMonth)
+      .reduce(
+        (sum, t) => (t.type === "income" ? sum + t.amount : sum - t.amount),
+        0
+      );
 
-  actions: {
-    addTransaction(transaction: Omit<Transaction, "id">) {
-      this.transactions.push({
-        ...transaction,
-        id: Date.now().toString(),
-      });
-    },
+    if (lastMonthBalance === 0) return 0;
+    return ((currentMonthBalance - lastMonthBalance) / lastMonthBalance) * 100;
+  });
 
-    removeTransaction(id: string) {
-      this.transactions = this.transactions.filter((t) => t.id !== id);
-    },
-  },
+  const incomeChange = computed(() => {
+    const currentMonth = new Date().getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+    const currentMonthIncome = transactions.value
+      .filter(
+        (t) =>
+          t.type === "income" && new Date(t.date).getMonth() === currentMonth
+      )
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const lastMonthIncome = transactions.value
+      .filter(
+        (t) => t.type === "income" && new Date(t.date).getMonth() === lastMonth
+      )
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    if (lastMonthIncome === 0) return 0;
+    return ((currentMonthIncome - lastMonthIncome) / lastMonthIncome) * 100;
+  });
+
+  const expensesChange = computed(() => {
+    const currentMonth = new Date().getMonth();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+
+    const currentMonthExpenses = transactions.value
+      .filter(
+        (t) =>
+          t.type === "expense" && new Date(t.date).getMonth() === currentMonth
+      )
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const lastMonthExpenses = transactions.value
+      .filter(
+        (t) => t.type === "expense" && new Date(t.date).getMonth() === lastMonth
+      )
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    if (lastMonthExpenses === 0) return 0;
+    return (
+      ((currentMonthExpenses - lastMonthExpenses) / lastMonthExpenses) * 100
+    );
+  });
+
+  return {
+    transactions,
+    addTransaction,
+    removeTransaction,
+    updateTransaction,
+    totalIncome,
+    totalExpenses,
+    balance,
+    recentTransactions,
+    balanceChange,
+    incomeChange,
+    expensesChange,
+  };
 });
