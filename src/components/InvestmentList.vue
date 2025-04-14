@@ -268,14 +268,14 @@ const investmentList = computed(() => {
     .map((investment) => ({
       ...investment,
       image:
-        investment.type === "crypto"
+        investment.type === "crypto" && investment.name
           ? CRYPTO_IMAGES[investment.name.toLowerCase()]
           : undefined,
-      totalValue: investment.amount * investment.currentPrice,
+      totalValue: investment.amount * (investment.currentPrice || 0),
     }))
     .sort((a, b) => {
-      const valueA = a.totalValue;
-      const valueB = b.totalValue;
+      const valueA = a.totalValue || 0;
+      const valueB = b.totalValue || 0;
       return valueB - valueA;
     });
 });
@@ -294,20 +294,23 @@ const getPriceChange24h = (symbol: string) => {
 };
 
 const getInvestmentTransactions = (symbol: string) => {
-  if (!transactions.value) return [];
+  if (!transactions.value || !symbol) return [];
   return transactions.value.filter((t) => t.symbol === symbol);
 };
 
 const getProfitLoss = (investment: Investment) => {
   if (!investment) return 0;
-  const totalInvested = investment.amount * investment.purchasePrice;
-  const currentValue = investment.amount * investment.currentPrice;
+  const totalInvested =
+    (investment.amount || 0) * (investment.purchasePrice || 0);
+  const currentValue =
+    (investment.amount || 0) * (investment.currentPrice || 0);
   return currentValue - totalInvested;
 };
 
 const getProfitLossPercentage = (investment: Investment) => {
   if (!investment) return 0;
-  const totalInvested = investment.amount * investment.purchasePrice;
+  const totalInvested =
+    (investment.amount || 0) * (investment.purchasePrice || 0);
   if (totalInvested === 0) return 0;
   return (getProfitLoss(investment) / totalInvested) * 100;
 };
