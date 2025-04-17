@@ -63,8 +63,6 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "vue-chartjs";
-import { useInvestmentStore } from "@/store/investments";
-import { storeToRefs } from "pinia";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -78,9 +76,6 @@ ChartJS.register(
   Tooltip,
   Legend
 );
-
-const investmentStore = useInvestmentStore();
-const { investments } = storeToRefs(investmentStore);
 
 const periods = [
   { label: "24h", value: "24h" },
