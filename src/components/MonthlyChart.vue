@@ -1,6 +1,8 @@
 <template>
   <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-    <h3 class="text-lg font-semibold mb-4">Monthly Overview</h3>
+    <h3 class="text-lg font-semibold mb-4">
+      {{ t("dashboard.charts.monthlyOverview") }}
+    </h3>
     <div class="h-64">
       <Bar :data="chartData" :options="chartOptions" />
     </div>
@@ -21,6 +23,9 @@ import {
 import { computed } from "vue";
 import { useTransactionStore } from "@/store/transactions";
 import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 ChartJS.register(
   CategoryScale,

@@ -1,6 +1,8 @@
 <template>
   <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-    <h3 class="text-lg font-semibold mb-4">Expenses by Category</h3>
+    <h3 class="text-lg font-semibold mb-4">
+      {{ t("dashboard.charts.expensesByCategory") }}
+    </h3>
     <div class="h-64">
       <Pie :data="chartData" :options="chartOptions" />
     </div>
@@ -13,6 +15,9 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { computed } from "vue";
 import { useTransactionStore } from "@/store/transactions";
 import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 

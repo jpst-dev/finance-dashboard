@@ -3,12 +3,12 @@
     <div class="flex items-center justify-between mb-4 h-[32px]">
       <div class="flex items-center gap-2">
         <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Alocação
+          {{ t("portfolio.allocation") }}
         </h3>
         <button
           @click="isCollapsed = !isCollapsed"
           class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          :title="isCollapsed ? 'Expand' : 'Collapse'"
+          :title="isCollapsed ? t('common.expand') : t('common.collapse')"
         >
           <svg
             class="w-5 h-5 transition-transform"
@@ -86,6 +86,9 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "vue-chartjs";
 import { useInvestmentStore } from "@/store/investments";
 import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 

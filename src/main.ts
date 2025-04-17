@@ -6,6 +6,7 @@ import "./assets/main.css";
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import { useInvestmentStore } from "./store/investments";
+import i18n from "./i18n";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -38,6 +39,7 @@ const toastOptions = {
 
 app.use(pinia);
 app.use(router);
+app.use(i18n);
 app.use(Toast, toastOptions);
 
 // Initialize store and then mount app

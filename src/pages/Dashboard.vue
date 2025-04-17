@@ -4,7 +4,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Total Balance
+          {{ t("dashboard.totalBalance") }}
         </h3>
         <p class="text-2xl font-bold">
           {{ formatCurrency(transactionStore.balance) }}
@@ -21,14 +21,14 @@
             {{ transactionStore.balanceChange >= 0 ? "↑" : "↓" }}
             {{ Math.abs(transactionStore.balanceChange) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2"
-            >vs last month</span
-          >
+          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+            t("common.vs_last_month")
+          }}</span>
         </div>
       </div>
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Monthly Income
+          {{ t("dashboard.monthlyIncome") }}
         </h3>
         <p class="text-2xl font-bold text-green-600">
           {{ formatCurrency(transactionStore.totalIncome) }}
@@ -45,14 +45,14 @@
             {{ transactionStore.incomeChange >= 0 ? "↑" : "↓" }}
             {{ Math.abs(transactionStore.incomeChange) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2"
-            >vs last month</span
-          >
+          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+            t("common.vs_last_month")
+          }}</span>
         </div>
       </div>
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Monthly Expenses
+          {{ t("dashboard.monthlyExpenses") }}
         </h3>
         <p class="text-2xl font-bold text-red-600">
           {{ formatCurrency(transactionStore.totalExpenses) }}
@@ -69,14 +69,14 @@
             {{ transactionStore.expensesChange <= 0 ? "↓" : "↑" }}
             {{ Math.abs(transactionStore.expensesChange) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2"
-            >vs last month</span
-          >
+          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+            t("common.vs_last_month")
+          }}</span>
         </div>
       </div>
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Investments
+          {{ t("dashboard.investments") }}
         </h3>
         <p class="text-2xl font-bold">
           {{ formatCurrency(investmentStore.currentValue || 0) }}
@@ -93,7 +93,9 @@
             {{ investmentStore.profitPercentage >= 0 ? "↑" : "↓" }}
             {{ Math.abs(investmentStore.profitPercentage).toFixed(2) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2">all time</span>
+          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+            t("common.all_time")
+          }}</span>
         </div>
       </div>
     </div>
@@ -117,7 +119,9 @@
             d="M12 6v6m0 0v6m0-6h6m-6 0H6"
           />
         </svg>
-        <span class="font-medium">Add Transaction</span>
+        <span class="font-medium">{{
+          t("dashboard.quickActions.addTransaction")
+        }}</span>
       </button>
       <button
         @click="$router.push('/portfolio')"
@@ -136,7 +140,9 @@
             d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
           />
         </svg>
-        <span class="font-medium">Add Investment</span>
+        <span class="font-medium">{{
+          t("dashboard.quickActions.addInvestment")
+        }}</span>
       </button>
       <button
         class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow flex items-center justify-center space-x-2"
@@ -155,7 +161,9 @@
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        <span class="font-medium">Set Goal</span>
+        <span class="font-medium">{{
+          t("dashboard.quickActions.setGoal")
+        }}</span>
       </button>
       <button
         class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow flex items-center justify-center space-x-2"
@@ -173,7 +181,9 @@
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
           />
         </svg>
-        <span class="font-medium">Export Report</span>
+        <span class="font-medium">{{
+          t("dashboard.quickActions.exportReport")
+        }}</span>
       </button>
     </div>
 
@@ -187,10 +197,12 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <TransactionList />
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold mb-4">Financial Alerts</h3>
+        <h3 class="text-lg font-semibold mb-4">
+          {{ t("dashboard.alerts.title") }}
+        </h3>
         <div class="space-y-4">
           <div v-if="!hasAlerts" class="text-gray-500 dark:text-gray-400">
-            No alerts at the moment
+            {{ t("dashboard.alerts.noAlerts") }}
           </div>
           <div v-else class="space-y-4">
             <div
@@ -244,7 +256,7 @@
     >
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-          Financial Goals
+          {{ t("goals.title") }}
         </h2>
         <button
           @click="showGoalModal = true"
@@ -263,7 +275,7 @@
               d="M12 6v6m0 0v6m0-6h6m-6 0H6"
             />
           </svg>
-          Set New Goal
+          {{ t("goals.addGoal") }}
         </button>
       </div>
 
@@ -282,17 +294,17 @@
           />
         </svg>
         <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-          No goals yet
+          {{ t("goals.noGoals") }}
         </h3>
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Get started by setting your first financial goal.
+          {{ t("goals.getStarted") }}
         </p>
         <div class="mt-6">
           <button
             @click="showGoalModal = true"
             class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            Set New Goal
+            {{ t("goals.addGoal") }}
           </button>
         </div>
       </div>
@@ -312,7 +324,7 @@
                 </h3>
                 <div class="mt-1 flex items-center space-x-2">
                   <span class="text-sm text-gray-500 dark:text-gray-400">
-                    Progress:
+                    {{ t("goals.progress") }}:
                   </span>
                   <span
                     :class="[
@@ -392,7 +404,7 @@
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-1">
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                  Target Amount
+                  {{ t("goals.targetAmount") }}
                 </p>
                 <p class="text-lg font-semibold text-gray-900 dark:text-white">
                   {{ formatCurrency(goal.targetAmount) }}
@@ -400,7 +412,7 @@
               </div>
               <div class="space-y-1">
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                  Current Amount
+                  {{ t("goals.currentAmount") }}
                 </p>
                 <p class="text-lg font-semibold text-gray-900 dark:text-white">
                   {{ formatCurrency(goal.currentAmount) }}
@@ -427,7 +439,7 @@
                   />
                 </svg>
                 <span
-                  >Deadline:
+                  >{{ t("goals.deadline") }}:
                   {{ new Date(goal.deadline).toLocaleDateString() }}</span
                 >
               </div>
@@ -448,7 +460,8 @@
                   />
                 </svg>
                 <span
-                  >{{ getDaysRemaining(goal.deadline) }} days remaining</span
+                  >{{ getDaysRemaining(goal.deadline) }}
+                  {{ t("goals.days_remaining") }}</span
                 >
               </div>
               <div
@@ -478,7 +491,7 @@
             @click="showAllGoals = !showAllGoals"
             class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
-            {{ showAllGoals ? "Show Less" : "View More" }}
+            {{ showAllGoals ? t("goals.showLess") : t("goals.viewMore") }}
             <svg
               class="w-4 h-4 ml-1 transition-transform"
               :class="{ 'rotate-180': showAllGoals }"
@@ -515,9 +528,9 @@
 
     <ConfirmationModal
       :show="showDeleteGoalModal"
-      title="Delete Goal"
-      message="Are you sure you want to delete this goal?"
-      confirm-button-text="Delete"
+      :title="t('goals.deleteGoal.title')"
+      :message="t('goals.deleteGoal.message')"
+      :confirm-button-text="t('goals.deleteGoal.confirmButton')"
       @close="closeDeleteGoalModal"
       @confirm="handleDeleteGoal"
     />
@@ -526,6 +539,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTransactionStore } from "@/store/transactions";
 import { useInvestmentStore } from "@/store/investments";
 import TransactionList from "@/components/TransactionList.vue";
@@ -538,6 +552,7 @@ import type { Goal } from "@/store/goals";
 import ConfirmationModal from "@/components/ConfirmationModal.vue";
 import { useToast } from "vue-toastification";
 
+const { t } = useI18n();
 const transactionStore = useTransactionStore();
 const investmentStore = useInvestmentStore();
 const goalStore = useGoalStore();
@@ -559,17 +574,15 @@ const displayedGoals = computed(() =>
 const alerts = ref([
   {
     id: 1,
-    type: "warning",
-    title: "High Spending Alert",
-    message:
-      "Your spending in the 'Shopping' category is 20% above average this month",
+    type: "highSpending",
+    title: t("dashboard.alerts.highSpending.title"),
+    message: t("dashboard.alerts.highSpending.message"),
   },
   {
     id: 2,
-    type: "warning",
-    title: "Investment Opportunity",
-    message:
-      "Consider rebalancing your portfolio based on current market conditions",
+    type: "investmentOpportunity",
+    title: t("dashboard.alerts.investmentOpportunity.title"),
+    message: t("dashboard.alerts.investmentOpportunity.message"),
   },
 ]);
 
@@ -594,20 +607,20 @@ const confirmDelete = (goal: Goal) => {
 
 const handleSaveGoal = (goal: Goal) => {
   goalStore.addGoal(goal);
-  toast.success("Goal created successfully!");
+  toast.success(t("goals.success.created"));
   closeGoalModal();
 };
 
 const handleUpdateGoal = (goal: Goal) => {
   goalStore.updateGoal(goal);
-  toast.success("Goal updated successfully!");
+  toast.success(t("goals.success.updated"));
   closeGoalModal();
 };
 
 const handleDeleteGoal = () => {
   if (goalToDelete.value) {
     goalStore.removeGoal(goalToDelete.value.id);
-    toast.success("Goal deleted successfully!");
+    toast.success(t("goals.success.deleted"));
     closeDeleteGoalModal();
   }
 };

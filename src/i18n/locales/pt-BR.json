@@ -1,0 +1,258 @@
+{
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "add": "Adicionar",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "vs_last_month": "vs mês anterior",
+    "all_time": "desde o início",
+    "days_remaining": "dias restantes",
+    "update": "Atualizar",
+    "required": "Obrigatório",
+    "collapse": "Recolher",
+    "expand": "Expandir"
+  },
+  "dashboard": {
+    "title": "Painel",
+    "welcome": "Bem-vindo ao seu Painel Financeiro",
+    "totalBalance": "Saldo Total",
+    "monthlyIncome": "Renda Mensal",
+    "monthlyExpenses": "Despesas Mensais",
+    "investments": "Investimentos",
+    "quickActions": {
+      "addTransaction": "Adicionar Transação",
+      "addInvestment": "Adicionar Investimento",
+      "setGoal": "Definir Meta",
+      "exportReport": "Exportar Relatório",
+      "setNewGoal": "Definir Nova Meta"
+    },
+    "alerts": {
+      "title": "Alertas Financeiros",
+      "noAlerts": "Nenhum alerta no momento",
+      "highSpending": {
+        "title": "Alerta de Gastos Elevados",
+        "message": "Seus gastos na categoria 'Compras' estão 20% acima da média este mês"
+      },
+      "investmentOpportunity": {
+        "title": "Oportunidade de Investimento",
+        "message": "Considere rebalancear sua carteira com base nas condições atuais do mercado"
+      }
+    },
+    "charts": {
+      "recentTransactions": "Transações Recentes",
+      "expensesByCategory": "Despesas por Categoria",
+      "monthlyOverview": "Visão Mensal"
+    }
+  },
+  "transactions": {
+    "title": "Transações",
+    "add": "Adicionar Transação",
+    "edit": "Editar Transação",
+    "delete": "Excluir Transação",
+    "deleteConfirm": "Tem certeza que deseja excluir esta transação de {type} no valor de {amount}?",
+    "type": {
+      "income": "Receita",
+      "expense": "Despesa"
+    },
+    "form": {
+      "amount": "Valor",
+      "description": "Descrição",
+      "category": "Categoria",
+      "date": "Data",
+      "amountError": "O valor é obrigatório e deve ser maior que 0",
+      "descriptionError": "A descrição é obrigatória",
+      "categoryError": "A categoria é obrigatória",
+      "dateError": "A data é obrigatória"
+    },
+    "categories": {
+      "salary": "Salário",
+      "freelance": "Freelance",
+      "investment": "Investimento",
+      "gift": "Presente",
+      "housing": "Moradia",
+      "transportation": "Transporte",
+      "food": "Alimentação",
+      "utilities": "Utilidades",
+      "healthcare": "Saúde",
+      "entertainment": "Entretenimento",
+      "shopping": "Compras",
+      "other": "Outros"
+    },
+    "noTransactions": "Nenhuma transação encontrada"
+  },
+  "investments": {
+    "title": "Investimentos",
+    "add": "Adicionar Investimento",
+    "edit": "Editar Investimento",
+    "delete": "Excluir Investimento",
+    "deleteConfirm": "Tem certeza que deseja excluir seu investimento em {name} ({symbol})? Esta ação não pode ser desfeita.",
+    "form": {
+      "type": "Tipo",
+      "amount": "Quantidade",
+      "price": "Preço",
+      "date": "Data",
+      "amountError": "A quantidade é obrigatória e deve ser maior que 0",
+      "priceError": "O preço é obrigatório e deve ser maior que 0",
+      "dateError": "A data é obrigatória"
+    },
+    "metrics": {
+      "totalInvested": "Total Investido",
+      "profitLoss": "Lucro/Prejuízo",
+      "currentValue": "Valor Atual"
+    }
+  },
+  "goals": {
+    "title": "Metas",
+    "add": "Adicionar Meta",
+    "edit": "Editar Meta",
+    "delete": "Excluir Meta",
+    "form": {
+      "name": "Nome da Meta",
+      "targetAmount": "Valor Alvo",
+      "currentAmount": "Valor Atual",
+      "deadline": "Data Alvo",
+      "priority": "Prioridade",
+      "notes": "Observações",
+      "nameError": "O nome da meta é obrigatório",
+      "targetAmountError": "O valor alvo é obrigatório e deve ser maior que 0",
+      "currentAmountError": "O valor atual é obrigatório e deve ser maior ou igual a 0",
+      "deadlineError": "A data alvo é obrigatória"
+    },
+    "priorities": {
+      "low": "Baixa",
+      "medium": "Média",
+      "high": "Alta"
+    },
+    "noGoals": "Nenhuma meta definida",
+    "getStarted": "Comece definindo sua primeira meta financeira",
+    "viewMore": "Ver Mais",
+    "showLess": "Mostrar Menos",
+    "deleteGoal": {
+      "title": "Excluir Meta",
+      "message": "Tem certeza que deseja excluir esta meta?",
+      "confirmButton": "Excluir"
+    },
+    "success": {
+      "created": "Meta criada com sucesso!",
+      "updated": "Meta atualizada com sucesso!",
+      "deleted": "Meta excluída com sucesso!"
+    },
+    "addGoal": "Adicionar Meta",
+    "progress": "Progresso",
+    "targetAmount": "Valor Alvo",
+    "currentAmount": "Valor Atual",
+    "deadline": "Prazo",
+    "days_remaining": "dias restantes"
+  },
+  "notifications": {
+    "transactionAdded": "Transação adicionada com sucesso!",
+    "transactionUpdated": "Transação atualizada com sucesso!",
+    "transactionDeleted": "Transação excluída com sucesso!",
+    "investmentAdded": "Investimento adicionado com sucesso!",
+    "investmentUpdated": "Investimento atualizado com sucesso!",
+    "investmentDeleted": "Investimento excluído com sucesso!",
+    "goalAdded": "Meta adicionada com sucesso!",
+    "goalUpdated": "Meta atualizada com sucesso!",
+    "goalDeleted": "Meta excluída com sucesso!",
+    "error": "Ocorreu um erro. Por favor, tente novamente."
+  },
+  "portfolio": {
+    "title": "Portfólio",
+    "totalValue": "Valor Total do Portfólio",
+    "totalProfitLoss": "Lucro/Prejuízo Total",
+    "profitPercentage": "Porcentagem de Lucro",
+    "yourInvestments": "Seus Investimentos",
+    "addInvestment": "Adicionar Investimento",
+    "portfolioPerformance": "Desempenho do Portfólio",
+    "allocation": "Alocação",
+    "periods": {
+      "24h": "24h",
+      "7d": "7d",
+      "30d": "30d",
+      "90d": "90d",
+      "all": "Tudo"
+    },
+    "metrics": {
+      "totalQuantity": "Quantidade Total",
+      "avgBuyPrice": "Preço Médio de Compra",
+      "totalInvested": "Total Investido",
+      "currentValue": "Valor Atual",
+      "holdings": "Posição",
+      "currentPrice": "Preço Atual",
+      "priceChange24h": "Variação 24h"
+    },
+    "transactions": {
+      "type": "Tipo",
+      "date": "Data",
+      "quantity": "Quantidade",
+      "price": "Preço",
+      "total": "Total",
+      "actions": "Ações",
+      "buy": "Compra",
+      "sell": "Venda"
+    },
+    "noInvestments": "Nenhum investimento encontrado",
+    "addFirstInvestment": "Adicione seu primeiro investimento!",
+    "investmentDetails": {
+      "title": "Detalhes do Investimento",
+      "transactions": "Transações",
+      "metrics": "Métricas",
+      "performance": "Desempenho"
+    }
+  },
+  "modals": {
+    "selectCrypto": {
+      "title": "Selecionar Criptomoeda",
+      "search": "Pesquisar criptomoeda (ex: Bitcoin, ETH)",
+      "noResults": "Nenhuma criptomoeda encontrada",
+      "select": "Selecionar",
+      "searching": "Buscando criptomoedas..."
+    },
+    "transactionForm": {
+      "title": "Adicionar Transação",
+      "type": "Tipo",
+      "income": "Renda",
+      "expense": "Despesa",
+      "amount": "Valor",
+      "description": "Descrição",
+      "category": "Categoria",
+      "selectCategory": "Selecione uma categoria",
+      "date": "Data",
+      "addIncome": "Adicionar Renda",
+      "addExpense": "Adicionar Despesa"
+    },
+    "editTransaction": {
+      "title": "Editar Transação",
+      "type": "Tipo",
+      "amount": "Quantidade"
+    },
+    "cryptoTransactions": {
+      "title": "Transações",
+      "buy": "Comprar",
+      "sell": "Vender"
+    },
+    "investmentForm": {
+      "title": "Adicionar Investimento",
+      "transactionType": "Tipo de Transação",
+      "buy": "Comprar",
+      "sell": "Vender",
+      "quantity": "Quantidade",
+      "price": "Preço",
+      "date": "Data",
+      "totalValue": "Valor Total",
+      "submit": "Confirmar"
+    },
+    "confirmation": {
+      "title": "Confirmar Ação",
+      "message": "Tem certeza que deseja continuar?",
+      "confirm": "Confirmar",
+      "cancel": "Cancelar"
+    }
+  }
+}

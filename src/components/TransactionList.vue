@@ -1,14 +1,16 @@
 <template>
   <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold">Recent Transactions</h3>
+      <h3 class="text-lg font-semibold">
+        {{ t("dashboard.charts.recentTransactions") }}
+      </h3>
     </div>
     <div class="space-y-4">
       <div
         v-if="transactions.length === 0"
         class="text-gray-500 dark:text-gray-400"
       >
-        No transactions yet
+        {{ t("transactions.noTransactions") }}
       </div>
       <div
         v-for="transaction in displayedTransactions"
@@ -29,7 +31,13 @@
           <div>
             <p class="font-medium">{{ transaction.description }}</p>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              {{ transaction.category }} • {{ formatDate(transaction.date) }}
+              {{
+                t(
+                  `transactions.categories.${transaction.category.toLowerCase()}`
+                )
+              }}
+              •
+              {{ formatDate(transaction.date) }}
             </p>
           </div>
         </div>
@@ -50,7 +58,7 @@
             <button
               @click="editTransaction(transaction)"
               class="p-1.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-              title="Edit transaction"
+              :title="t('common.edit')"
             >
               <svg
                 class="w-5 h-5"
@@ -69,7 +77,7 @@
             <button
               @click="confirmDelete(transaction)"
               class="p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-              title="Delete transaction"
+              :title="t('common.delete')"
             >
               <svg
                 class="w-5 h-5"
@@ -99,7 +107,7 @@
         @click="showAll = !showAll"
         class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
       >
-        {{ showAll ? "Show Less" : "View More" }}
+        {{ showAll ? t("common.showLess") : t("common.viewMore") }}
         <svg
           class="w-4 h-4 transition-transform duration-300"
           :class="{ 'rotate-180': showAll }"
@@ -127,9 +135,16 @@
 
     <ConfirmationModal
       :show="showDeleteModal"
-      title="Delete Transaction"
-      :message="`Are you sure you want to delete this ${transactionToDelete?.type} transaction of $${transactionToDelete?.amount}?`"
-      confirm-button-text="Delete"
+      :title="t('transactions.delete')"
+      :message="
+        t('transactions.deleteConfirm', {
+          type: transactionToDelete?.type
+            ? t(`transactions.type.${transactionToDelete.type}`)
+            : '',
+          amount: transactionToDelete?.amount,
+        })
+      "
+      :confirm-button-text="t('common.delete')"
       @close="showDeleteModal = false"
       @confirm="handleDelete"
     />
@@ -143,6 +158,9 @@ import { storeToRefs } from "pinia";
 import { useToast } from "vue-toastification";
 import EditTransactionModal from "./EditTransactionModal.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 const transactionStore = useTransactionStore();
 const { transactions } = storeToRefs(transactionStore);

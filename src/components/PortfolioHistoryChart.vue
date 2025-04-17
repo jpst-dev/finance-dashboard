@@ -5,12 +5,12 @@
     >
       <div class="flex items-center gap-2">
         <h3 class="text-base font-medium text-gray-900 dark:text-gray-100">
-          Portfolio Performance
+          {{ t("portfolio.portfolioPerformance") }}
         </h3>
         <button
           @click="isCollapsed = !isCollapsed"
           class="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          :title="isCollapsed ? 'Expand' : 'Collapse'"
+          :title="isCollapsed ? t('common.expand') : t('common.collapse')"
         >
           <svg
             class="w-5 h-5 transition-transform"
@@ -40,7 +40,7 @@
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700',
           ]"
         >
-          {{ period.label }}
+          {{ t(`portfolio.periods.${period.value}`) }}
         </button>
       </div>
     </div>
@@ -65,6 +65,9 @@ import {
 import { Line } from "vue-chartjs";
 import { useInvestmentStore } from "@/store/investments";
 import { storeToRefs } from "pinia";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 ChartJS.register(
   CategoryScale,
@@ -84,7 +87,7 @@ const periods = [
   { label: "7d", value: "7d" },
   { label: "30d", value: "30d" },
   { label: "90d", value: "90d" },
-  { label: "Tudo", value: "all" },
+  { label: "all", value: "all" },
 ];
 
 const selectedPeriod = ref("all");
@@ -177,13 +180,13 @@ const chartOptions = {
       ticks: {
         color: "#6B7280",
         padding: 10,
-        callback: (value: number) => {
+        callback: function (this: any, tickValue: string | number) {
           return new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
-          }).format(value);
+          }).format(Number(tickValue));
         },
       },
     },

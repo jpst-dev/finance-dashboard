@@ -1,0 +1,241 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "close": "Close",
+    "confirm": "Confirm",
+    "vs_last_month": "vs last month",
+    "all_time": "all time",
+    "days_remaining": "days remaining",
+    "update": "Update",
+    "required": "Required",
+    "collapse": "Collapse",
+    "expand": "Expand"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome to your Finance Dashboard",
+    "totalBalance": "Total Balance",
+    "monthlyIncome": "Monthly Income",
+    "monthlyExpenses": "Monthly Expenses",
+    "investments": "Investments",
+    "quickActions": {
+      "addTransaction": "Add Transaction",
+      "addInvestment": "Add Investment",
+      "setGoal": "Set Goal",
+      "exportReport": "Export Report",
+      "setNewGoal": "Set New Goal"
+    },
+    "alerts": {
+      "title": "Financial Alerts",
+      "noAlerts": "No alerts at the moment",
+      "highSpending": {
+        "title": "High Spending Alert",
+        "message": "Your spending in the 'Shopping' category is 20% above average this month"
+      },
+      "investmentOpportunity": {
+        "title": "Investment Opportunity",
+        "message": "Consider rebalancing your portfolio based on current market conditions"
+      }
+    },
+    "charts": {
+      "recentTransactions": "Recent Transactions",
+      "expensesByCategory": "Expenses by Category",
+      "monthlyOverview": "Monthly Overview"
+    }
+  },
+  "transactions": {
+    "title": "Transactions",
+    "add": "Add Transaction",
+    "edit": "Edit Transaction",
+    "delete": "Delete Transaction",
+    "deleteConfirm": "Are you sure you want to delete this {type} transaction of {amount}?",
+    "type": {
+      "income": "Income",
+      "expense": "Expense"
+    },
+    "form": {
+      "amount": "Amount",
+      "description": "Description",
+      "category": "Category",
+      "date": "Date",
+      "amountError": "Amount is required and must be greater than 0",
+      "descriptionError": "Description is required",
+      "categoryError": "Category is required",
+      "dateError": "Date is required"
+    },
+    "categories": {
+      "salary": "Salary",
+      "freelance": "Freelance",
+      "investment": "Investment",
+      "gift": "Gift",
+      "housing": "Housing",
+      "transportation": "Transportation",
+      "food": "Food",
+      "utilities": "Utilities",
+      "healthcare": "Healthcare",
+      "entertainment": "Entertainment",
+      "shopping": "Shopping",
+      "other": "Other"
+    },
+    "noTransactions": "No transactions found"
+  },
+  "investments": {
+    "title": "Investments",
+    "add": "Add Investment",
+    "edit": "Edit Investment",
+    "delete": "Delete Investment",
+    "deleteConfirm": "Are you sure you want to delete your investment in {name} ({symbol})? This action cannot be undone.",
+    "form": {
+      "type": "Type",
+      "amount": "Quantity",
+      "price": "Price",
+      "date": "Date",
+      "amountError": "Quantity is required and must be greater than 0",
+      "priceError": "Price is required and must be greater than 0",
+      "dateError": "Date is required"
+    },
+    "metrics": {
+      "totalInvested": "Total Invested",
+      "profitLoss": "Profit/Loss",
+      "currentValue": "Current Value"
+    }
+  },
+  "goals": {
+    "title": "Goals",
+    "add": "Add Goal",
+    "edit": "Edit Goal",
+    "delete": "Delete Goal",
+    "form": {
+      "name": "Goal Name",
+      "targetAmount": "Target Amount",
+      "currentAmount": "Current Amount",
+      "deadline": "Target Date",
+      "priority": "Priority",
+      "notes": "Notes",
+      "nameError": "Goal name is required",
+      "targetAmountError": "Target amount is required and must be greater than 0",
+      "currentAmountError": "Current amount is required and must be greater than or equal to 0",
+      "deadlineError": "Target date is required"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    },
+    "noGoals": "No goals defined",
+    "getStarted": "Start by setting your first financial goal",
+    "viewMore": "View More",
+    "showLess": "Show Less",
+    "deleteGoal": {
+      "title": "Delete Goal",
+      "message": "Are you sure you want to delete this goal?",
+      "confirmButton": "Delete"
+    },
+    "success": {
+      "created": "Goal created successfully!",
+      "updated": "Goal updated successfully!",
+      "deleted": "Goal deleted successfully!"
+    },
+    "addGoal": "Add Goal",
+    "progress": "Progress",
+    "targetAmount": "Target Amount",
+    "currentAmount": "Current Amount",
+    "deadline": "Deadline",
+    "days_remaining": "days remaining"
+  },
+  "notifications": {
+    "transactionAdded": "Transaction added successfully!",
+    "transactionUpdated": "Transaction updated successfully!",
+    "transactionDeleted": "Transaction deleted successfully!",
+    "investmentAdded": "Investment added successfully!",
+    "investmentUpdated": "Investment updated successfully!",
+    "investmentDeleted": "Investment deleted successfully!",
+    "goalAdded": "Goal added successfully!",
+    "goalUpdated": "Goal updated successfully!",
+    "goalDeleted": "Goal deleted successfully!",
+    "error": "An error occurred. Please try again."
+  },
+  "portfolio": {
+    "title": "Portfolio",
+    "totalValue": "Total Portfolio Value",
+    "totalProfitLoss": "Total Profit/Loss",
+    "profitPercentage": "Profit Percentage",
+    "yourInvestments": "Your Investments",
+    "addInvestment": "Add Investment",
+    "portfolioPerformance": "Portfolio Performance",
+    "allocation": "Allocation",
+    "periods": {
+      "24h": "24h",
+      "7d": "7d",
+      "30d": "30d",
+      "90d": "90d",
+      "all": "All"
+    },
+    "metrics": {
+      "totalQuantity": "Total Quantity",
+      "avgBuyPrice": "Average Buy Price",
+      "totalInvested": "Total Invested",
+      "currentValue": "Current Value",
+      "holdings": "Holdings",
+      "currentPrice": "Current Price",
+      "priceChange24h": "24h Change"
+    },
+    "transactions": {
+      "type": "Type",
+      "date": "Date",
+      "quantity": "Quantity",
+      "price": "Price",
+      "total": "Total",
+      "actions": "Actions",
+      "buy": "Buy",
+      "sell": "Sell"
+    },
+    "noInvestments": "No investments found",
+    "addFirstInvestment": "Add your first investment!",
+    "investmentDetails": {
+      "title": "Investment Details",
+      "transactions": "Transactions",
+      "metrics": "Metrics",
+      "performance": "Performance"
+    }
+  },
+  "modals": {
+    "selectCrypto": {
+      "title": "Select Cryptocurrency",
+      "search": "Search cryptocurrency (e.g. Bitcoin, ETH)",
+      "noResults": "No cryptocurrencies found",
+      "select": "Select",
+      "searching": "Searching cryptocurrencies..."
+    },
+    "transactionForm": {
+      "title": "Add Transaction",
+      "type": "Type",
+      "income": "Income",
+      "expense": "Expense",
+      "amount": "Amount",
+      "description": "Description",
+      "category": "Category",
+      "selectCategory": "Select a category",
+      "date": "Date",
+      "addIncome": "Add Income",
+      "addExpense": "Add Expense"
+    },
+    "editTransaction": {
+      "title": "Edit Transaction",
+      "type": "Type",
+      "amount": "Amount"
+    },
+    "cryptoTransactions": {
+      "title": "Transactions",
+      "buy": "Buy",
+      "sell": "Sell"
+    }
+  }
+}
