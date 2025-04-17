@@ -130,9 +130,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import type { CryptoPrice } from "@/services/cryptoService";
-import { getCryptoPrices, SUPPORTED_CRYPTOS } from "@/services/cryptoService";
-import { useToast } from "vue-toastification";
-import debounce from "lodash/debounce";
+import { getCryptoPrices } from "@/services/cryptoService";
 
 const props = defineProps<{
   show: boolean;
@@ -143,7 +141,6 @@ const emit = defineEmits<{
   (e: "select", crypto: CryptoPrice): void;
 }>();
 
-const toast = useToast();
 const searchQuery = ref("");
 const isLoading = ref(false);
 const error = ref<string | null>(null);

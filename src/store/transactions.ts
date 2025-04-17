@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 
-interface Transaction {
+export interface Transaction {
   id: string;
   type: "income" | "expense";
   amount: number;

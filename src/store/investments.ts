@@ -279,7 +279,7 @@ export const useInvestmentStore = defineStore("investments", () => {
       });
 
       const portfolioValue = Array.from(investmentsAtDate.entries()).reduce(
-        (total, [symbol, { amount, price }]) => {
+        (total, [_, { amount, price }]) => {
           return total + amount * price;
         },
         0

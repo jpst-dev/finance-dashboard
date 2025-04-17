@@ -227,14 +227,18 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { useTransactionStore } from "@/store/transactions";
+import type { Transaction } from "@/store/transactions";
+import type { CryptoPrice } from "@/services/cryptoService";
 import { useToast } from "vue-toastification";
 
-const props = defineProps<{
+defineProps<{
   show: boolean;
+  selectedCrypto?: CryptoPrice | null;
 }>();
 
 const emit = defineEmits<{
   (e: "close"): void;
+  (e: "submit", transaction: Transaction): void;
 }>();
 
 const transactionStore = useTransactionStore();

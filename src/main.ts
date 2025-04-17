@@ -37,9 +37,9 @@ const toastOptions = {
   rtl: false,
 };
 
+app.use(i18n);
 app.use(pinia);
 app.use(router);
-app.use(i18n);
 app.use(Toast, toastOptions);
 
 // Initialize store and then mount app

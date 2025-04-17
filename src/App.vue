@@ -89,10 +89,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 
-const route = useRoute();
 const { locale } = useI18n();
 const isDarkMode = ref(false);
 const showLanguageDropdown = ref(false);
