@@ -73,3 +73,19 @@ describe("storage", () => {
     expect(JSON.parse(localStorage.getItem(CHAVES.transacoes)!).length).toBeGreaterThan(10);
   });
 });
+
+describe("versions", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("replaces an older sample (dollars) with the current one", () => {
+    localStorage.setItem(CHAVES.transacoes, JSON.stringify([{ id: "exemplo-velho", amount: 5200 }]));
+    expect(semearSeVazio(localStorage, hoje)).toBe(true);
+    const salario = JSON.parse(localStorage.getItem(CHAVES.transacoes)!).find((t: { category: string }) => t.category === "Salary");
+    expect(salario.amount).toBe(8400);
+  });
+
+  it("keeps an older sample the user has edited", () => {
+    localStorage.setItem(CHAVES.transacoes, JSON.stringify([{ id: "exemplo-velho" }, { id: "1761500000000" }]));
+    expect(semearSeVazio(localStorage, hoje)).toBe(false);
+  });
+});

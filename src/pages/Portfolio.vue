@@ -105,6 +105,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatarMoeda } from "@/utils/moeda";
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 
@@ -131,10 +132,7 @@ const handleCryptoSelect = (crypto: CryptoPrice) => {
 };
 
 const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
+  return formatarMoeda(amount);
 };
 
 // Fetch available cryptocurrencies when component is mounted

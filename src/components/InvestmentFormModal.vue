@@ -226,6 +226,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatarMoeda } from "@/utils/moeda";
 import { ref, computed, watch } from "vue";
 import { useInvestmentStore } from "@/store/investments";
 import type { Transaction } from "@/store/investments";
@@ -298,10 +299,7 @@ const formErrors = ref({
 const today = computed(() => new Date().toISOString().split("T")[0]);
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+  return formatarMoeda(value);
 };
 
 const validateForm = () => {

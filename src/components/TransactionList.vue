@@ -50,9 +50,8 @@
                 : 'text-red-600 dark:text-red-400',
             ]"
           >
-            {{ transaction.type === "income" ? "+" : "-" }}${{
-              transaction.amount.toFixed(2)
-            }}
+            {{ transaction.type === "income" ? "+" : "-" }}
+            {{ formatarMoeda(transaction.amount) }}
           </p>
           <div class="flex items-center sm:space-x-2">
             <button
@@ -158,6 +157,7 @@ import { storeToRefs } from "pinia";
 import { useToast } from "vue-toastification";
 import EditTransactionModal from "./EditTransactionModal.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
+import { formatarMoeda } from "@/utils/moeda";
 import { useI18n } from "vue-i18n";
 
 const { t, locale } = useI18n();

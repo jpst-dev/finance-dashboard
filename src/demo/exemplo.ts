@@ -8,22 +8,26 @@ export const CHAVES = {
   metas: "finance_dashboard_goals",
   investimentos: "investmentStore",
   limpo: "finance_dashboard_cleared",
+  versao: "finance_dashboard_sample_version",
 } as const;
+
+// v2: valores em reais (a v1 era em dólar).
+const VERSAO = "2";
 
 type Lancamento = [dia: number, tipo: Transaction["type"], valor: number, descricao: string, categoria: string];
 
 // Um mês típico; os valores variam um pouco de mês para mês (fator abaixo).
 const MES: Lancamento[] = [
-  [3, "income", 5200, "Salário", "Salary"],
-  [5, "expense", 1450, "Aluguel", "Housing"],
-  [8, "expense", 182.4, "Conta de luz e internet", "Utilities"],
-  [10, "expense", 386.9, "Supermercado", "Food"],
-  [14, "income", 950, "Projeto freelance", "Freelance"],
-  [16, "expense", 64.5, "Combustível", "Transportation"],
-  [19, "expense", 129.9, "Farmácia e consulta", "Healthcare"],
-  [21, "expense", 74.3, "Cinema e jantar", "Entertainment"],
-  [24, "expense", 298.6, "Supermercado", "Food"],
-  [27, "expense", 215, "Roupas", "Shopping"],
+  [3, "income", 8400, "Salário", "Salary"],
+  [5, "expense", 2100, "Aluguel", "Housing"],
+  [8, "expense", 289.9, "Conta de luz e internet", "Utilities"],
+  [10, "expense", 642.35, "Supermercado", "Food"],
+  [14, "income", 1500, "Projeto freelance", "Freelance"],
+  [16, "expense", 260, "Combustível", "Transportation"],
+  [19, "expense", 212.4, "Farmácia e consulta", "Healthcare"],
+  [21, "expense", 148.9, "Cinema e jantar", "Entertainment"],
+  [24, "expense", 476.2, "Supermercado", "Food"],
+  [27, "expense", 349.9, "Roupas", "Shopping"],
 ];
 const FATOR = [0.94, 1.03, 0.97, 1.06, 0.99, 1.02];
 
@@ -32,11 +36,11 @@ const iso = (d: Date) =>
 const centavos = (v: number) => Math.round(v * 100) / 100;
 
 const CRIPTO = [
-  // Preços aproximados de out. 2026; ao abrir, a CoinGecko substitui pelos atuais.
-  { symbol: "BTC", name: "Bitcoin", compras: [[0.035, 61200], [0.02, 72400]], atual: 80360 },
-  { symbol: "ETH", name: "Ethereum", compras: [[0.6, 2610], [0.4, 2280]], atual: 2327 },
-  { symbol: "SOL", name: "Solana", compras: [[6, 118], [4, 92]], atual: 101.5 },
-  { symbol: "ADA", name: "Cardano", compras: [[900, 0.29]], atual: 0.21 },
+  // Preços em reais, aproximados de out. 2026; ao abrir, a CoinGecko substitui pelos atuais.
+  { symbol: "BTC", name: "Bitcoin", compras: [[0.035, 330000], [0.02, 395000]], atual: 437300 },
+  { symbol: "ETH", name: "Ethereum", compras: [[0.6, 14200], [0.4, 12100]], atual: 12670 },
+  { symbol: "SOL", name: "Solana", compras: [[6, 640], [4, 500]], atual: 552 },
+  { symbol: "ADA", name: "Cardano", compras: [[900, 1.6]], atual: 1.13 },
 ] as const;
 
 export const gerarExemplo = (hoje: Date) => {
@@ -55,9 +59,9 @@ export const gerarExemplo = (hoje: Date) => {
   const prazo = (meses: number) => iso(new Date(hoje.getFullYear(), hoje.getMonth() + meses, 15));
   const criada = iso(new Date(hoje.getFullYear(), hoje.getMonth() - 5, 2));
   const goals: Goal[] = [
-    { id: "exemplo-meta-1", name: "Reserva de emergência", type: "savings", targetAmount: 12000, currentAmount: 9150, deadline: prazo(6), priority: "high", notes: "Seis meses de despesas fixas.", createdAt: criada },
-    { id: "exemplo-meta-2", name: "Viagem para o Chile", type: "savings", targetAmount: 4000, currentAmount: 1560, deadline: prazo(9), priority: "medium", notes: "", createdAt: criada },
-    { id: "exemplo-meta-3", name: "Carteira de cripto", type: "investment", targetAmount: 8000, currentAmount: 6100, deadline: prazo(12), priority: "low", notes: "Aportes mensais em BTC e ETH.", createdAt: criada },
+    { id: "exemplo-meta-1", name: "Reserva de emergência", type: "savings", targetAmount: 30000, currentAmount: 22800, deadline: prazo(6), priority: "high", notes: "Seis meses de despesas fixas.", createdAt: criada },
+    { id: "exemplo-meta-2", name: "Viagem para o Chile", type: "savings", targetAmount: 9000, currentAmount: 3500, deadline: prazo(9), priority: "medium", notes: "", createdAt: criada },
+    { id: "exemplo-meta-3", name: "Carteira de cripto", type: "investment", targetAmount: 25000, currentAmount: 18600, deadline: prazo(12), priority: "low", notes: "Aportes mensais em BTC e ETH.", createdAt: criada },
   ];
 
   const operacoes: Operacao[] = [];
@@ -97,10 +101,26 @@ const gravar = (storage: Storage, hoje: Date) => {
   storage.setItem(CHAVES.transacoes, JSON.stringify(transactions));
   storage.setItem(CHAVES.metas, JSON.stringify(goals));
   storage.setItem(CHAVES.investimentos, JSON.stringify(investments));
+  storage.setItem(CHAVES.versao, VERSAO);
+};
+
+// Exemplo antigo e intocado (só ids "exemplo-"): pode ser trocado pela versão atual.
+const exemploAntigo = (storage: Storage) => {
+  if (storage.getItem(CHAVES.versao) === VERSAO) return false;
+  try {
+    const lista: { id: string }[] = JSON.parse(storage.getItem(CHAVES.transacoes) ?? "[]");
+    return lista.length > 0 && lista.every((t) => String(t.id).startsWith("exemplo-"));
+  } catch {
+    return false;
+  }
 };
 
 // Só semeia um navegador sem nenhum dado e que não pediu para limpar.
 export const semearSeVazio = (storage: Storage, hoje = new Date()): boolean => {
+  if (exemploAntigo(storage)) {
+    gravar(storage, hoje);
+    return true;
+  }
   const temAlgo = [CHAVES.transacoes, CHAVES.metas, CHAVES.investimentos, CHAVES.limpo].some((k) => storage.getItem(k) !== null);
   if (temAlgo) return false;
   gravar(storage, hoje);

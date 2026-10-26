@@ -240,6 +240,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatarMoeda } from "@/utils/moeda";
 import { ref, computed, onMounted, watch } from "vue";
 import { useInvestmentStore } from "@/store/investments";
 import { storeToRefs } from "pinia";
@@ -281,11 +282,7 @@ const investmentList = computed(() => {
 });
 
 const formatCurrency = (value: number) => {
-  if (isNaN(value)) return "$0.00";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+    return formatarMoeda(value);
 };
 
 const getPriceChange24h = (symbol: string) => {

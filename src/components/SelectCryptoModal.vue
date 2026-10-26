@@ -128,6 +128,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatarMoeda } from "@/utils/moeda";
 import { ref, computed, watch } from "vue";
 import type { CryptoPrice } from "@/services/cryptoService";
 import { getCryptoPrices } from "@/services/cryptoService";
@@ -170,10 +171,7 @@ const close = () => {
 };
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+  return formatarMoeda(value);
 };
 
 // Fetch available cryptocurrencies when component is mounted

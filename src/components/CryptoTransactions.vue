@@ -226,6 +226,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatarMoeda } from "@/utils/moeda";
 import { computed, ref } from "vue";
 import EditTransactionModal from "./EditTransactionModal.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
@@ -279,10 +280,7 @@ const currentValue = computed(() => {
 });
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+  return formatarMoeda(value);
 };
 
 const formatDate = (date: string) => {

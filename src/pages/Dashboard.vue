@@ -543,6 +543,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatarMoeda } from "@/utils/moeda";
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useTransactionStore } from "@/store/transactions";
@@ -607,10 +608,7 @@ const doMes = (tipo: "income" | "expense") => {
 };
 
 const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(value);
+  return formatarMoeda(value);
 };
 
 const editGoal = (goal: Goal) => {

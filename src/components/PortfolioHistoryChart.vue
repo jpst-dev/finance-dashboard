@@ -51,6 +51,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatarMoeda } from "@/utils/moeda";
 import { ref, computed } from "vue";
 import {
   Chart as ChartJS,
@@ -63,6 +64,7 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "vue-chartjs";
+import { useInvestmentStore } from "@/store/investments";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -88,11 +90,20 @@ const periods = [
 const selectedPeriod = ref("all");
 const isCollapsed = ref(false);
 
+const investmentStore = useInvestmentStore();
+
+// O histórico é simulado; a escala faz a curva terminar no valor atual da carteira.
+const naEscala = (valores: number[]) => {
+  const alvo = investmentStore.currentValue || 10000;
+  const fator = alvo / valores[valores.length - 1];
+  return valores.map((v) => v * fator);
+};
+
 const chartData = computed(() => {
   // Simulando dados históricos por enquanto
   const dates = generateDates();
-  const portfolioValues = generatePortfolioValues(dates);
-  const btcTrendValues = generateBTCTrendValues(dates);
+  const portfolioValues = naEscala(generatePortfolioValues(dates));
+  const btcTrendValues = naEscala(generateBTCTrendValues(dates));
 
   return {
     labels: dates.map((date) => date.toLocaleDateString()),
@@ -144,12 +155,7 @@ const chartOptions = {
       displayColors: false,
       callbacks: {
         label: (context: any) => {
-          return new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }).format(context.raw);
+          return formatarMoeda(context.raw, undefined, { maximumFractionDigits: 0 });
         },
       },
     },
@@ -176,12 +182,7 @@ const chartOptions = {
         color: "#8b93a1",
         padding: 10,
         callback: function (this: any, tickValue: string | number) {
-          return new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }).format(Number(tickValue));
+          return formatarMoeda(Number(tickValue), undefined, { maximumFractionDigits: 0 });
         },
       },
     },

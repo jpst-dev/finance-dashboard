@@ -222,7 +222,7 @@ export const getCryptoPrices = async (
     }
 
     const params = new URLSearchParams({
-      vs_currency: "usd",
+      vs_currency: "brl",
       ids: validIds.join(","),
       order: "market_cap_desc",
       per_page: "100",

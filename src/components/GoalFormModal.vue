@@ -132,12 +132,12 @@
             <div class="relative">
               <span
                 class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
-                >$</span
+                >R$</span
               >
               <input
                 type="number"
                 v-model="form.targetAmount"
-                class="w-full pl-8 p-3 border rounded-lg dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full pl-10 p-3 border rounded-lg dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 :class="{
                   'border-red-500':
                     formErrors.targetAmount && !form.targetAmount,
@@ -166,12 +166,12 @@
             <div class="relative">
               <span
                 class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400"
-                >$</span
+                >R$</span
               >
               <input
                 type="number"
                 v-model="form.currentAmount"
-                class="w-full pl-8 p-3 border rounded-lg dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full pl-10 p-3 border rounded-lg dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 :class="{
                   'border-red-500':
                     formErrors.currentAmount && !form.currentAmount,
