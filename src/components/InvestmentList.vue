@@ -186,7 +186,7 @@
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 Profit/Loss
               </p>
-              <div class="flex items-baseline space-x-2">
+              <div class="flex flex-wrap items-baseline gap-x-2">
                 <p
                   :class="[
                     'font-medium',

@@ -6,18 +6,18 @@
     </header>
 
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <div class="destaque p-6 rounded-lg shadow">
         <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.totalBalance") }}
         </h3>
-        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight">
+        <p class="mt-2 whitespace-nowrap font-mono text-2xl font-semibold tracking-tight">
           {{ formatCurrency(transactionStore.balance) }}
         </p>
-        <div class="mt-2 flex items-center text-sm">
+        <div class="mt-2 flex flex-wrap items-center gap-x-2 text-sm">
           <span
             :class="[
-              'font-medium',
+              'whitespace-nowrap font-medium',
               transactionStore.balanceChange >= 0
                 ? 'text-green-600'
                 : 'text-red-600',
@@ -26,7 +26,7 @@
             {{ transactionStore.balanceChange >= 0 ? "↑" : "↓" }}
             {{ Math.abs(transactionStore.balanceChange).toFixed(1) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+          <span class="whitespace-nowrap text-gray-500 dark:text-gray-400">{{
             t("common.vs_last_month")
           }}</span>
         </div>
@@ -35,13 +35,13 @@
         <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.monthlyIncome") }}
         </h3>
-        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight text-green-600">
+        <p class="mt-2 whitespace-nowrap font-mono text-2xl font-semibold tracking-tight text-green-600">
           {{ formatCurrency(doMes("income")) }}
         </p>
-        <div class="mt-2 flex items-center text-sm">
+        <div class="mt-2 flex flex-wrap items-center gap-x-2 text-sm">
           <span
             :class="[
-              'font-medium',
+              'whitespace-nowrap font-medium',
               transactionStore.incomeChange >= 0
                 ? 'text-green-600'
                 : 'text-red-600',
@@ -50,7 +50,7 @@
             {{ transactionStore.incomeChange >= 0 ? "↑" : "↓" }}
             {{ Math.abs(transactionStore.incomeChange).toFixed(1) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+          <span class="whitespace-nowrap text-gray-500 dark:text-gray-400">{{
             t("common.vs_last_month")
           }}</span>
         </div>
@@ -59,13 +59,13 @@
         <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.monthlyExpenses") }}
         </h3>
-        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight text-red-600">
+        <p class="mt-2 whitespace-nowrap font-mono text-2xl font-semibold tracking-tight text-red-600">
           {{ formatCurrency(doMes("expense")) }}
         </p>
-        <div class="mt-2 flex items-center text-sm">
+        <div class="mt-2 flex flex-wrap items-center gap-x-2 text-sm">
           <span
             :class="[
-              'font-medium',
+              'whitespace-nowrap font-medium',
               transactionStore.expensesChange <= 0
                 ? 'text-green-600'
                 : 'text-red-600',
@@ -74,7 +74,7 @@
             {{ transactionStore.expensesChange <= 0 ? "↓" : "↑" }}
             {{ Math.abs(transactionStore.expensesChange).toFixed(1) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+          <span class="whitespace-nowrap text-gray-500 dark:text-gray-400">{{
             t("common.vs_last_month")
           }}</span>
         </div>
@@ -83,13 +83,13 @@
         <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.investments") }}
         </h3>
-        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight">
+        <p class="mt-2 whitespace-nowrap font-mono text-2xl font-semibold tracking-tight">
           {{ formatCurrency(investmentStore.currentValue || 0) }}
         </p>
-        <div class="mt-2 flex items-center text-sm">
+        <div class="mt-2 flex flex-wrap items-center gap-x-2 text-sm">
           <span
             :class="[
-              'font-medium',
+              'whitespace-nowrap font-medium',
               investmentStore.profitPercentage >= 0
                 ? 'text-green-600'
                 : 'text-red-600',
@@ -98,7 +98,7 @@
             {{ investmentStore.profitPercentage >= 0 ? "↑" : "↓" }}
             {{ Math.abs(investmentStore.profitPercentage).toFixed(1) }}%
           </span>
-          <span class="text-gray-500 dark:text-gray-400 ml-2">{{
+          <span class="whitespace-nowrap text-gray-500 dark:text-gray-400">{{
             t("common.all_time")
           }}</span>
         </div>
@@ -106,7 +106,7 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
       <button
         @click="showTransactionModal = true"
         class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow flex items-center justify-center space-x-2"
@@ -193,13 +193,13 @@
     </div>
 
     <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <MonthlyChart />
       <ExpenseChart />
     </div>
 
     <!-- Recent Transactions and Alerts -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <TransactionList />
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
         <h3 class="text-lg font-semibold mb-4">

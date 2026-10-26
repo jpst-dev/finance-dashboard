@@ -9,7 +9,7 @@
         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
           Total Portfolio Value
         </h3>
-        <p class="mt-2 font-mono text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
+        <p class="mt-2 whitespace-nowrap font-mono text-xl xl:text-2xl 2xl:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
           {{ formatCurrency(investmentStore.currentValue || 0) }}
         </p>
       </div>
@@ -19,7 +19,7 @@
         </h3>
         <p
           :class="[
-            'mt-2 font-mono text-3xl font-semibold tracking-tight',
+            'mt-2 whitespace-nowrap font-mono text-xl xl:text-2xl 2xl:text-3xl font-semibold tracking-tight',
             (investmentStore.totalProfit || 0) >= 0
               ? 'text-green-600 dark:text-green-400'
               : 'text-red-600 dark:text-red-400',
@@ -34,7 +34,7 @@
         </h3>
         <p
           :class="[
-            'mt-2 font-mono text-3xl font-semibold tracking-tight',
+            'mt-2 whitespace-nowrap font-mono text-xl xl:text-2xl 2xl:text-3xl font-semibold tracking-tight',
             (investmentStore.profitPercentage || 0) >= 0
               ? 'text-green-600 dark:text-green-400'
               : 'text-red-600 dark:text-red-400',
@@ -46,8 +46,8 @@
     </div>
 
     <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2">
+    <div class="grid grid-cols-1 2xl:grid-cols-3 gap-6">
+      <div class="2xl:col-span-2">
         <PortfolioHistoryChart />
       </div>
       <div>

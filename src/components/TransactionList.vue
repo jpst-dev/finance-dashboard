@@ -17,7 +17,7 @@
         :key="transaction.id"
         class="flex items-center justify-between gap-3 p-3 sm:p-4 border rounded-lg dark:border-gray-700"
       >
-        <div class="flex min-w-0 items-center space-x-3 sm:space-x-4">
+        <div class="flex min-w-0 flex-1 items-center gap-3">
           <div
             :class="[
               'w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full flex items-center justify-center',
@@ -28,9 +28,9 @@
           >
             {{ transaction.type === "income" ? "↑" : "↓" }}
           </div>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <p class="truncate font-medium">{{ transaction.description }}</p>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="truncate text-sm text-gray-500 dark:text-gray-400">
               {{
                 t(
                   `transactions.categories.${transaction.category.toLowerCase()}`
@@ -41,10 +41,10 @@
             </p>
           </div>
         </div>
-        <div class="flex shrink-0 items-center space-x-2 sm:space-x-4">
+        <div class="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-center sm:gap-3">
           <p
             :class="[
-              'font-semibold',
+              'whitespace-nowrap font-semibold',
               transaction.type === 'income'
                 ? 'text-green-600 dark:text-green-400'
                 : 'text-red-600 dark:text-red-400',
@@ -53,7 +53,7 @@
             {{ transaction.type === "income" ? "+" : "-" }}
             {{ formatarMoeda(transaction.amount) }}
           </p>
-          <div class="flex items-center sm:space-x-2">
+          <div class="-mr-1.5 flex items-center">
             <button
               @click="editTransaction(transaction)"
               class="p-1.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
@@ -185,10 +185,12 @@ const transactionToDelete = ref<any>(null);
 const formatDate = (dateString: string) => {
   // "2026-10-05" seria lido como UTC e cairia no dia anterior no Brasil.
   const data = dateString.length === 10 ? `${dateString}T12:00:00` : dateString;
-  return new Date(data).toLocaleDateString(locale.value, {
-    year: "numeric",
-    month: "short",
+  const d = new Date(data);
+  // Ano só quando não é o atual: "24 de out." em vez de "24 de out. de 2026".
+  return d.toLocaleDateString(locale.value, {
     day: "numeric",
+    month: "short",
+    ...(d.getFullYear() !== new Date().getFullYear() && { year: "numeric" }),
   });
 };
 
