@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Finance Dashboard — direções visuais</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #0b0b0d; color: #e7e7ea; font-family: Inter, system-ui, sans-serif; padding: 32px 24px 80px; }
+  main { max-width: 1240px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 6px; }
+  .sub { color: #9a9aa3; font-size: 14px; margin-bottom: 28px; max-width: 760px; line-height: 1.5; }
+  .opcao { margin: 40px 0 12px; }
+  .opcao h2 { font-size: 16px; text-transform: uppercase; letter-spacing: .12em; color: #fbbf24; }
+  .opcao p { color: #9a9aa3; font-size: 14px; margin-top: 6px; max-width: 820px; line-height: 1.5; }
+
+  /* ---------- estrutura comum ---------- */
+  .app { border-radius: 14px; overflow: hidden; display: grid; grid-template-columns: 210px 1fr; min-height: 640px;
+         background: var(--bg); color: var(--text); font-family: var(--font); border: 1px solid var(--borda); }
+  .lateral { padding: 22px 16px; border-right: 1px solid var(--borda); background: var(--lateral); display: flex; flex-direction: column; gap: 6px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-family: var(--titulo); font-weight: 600; font-size: 17px; margin-bottom: 22px; padding: 0 8px; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--acento); display: grid; place-items: center; color: var(--sobre-acento); font-weight: 700; font-size: 15px; }
+  .item { padding: 9px 10px; border-radius: 8px; font-size: 14px; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+  .item.ativo { background: var(--ativo); color: var(--text); font-weight: 500; }
+  .item i { width: 16px; height: 16px; border-radius: 4px; border: 1.6px solid currentColor; display: inline-block; }
+  .conteudo { padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+  .topo { display: flex; justify-content: space-between; align-items: center; }
+  .topo h3 { font-family: var(--titulo); font-size: 24px; font-weight: 600; }
+  .topo small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; font-family: var(--font); font-weight: 400; }
+  .btn { background: var(--acento); color: var(--sobre-acento); border-radius: 9px; padding: 9px 14px; font-size: 13px; font-weight: 600; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--borda); border-radius: var(--raio); padding: 16px; box-shadow: var(--sombra); }
+  .card .rot { font-size: 12px; color: var(--muted); }
+  .card .val { font-family: var(--num); font-size: 22px; font-weight: 600; margin-top: 8px; letter-spacing: -.01em; }
+  .card .var { font-size: 12px; margin-top: 6px; }
+  .pos { color: var(--positivo); } .neg { color: var(--negativo); }
+  .meio { display: grid; grid-template-columns: 1.7fr 1fr; gap: 12px; }
+  .card h4 { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; }
+  .card h4 span { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .baixo { display: grid; grid-template-columns: 1.7fr 1fr; gap: 12px; }
+  .linha { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid var(--borda); font-size: 13px; }
+  .linha:first-of-type { border-top: 0; }
+  .linha .cat { display: flex; gap: 10px; align-items: center; }
+  .linha .ic { width: 30px; height: 30px; border-radius: 8px; background: var(--ativo); display: grid; place-items: center; font-size: 14px; }
+  .linha small { display: block; color: var(--muted); font-size: 11px; }
+  .linha .v { font-family: var(--num); font-weight: 600; }
+  .meta { margin-top: 12px; font-size: 13px; }
+  .meta:first-of-type { margin-top: 0; }
+  .meta .t { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .meta .t span { color: var(--muted); font-family: var(--num); font-size: 12px; }
+  .barra { height: 7px; border-radius: 9px; background: var(--ativo); overflow: hidden; }
+  .barra b { display: block; height: 100%; border-radius: 9px; background: var(--acento); }
+  .legenda { display: grid; gap: 7px; font-size: 12px; margin-top: 10px; }
+  .legenda div { display: flex; justify-content: space-between; color: var(--muted); }
+  .legenda i { display: inline-block; width: 8px; height: 8px; border-radius: 9px; margin-right: 7px; }
+
+  /* ---------- A: Grafite + lima ---------- */
+  .a { --bg: #0a0b0d; --lateral: #0d0f12; --card: #121418; --borda: #1f232a; --ativo: #1a1e24; --text: #f2f4f7; --muted: #8b93a1;
+       --acento: #c6f432; --sobre-acento: #0a0b0d; --positivo: #c6f432; --negativo: #ff6b6b; --raio: 12px; --sombra: none;
+       --font: Inter, sans-serif; --titulo: Inter, sans-serif; --num: "JetBrains Mono", monospace; }
+  .a .kpis .card:first-child { background: linear-gradient(140deg, #1b2410, #121418 70%); border-color: #2c3a14; }
+
+  /* ---------- B: Papel + tinta ---------- */
+  .b { --bg: #f6f4ef; --lateral: #efece4; --card: #ffffff; --borda: #e4e0d6; --ativo: #ebe7dc; --text: #1b2333; --muted: #6b7180;
+       --acento: #1f4b3f; --sobre-acento: #f6f4ef; --positivo: #1f7a55; --negativo: #c0392b; --raio: 14px; --sombra: 0 1px 2px rgba(27,35,51,.05);
+       --font: Inter, sans-serif; --titulo: Fraunces, serif; --num: Inter, sans-serif; }
+  .b .card .val { font-family: Fraunces, serif; font-size: 25px; font-weight: 500; }
+  .b .kpis .card:first-child { background: #1f4b3f; color: #f6f4ef; border-color: #1f4b3f; }
+  .b .kpis .card:first-child .rot, .b .kpis .card:first-child .var { color: #b9d3c8; }
+
+  /* ---------- C: Violeta + menta ---------- */
+  .c { --bg: radial-gradient(1200px 500px at 85% -10%, #3b1f7a 0%, #140d26 45%, #0d0a18 100%); --lateral: rgba(255,255,255,.02); --card: rgba(255,255,255,.04);
+       --borda: rgba(255,255,255,.08); --ativo: rgba(167,139,250,.14); --text: #f4f1ff; --muted: #a49cc0;
+       --acento: #a78bfa; --sobre-acento: #140d26; --positivo: #5eead4; --negativo: #fb7185; --raio: 16px; --sombra: 0 10px 30px rgba(0,0,0,.25);
+       --font: Inter, sans-serif; --titulo: "Space Grotesk", sans-serif; --num: "Space Grotesk", sans-serif; }
+  .c .card { backdrop-filter: blur(8px); }
+  .c .kpis .card:first-child { background: linear-gradient(135deg, #7c5cf0, #4c2fb8); border: 0; }
+  .c .kpis .card:first-child .rot, .c .kpis .card:first-child .var { color: #e3dbff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Finance Dashboard: direções visuais</h1>
+  <p class="sub">Mesma tela (Dashboard) nas três direções, já com os dados de exemplo que aparecem na primeira visita. A estrutura muda pouco: menu lateral, quatro indicadores, gráfico de entradas e saídas, despesas por categoria, transações recentes e metas. O que muda é a identidade.</p>
+
+  <div class="opcao"><h2>A · Grafite + lima</h2><p>Escuro e técnico, estilo fintech moderna (Mercury, Linear). Verde-lima como único acento, números em fonte monoespaçada. Fica coeso com o resto do portfólio, que também é escuro.</p></div>
+  <div class="app a" data-mock></div>
+
+  <div class="opcao"><h2>B · Papel + tinta</h2><p>Claro, sóbrio e editorial: fundo creme, verde-escuro "de banco" e títulos com serifa. É o único projeto claro do portfólio, então se destaca entre os outros e passa confiança, como um app financeiro de verdade.</p></div>
+  <div class="app b" data-mock></div>
+
+  <div class="opcao"><h2>C · Violeta + menta</h2><p>Escuro com gradiente roxo e cartões de vidro, na linha dos bancos digitais (Nubank, Revolut). Mais chamativo e "produto de consumo"; ganhos em menta e perdas em rosa.</p></div>
+  <div class="app c" data-mock></div>
+</main>
+
+<script>
+const tpl = (tema) => `
+  <aside class="lateral">
+    <div class="marca"><span class="logo">F</span>Finança</div>
+    <div class="item ativo"><i></i>Visão geral</div>
+    <div class="item"><i></i>Transações</div>
+    <div class="item"><i></i>Portfólio</div>
+    <div class="item"><i></i>Metas</div>
+  </aside>
+  <section class="conteudo">
+    <div class="topo"><h3>Olá, João<small>Resumo de outubro de 2026</small></h3><span class="btn">+ Nova transação</span></div>
+    <div class="kpis">
+      <div class="card"><div class="rot">Saldo total</div><div class="val">R$ 24.580,40</div><div class="var">↑ 8,2% vs. setembro</div></div>
+      <div class="card"><div class="rot">Entradas no mês</div><div class="val">R$ 9.200,00</div><div class="var pos">↑ 4,5%</div></div>
+      <div class="card"><div class="rot">Saídas no mês</div><div class="val">R$ 5.734,18</div><div class="var neg">↑ 2,1%</div></div>
+      <div class="card"><div class="rot">Investimentos</div><div class="val">R$ 12.940,77</div><div class="var pos">↑ 12,9% no total</div></div>
+    </div>
+    <div class="meio">
+      <div class="card"><h4>Entradas e saídas <span>últimos 6 meses</span></h4>${barras(tema)}</div>
+      <div class="card"><h4>Despesas por categoria <span>outubro</span></h4>${rosca(tema)}</div>
+    </div>
+    <div class="baixo">
+      <div class="card"><h4>Transações recentes <span>ver todas →</span></h4>
+        ${[["🛒","Mercado Pão de Açúcar","Alimentação · 24 out","- R$ 412,35","neg"],["💼","Salário","Renda · 05 out","+ R$ 8.400,00","pos"],["🏠","Aluguel","Moradia · 05 out","- R$ 2.100,00","neg"],["₿","Compra de Bitcoin","Investimento · 02 out","- R$ 800,00","neg"]]
+          .map(([i,n,s,v,c])=>`<div class="linha"><div class="cat"><span class="ic">${i}</span><div>${n}<small>${s}</small></div></div><span class="v ${c}">${v}</span></div>`).join("")}
+      </div>
+      <div class="card"><h4>Metas</h4>
+        ${[["Reserva de emergência","R$ 15.200 / 20.000",76],["Viagem para o Chile","R$ 3.100 / 8.000",39],["Notebook novo","R$ 6.300 / 7.000",90]]
+          .map(([n,v,p])=>`<div class="meta"><div class="t">${n}<span>${v}</span></div><div class="barra"><b style="width:${p}%"></b></div></div>`).join("")}
+      </div>
+    </div>
+  </section>`;
+
+const cores = {
+  a: { ent: "#c6f432", sai: "#3a414c", cat: ["#c6f432", "#7dd3fc", "#f0abfc", "#fca5a5", "#3a414c"] },
+  b: { ent: "#1f4b3f", sai: "#d8cfbd", cat: ["#1f4b3f", "#c08a3e", "#7a8fa6", "#b4553f", "#d8cfbd"] },
+  c: { ent: "#a78bfa", sai: "#5eead4", cat: ["#a78bfa", "#5eead4", "#f9a8d4", "#fcd34d", "#4b4370"] },
+};
+function barras(t) {
+  const ent = [7.8, 8.1, 8.0, 8.6, 8.8, 9.2], sai = [5.2, 6.1, 4.9, 5.8, 5.6, 5.7], meses = ["mai", "jun", "jul", "ago", "set", "out"];
+  let g = "";
+  ent.forEach((e, i) => {
+    const x = 18 + i * 74;
+    g += `<rect x="${x}" y="${170 - e * 16}" width="22" height="${e * 16}" rx="5" fill="${cores[t].ent}"/>`;
+    g += `<rect x="${x + 26}" y="${170 - sai[i] * 16}" width="22" height="${sai[i] * 16}" rx="5" fill="${cores[t].sai}"/>`;
+    g += `<text x="${x + 24}" y="190" text-anchor="middle" font-size="11" fill="currentColor" opacity=".55">${meses[i]}</text>`;
+  });
+  return `<svg viewBox="0 0 460 196" width="100%" style="display:block">${g}</svg>`;
+}
+function rosca(t) {
+  const fatias = [["Moradia", 37], ["Alimentação", 24], ["Transporte", 14], ["Lazer", 13], ["Outros", 12]];
+  let ac = 0, arcos = "";
+  const C = 2 * Math.PI * 46;
+  fatias.forEach(([, p], i) => {
+    arcos += `<circle r="46" cx="60" cy="60" fill="none" stroke="${cores[t].cat[i]}" stroke-width="16" stroke-dasharray="${(p / 100) * C - 2} ${C}" stroke-dashoffset="${-ac / 100 * C}" transform="rotate(-90 60 60)"/>`;
+    ac += p;
+  });
+  return `<div style="display:flex;gap:16px;align-items:center"><svg viewBox="0 0 120 120" width="118">${arcos}</svg>
+    <div class="legenda" style="flex:1">${fatias.map(([n, p], i) => `<div><span><i style="background:${cores[t].cat[i]}"></i>${n}</span><b style="font-weight:500">${p}%</b></div>`).join("")}</div></div>`;
+}
+document.querySelectorAll("[data-mock]").forEach((el) => { const t = el.classList[1]; el.innerHTML = tpl(t); });
+</script>
+</body>
+</html>
