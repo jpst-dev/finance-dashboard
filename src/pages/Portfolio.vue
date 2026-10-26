@@ -1,12 +1,15 @@
 <template>
-  <div class="max-w-7xl mx-auto space-y-6">
+  <div class="space-y-6">
+    <header>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ t("nav.portfolio") }}</h1>
+    </header>
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
         <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
           Total Portfolio Value
         </h3>
-        <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-white">
+        <p class="mt-2 font-mono text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">
           {{ formatCurrency(investmentStore.currentValue || 0) }}
         </p>
       </div>
@@ -16,7 +19,7 @@
         </h3>
         <p
           :class="[
-            'mt-2 text-3xl font-semibold',
+            'mt-2 font-mono text-3xl font-semibold tracking-tight',
             (investmentStore.totalProfit || 0) >= 0
               ? 'text-green-600 dark:text-green-400'
               : 'text-red-600 dark:text-red-400',
@@ -31,7 +34,7 @@
         </h3>
         <p
           :class="[
-            'mt-2 text-3xl font-semibold',
+            'mt-2 font-mono text-3xl font-semibold tracking-tight',
             (investmentStore.profitPercentage || 0) >= 0
               ? 'text-green-600 dark:text-green-400'
               : 'text-red-600 dark:text-red-400',
@@ -103,6 +106,9 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 import { useInvestmentStore } from "@/store/investments";
 import InvestmentList from "@/components/InvestmentList.vue";
 import InvestmentFormModal from "@/components/InvestmentFormModal.vue";

@@ -63,14 +63,16 @@ const chartData = computed(() => {
     labels: months,
     datasets: [
       {
-        label: "Income",
+        label: t("transactions.type.income"),
         data: months.map((month) => monthlyData.get(month)?.income || 0),
-        backgroundColor: "#4CAF50",
+        backgroundColor: "#c6f432",
+        borderRadius: 5,
       },
       {
-        label: "Expenses",
+        label: t("transactions.type.expense"),
         data: months.map((month) => monthlyData.get(month)?.expense || 0),
-        backgroundColor: "#F44336",
+        backgroundColor: "#3a414c",
+        borderRadius: 5,
       },
     ],
   };
@@ -83,7 +85,7 @@ const chartOptions = {
     legend: {
       position: "top" as const,
       labels: {
-        color: "#6B7280",
+        color: "#8b93a1",
         font: {
           size: 12,
         },
@@ -93,13 +95,16 @@ const chartOptions = {
   scales: {
     y: {
       beginAtZero: true,
+      grid: { color: "#1d2128" },
+      border: { display: false },
       ticks: {
-        color: "#6B7280",
+        color: "#8b93a1",
       },
     },
     x: {
+      grid: { display: false },
       ticks: {
-        color: "#6B7280",
+        color: "#8b93a1",
       },
     },
   },

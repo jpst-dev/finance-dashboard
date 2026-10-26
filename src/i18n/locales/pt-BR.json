@@ -16,7 +16,9 @@
     "update": "Atualizar",
     "required": "Obrigatório",
     "collapse": "Recolher",
-    "expand": "Expandir"
+    "expand": "Expandir",
+    "viewMore": "Ver mais",
+    "showLess": "Mostrar menos"
   },
   "dashboard": {
     "title": "Painel",
@@ -254,5 +256,14 @@
       "confirm": "Confirmar",
       "cancel": "Cancelar"
     }
+  },
+  "nav": {
+    "overview": "Visão geral",
+    "portfolio": "Portfólio",
+    "menu": "Abrir menu",
+    "demoNote": "Você está vendo dados de exemplo, salvos só neste navegador.",
+    "clear": "Limpar dados",
+    "restore": "Restaurar exemplo",
+    "clearConfirm": "Apagar todos os dados deste navegador?"
   }
 }

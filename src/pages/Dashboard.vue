@@ -1,12 +1,17 @@
 <template>
-  <div class="space-y-8">
+  <div class="space-y-6">
+    <header>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ t("nav.overview") }}</h1>
+      <p class="mt-1 text-sm text-gray-400">{{ mesAtual }}</p>
+    </header>
+
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
+      <div class="destaque p-6 rounded-lg shadow">
+        <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.totalBalance") }}
         </h3>
-        <p class="text-2xl font-bold">
+        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight">
           {{ formatCurrency(transactionStore.balance) }}
         </p>
         <div class="mt-2 flex items-center text-sm">
@@ -19,7 +24,7 @@
             ]"
           >
             {{ transactionStore.balanceChange >= 0 ? "↑" : "↓" }}
-            {{ Math.abs(transactionStore.balanceChange) }}%
+            {{ Math.abs(transactionStore.balanceChange).toFixed(1) }}%
           </span>
           <span class="text-gray-500 dark:text-gray-400 ml-2">{{
             t("common.vs_last_month")
@@ -27,11 +32,11 @@
         </div>
       </div>
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
+        <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.monthlyIncome") }}
         </h3>
-        <p class="text-2xl font-bold text-green-600">
-          {{ formatCurrency(transactionStore.totalIncome) }}
+        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight text-green-600">
+          {{ formatCurrency(doMes("income")) }}
         </p>
         <div class="mt-2 flex items-center text-sm">
           <span
@@ -43,7 +48,7 @@
             ]"
           >
             {{ transactionStore.incomeChange >= 0 ? "↑" : "↓" }}
-            {{ Math.abs(transactionStore.incomeChange) }}%
+            {{ Math.abs(transactionStore.incomeChange).toFixed(1) }}%
           </span>
           <span class="text-gray-500 dark:text-gray-400 ml-2">{{
             t("common.vs_last_month")
@@ -51,11 +56,11 @@
         </div>
       </div>
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
+        <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.monthlyExpenses") }}
         </h3>
-        <p class="text-2xl font-bold text-red-600">
-          {{ formatCurrency(transactionStore.totalExpenses) }}
+        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight text-red-600">
+          {{ formatCurrency(doMes("expense")) }}
         </p>
         <div class="mt-2 flex items-center text-sm">
           <span
@@ -67,7 +72,7 @@
             ]"
           >
             {{ transactionStore.expensesChange <= 0 ? "↓" : "↑" }}
-            {{ Math.abs(transactionStore.expensesChange) }}%
+            {{ Math.abs(transactionStore.expensesChange).toFixed(1) }}%
           </span>
           <span class="text-gray-500 dark:text-gray-400 ml-2">{{
             t("common.vs_last_month")
@@ -75,10 +80,10 @@
         </div>
       </div>
       <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">
+        <h3 class="text-sm font-medium text-gray-400">
           {{ t("dashboard.investments") }}
         </h3>
-        <p class="text-2xl font-bold">
+        <p class="mt-2 font-mono text-2xl font-semibold tracking-tight">
           {{ formatCurrency(investmentStore.currentValue || 0) }}
         </p>
         <div class="mt-2 flex items-center text-sm">
@@ -91,7 +96,7 @@
             ]"
           >
             {{ investmentStore.profitPercentage >= 0 ? "↑" : "↓" }}
-            {{ Math.abs(investmentStore.profitPercentage).toFixed(2) }}%
+            {{ Math.abs(investmentStore.profitPercentage).toFixed(1) }}%
           </span>
           <span class="text-gray-500 dark:text-gray-400 ml-2">{{
             t("common.all_time")
@@ -552,7 +557,7 @@ import type { Goal } from "@/store/goals";
 import ConfirmationModal from "@/components/ConfirmationModal.vue";
 import { useToast } from "vue-toastification";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const transactionStore = useTransactionStore();
 const investmentStore = useInvestmentStore();
 const goalStore = useGoalStore();
@@ -587,6 +592,19 @@ const alerts = ref([
 ]);
 
 const hasAlerts = computed(() => alerts.value.length > 0);
+
+const mesAtual = computed(() =>
+  new Date().toLocaleDateString(locale.value, { month: "long", year: "numeric" })
+);
+
+// Os cartões de "Renda/Despesas mensais" mostram só o mês atual.
+const doMes = (tipo: "income" | "expense") => {
+  const hoje = new Date();
+  const prefixo = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+  return transactionStore.transactions
+    .filter((t) => t.type === tipo && t.date.startsWith(prefixo))
+    .reduce((soma, t) => soma + t.amount, 0);
+};
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-US", {
@@ -649,3 +667,10 @@ const handleSetGoalClick = () => {
   }, 100);
 };
 </script>
+
+<style scoped>
+.destaque {
+  background: linear-gradient(140deg, #1b2410, #121418 70%);
+  border: 1px solid #2c3a14;
+}
+</style>

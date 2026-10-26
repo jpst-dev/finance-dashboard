@@ -124,7 +124,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Holdings</p>
             <div class="flex items-baseline space-x-2">
               <p class="font-medium text-gray-900 dark:text-white">
-                {{ investment.amount }} {{ investment.symbol }}
+                {{ investment.amount.toLocaleString(undefined, { maximumFractionDigits: 8 }) }} {{ investment.symbol }}
               </p>
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 ({{

@@ -99,12 +99,12 @@ const isLoading = ref(true);
 const isCollapsed = ref(false);
 
 const chartColors = [
-  "rgb(59, 130, 246)", // Blue
-  "rgb(16, 185, 129)", // Green
-  "rgb(249, 115, 22)", // Orange
-  "rgb(236, 72, 153)", // Pink
-  "rgb(139, 92, 246)", // Purple
-  "rgb(245, 158, 11)", // Yellow
+  "#c6f432",
+  "#7dd3fc",
+  "#f0abfc",
+  "#fcd34d",
+  "#5eead4",
+  "#fca5a5",
 ];
 
 const total = computed(() => {
@@ -148,7 +148,7 @@ const chartData = computed(() => {
       datasets: [
         {
           data: [100],
-          backgroundColor: ["rgb(229, 231, 235)"],
+          backgroundColor: ["#1d2128"],
           borderWidth: 0,
         },
       ],
@@ -177,7 +177,7 @@ const chartOptions = {
       display: false,
     },
     tooltip: {
-      backgroundColor: "rgba(17, 24, 39, 0.8)",
+      backgroundColor: "#121418",
       titleColor: "#F3F4F6",
       bodyColor: "#F3F4F6",
       padding: 12,

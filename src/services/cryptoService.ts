@@ -1,7 +1,6 @@
 import axios from "axios";
 
 const API_URL = "https://api.coingecko.com/api/v3";
-const PROXY_URL = "https://corsproxy.io/?";
 const CACHE_DURATION = 300000; // 5 minutos
 const RATE_LIMIT_DELAY = 10000; // 10 segundos entre requisições
 const MAX_RETRIES = 3;
@@ -232,9 +231,8 @@ export const getCryptoPrices = async (
       price_change_percentage: "24h",
     });
 
-    const url = `${PROXY_URL}${encodeURIComponent(
-      `${API_URL}/coins/markets?${params.toString()}`
-    )}`;
+    // A CoinGecko aceita chamadas do navegador (CORS liberado), sem proxy.
+    const url = `${API_URL}/coins/markets?${params.toString()}`;
     const data = await fetchWithRetry(url);
 
     if (!data || !Array.isArray(data)) {
@@ -252,15 +250,9 @@ export const getCryptoPrices = async (
     setCachedPrices(validIds, prices);
     return prices;
   } catch (error) {
-    // Se houver erro, retorna as moedas pré-definidas com valores padrão
-    console.warn("Error fetching crypto prices, using default values:", error);
-    return SUPPORTED_CRYPTOS.map((crypto) => ({
-      symbol: crypto.symbol,
-      name: crypto.name,
-      current_price: 0,
-      price_change_percentage_24h: 0,
-      image: crypto.image,
-    }));
+    // Sem resposta, mantém os últimos preços conhecidos (preço zero derrubava a carteira para -100%).
+    console.warn("Error fetching crypto prices, keeping last known values:", error);
+    return [];
   }
 };
 

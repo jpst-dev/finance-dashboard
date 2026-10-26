@@ -15,12 +15,12 @@
       <div
         v-for="transaction in displayedTransactions"
         :key="transaction.id"
-        class="flex items-center justify-between p-4 border rounded-lg dark:border-gray-700"
+        class="flex items-center justify-between gap-3 p-3 sm:p-4 border rounded-lg dark:border-gray-700"
       >
-        <div class="flex items-center space-x-4">
+        <div class="flex min-w-0 items-center space-x-3 sm:space-x-4">
           <div
             :class="[
-              'w-10 h-10 rounded-full flex items-center justify-center',
+              'w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-full flex items-center justify-center',
               transaction.type === 'income'
                 ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300'
                 : 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300',
@@ -28,8 +28,8 @@
           >
             {{ transaction.type === "income" ? "↑" : "↓" }}
           </div>
-          <div>
-            <p class="font-medium">{{ transaction.description }}</p>
+          <div class="min-w-0">
+            <p class="truncate font-medium">{{ transaction.description }}</p>
             <p class="text-sm text-gray-500 dark:text-gray-400">
               {{
                 t(
@@ -41,7 +41,7 @@
             </p>
           </div>
         </div>
-        <div class="flex items-center space-x-4">
+        <div class="flex shrink-0 items-center space-x-2 sm:space-x-4">
           <p
             :class="[
               'font-semibold',
@@ -54,7 +54,7 @@
               transaction.amount.toFixed(2)
             }}
           </p>
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center sm:space-x-2">
             <button
               @click="editTransaction(transaction)"
               class="p-1.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
@@ -160,7 +160,7 @@ import EditTransactionModal from "./EditTransactionModal.vue";
 import ConfirmationModal from "./ConfirmationModal.vue";
 import { useI18n } from "vue-i18n";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const transactionStore = useTransactionStore();
 const { transactions } = storeToRefs(transactionStore);
@@ -169,12 +169,13 @@ const toast = useToast();
 const showViewMore = ref(true);
 const showAll = ref(false);
 
-const displayedTransactions = computed(() => {
-  if (showAll.value) {
-    return transactions.value;
-  }
-  return transactions.value.slice(0, 3);
-});
+// Mais recentes primeiro.
+const ordenadas = computed(() =>
+  [...transactions.value].sort((a, b) => b.date.localeCompare(a.date))
+);
+const displayedTransactions = computed(() =>
+  showAll.value ? ordenadas.value : ordenadas.value.slice(0, 3)
+);
 
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
@@ -182,7 +183,9 @@ const selectedTransaction = ref<any>(null);
 const transactionToDelete = ref<any>(null);
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("en-US", {
+  // "2026-10-05" seria lido como UTC e cairia no dia anterior no Brasil.
+  const data = dateString.length === 10 ? `${dateString}T12:00:00` : dateString;
+  return new Date(data).toLocaleDateString(locale.value, {
     year: "numeric",
     month: "short",
     day: "numeric",

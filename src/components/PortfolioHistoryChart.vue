@@ -100,15 +100,15 @@ const chartData = computed(() => {
       {
         label: "All-time profit",
         data: portfolioValues,
-        borderColor: "rgb(59, 130, 246)",
-        backgroundColor: "rgba(59, 130, 246, 0.5)",
+        borderColor: "#c6f432",
+        backgroundColor: "rgba(198, 244, 50, 0.15)",
         tension: 0.4,
       },
       {
         label: "BTC trend",
         data: btcTrendValues,
-        borderColor: "rgb(249, 115, 22)",
-        backgroundColor: "rgba(249, 115, 22, 0.5)",
+        borderColor: "#7dd3fc",
+        backgroundColor: "rgba(125, 211, 252, 0.15)",
         tension: 0.4,
       },
     ],
@@ -131,11 +131,11 @@ const chartOptions = {
         usePointStyle: true,
         pointStyle: "circle",
         padding: 20,
-        color: "#6B7280",
+        color: "#8b93a1",
       },
     },
     tooltip: {
-      backgroundColor: "rgba(17, 24, 39, 0.8)",
+      backgroundColor: "#121418",
       titleColor: "#F3F4F6",
       bodyColor: "#F3F4F6",
       padding: 12,
@@ -160,7 +160,7 @@ const chartOptions = {
         display: false,
       },
       ticks: {
-        color: "#6B7280",
+        color: "#8b93a1",
         maxRotation: 0,
         autoSkipPadding: 20,
       },
@@ -173,7 +173,7 @@ const chartOptions = {
         display: false,
       },
       ticks: {
-        color: "#6B7280",
+        color: "#8b93a1",
         padding: 10,
         callback: function (this: any, tickValue: string | number) {
           return new Intl.NumberFormat("en-US", {

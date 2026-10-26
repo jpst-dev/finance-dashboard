@@ -4,23 +4,47 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --border: 214.3 31.8% 91.4%;
+    --background: 220 13% 4%;
+    --foreground: 216 23% 96%;
+    --border: 216 15% 14%;
+    color-scheme: dark;
   }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-  }
-}
-
-@layer base {
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gray-950 text-gray-50 antialiased;
   }
+  /* Valores monetários com largura fixa, para as colunas não "dançarem". */
+  .font-bold,
+  .font-semibold {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Botões com fundo lima pedem texto escuro (os componentes usam text-white). */
+  [class*="bg-blue-5"].text-white,
+  [class*="bg-blue-6"].text-white,
+  [class*="bg-green-6"].text-white {
+    color: #0a0b0d;
+  }
+}
+
+/* Cartões: borda fina no lugar da sombra, que some no fundo escuro. */
+.dark .dark\:bg-gray-800.shadow,
+.dark .dark\:bg-gray-800.shadow-sm,
+.dark .dark\:bg-gray-800.shadow-lg,
+.dark .dark\:bg-gray-800.rounded-xl {
+  border: 1px solid #1f232a;
+  box-shadow: none;
+}
+
+.Vue-Toastification__toast {
+  font-family: Inter, system-ui, sans-serif;
+  border-radius: 10px;
+}
+.Vue-Toastification__toast--success {
+  background: #c6f432;
+  color: #0a0b0d;
 }

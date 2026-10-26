@@ -4,13 +4,13 @@
       {{ t("dashboard.charts.expensesByCategory") }}
     </h3>
     <div class="h-64">
-      <Pie :data="chartData" :options="chartOptions" />
+      <Doughnut :data="chartData" :options="chartOptions" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Pie } from "vue-chartjs";
+import { Doughnut } from "vue-chartjs";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { computed } from "vue";
 import { useTransactionStore } from "@/store/transactions";
@@ -39,17 +39,19 @@ const chartData = computed(() => {
       {
         data: Array.from(categories.values()),
         backgroundColor: [
-          "#FF6384",
-          "#36A2EB",
-          "#FFCE56",
-          "#4BC0C0",
-          "#9966FF",
-          "#FF9F40",
-          "#8AC24A",
-          "#FF5252",
-          "#7E57C2",
-          "#26A69A",
+          "#c6f432",
+          "#7dd3fc",
+          "#f0abfc",
+          "#fca5a5",
+          "#fcd34d",
+          "#5eead4",
+          "#c4b5fd",
+          "#fdba74",
+          "#94a3b8",
+          "#3a414c",
         ],
+        borderColor: "#121418",
+        borderWidth: 3,
       },
     ],
   };
@@ -58,11 +60,12 @@ const chartData = computed(() => {
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
+  cutout: "62%",
   plugins: {
     legend: {
       position: "right" as const,
       labels: {
-        color: "#6B7280",
+        color: "#8b93a1",
         font: {
           size: 12,
         },

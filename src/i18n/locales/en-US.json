@@ -16,7 +16,9 @@
     "update": "Update",
     "required": "Required",
     "collapse": "Collapse",
-    "expand": "Expand"
+    "expand": "Expand",
+    "viewMore": "View more",
+    "showLess": "Show less"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -237,5 +239,14 @@
       "buy": "Buy",
       "sell": "Sell"
     }
+  },
+  "nav": {
+    "overview": "Overview",
+    "portfolio": "Portfolio",
+    "menu": "Open menu",
+    "demoNote": "You are seeing sample data, stored only in this browser.",
+    "clear": "Clear data",
+    "restore": "Restore sample",
+    "clearConfirm": "Delete all data stored in this browser?"
   }
 }

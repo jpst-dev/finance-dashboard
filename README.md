@@ -1,6 +1,12 @@
 # Finance Dashboard
 
-Um dashboard financeiro moderno desenvolvido com Vue.js, TypeScript e Tailwind CSS para gerenciar suas finanças pessoais e investimentos em criptomoedas.
+Dashboard de finanças pessoais em Vue 3 + TypeScript: transações, metas e carteira de criptomoedas com preços em tempo real (CoinGecko). Na primeira visita o app já abre com dados de exemplo, salvos só no navegador; dá para limpar tudo e começar do zero.
+
+> 🔗 **[finance.jteixeira.dev](https://finance.jteixeira.dev)**
+
+![Visão geral](docs/screenshots/visao-geral.png)
+
+![Portfólio](docs/screenshots/portfolio.png)
 
 ## 🚀 Funcionalidades
 
@@ -28,6 +34,7 @@ Um dashboard financeiro moderno desenvolvido com Vue.js, TypeScript e Tailwind C
 - **Vue Router** - Roteamento da aplicação
 - **Chart.js** - Biblioteca de gráficos
 - **Vite** - Build tool e dev server
+- **Vitest** - Testes dos dados de exemplo
 - **Axios** - Cliente HTTP
 
 ## 📦 Instalação

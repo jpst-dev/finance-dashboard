@@ -7,6 +7,10 @@ import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
 import { useInvestmentStore } from "./store/investments";
 import i18n from "./i18n";
+import { semearSeVazio } from "./demo/exemplo";
+
+// Primeira visita: preenche com dados de exemplo antes de os stores lerem o localStorage.
+semearSeVazio(localStorage);
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -16,7 +20,6 @@ const initializeStore = async () => {
   try {
     const investmentStore = useInvestmentStore(pinia);
     await investmentStore.initializeStore();
-    console.log("Store initialized successfully");
   } catch (error) {
     console.error("Error initializing store:", error);
   }
