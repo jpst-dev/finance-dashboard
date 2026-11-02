@@ -31,3 +31,7 @@ yarn-error.log*
 .env
 .vercel
 .env*
+
+# Dados financeiros reais (nunca versionar)
+finance-samples/
+private/
