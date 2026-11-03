@@ -75,13 +75,13 @@ describe("ImportPreview", () => {
     expect(rows).toHaveLength(1);
     expect(w.text()).toContain("fora do resumo mensal");
     await rows[0].find("[data-test=line-state]").setValue("Normal");
-    expect(store.overrides.get("p1")).toEqual({ state: "Normal" });
+    expect(store.overrides.get("p1#0")).toEqual({ state: "Normal" });
     const cat = rows[0].find("select[data-test=line-category]");
     const opts = cat.findAll("option").map((o) => o.attributes("value"));
     expect(opts).toContain("c-exp");
     expect(opts).not.toContain("c-inc"); // valor negativo: só despesa
     await cat.setValue("c-exp");
-    expect(store.overrides.get("p1")).toEqual({ state: "Normal", categoryId: "c-exp" });
+    expect(store.overrides.get("p1#0")).toEqual({ state: "Normal", categoryId: "c-exp" });
     // Novos: somente leitura.
     await tabs(w)[0].trigger("click");
     expect(w.find("[data-test=new-lines] select").exists()).toBe(false);

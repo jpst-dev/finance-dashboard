@@ -3,7 +3,7 @@ import { computed, nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { ImportLine, ImportWarning, TransactionState } from "../api/types";
 import Money from "../money/Money.vue";
-import { useImportsStore } from "../stores/imports";
+import { lineId, useImportsStore } from "../stores/imports";
 import CategorySelect from "./CategorySelect.vue";
 
 const { t, te, locale } = useI18n();
@@ -64,16 +64,16 @@ function warningText(w: ImportWarning): string {
 }
 
 function stateOf(l: ImportLine): TransactionState {
-  return store.overrides.get(l.sourceKey)?.state ?? l.state;
+  return store.overrides.get(lineId(l))?.state ?? l.state;
 }
 function categoryOf(l: ImportLine): string | null {
-  return store.overrides.get(l.sourceKey)?.categoryId ?? null;
+  return store.overrides.get(lineId(l))?.categoryId ?? null;
 }
 function onState(l: ImportLine, e: Event) {
-  store.setOverride(l.sourceKey, { state: (e.target as HTMLSelectElement).value as TransactionState });
+  store.setOverride(l, { state: (e.target as HTMLSelectElement).value as TransactionState });
 }
 function onCategory(l: ImportLine, v: string | null) {
-  store.setOverride(l.sourceKey, { categoryId: v });
+  store.setOverride(l, { categoryId: v });
 }
 
 const newCount = computed(() => store.preview?.newCount ?? 0);

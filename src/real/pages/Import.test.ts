@@ -45,6 +45,28 @@ beforeEach(() => {
 });
 
 describe("Import page", () => {
+  it("file_input_accepts_ofx_and_xlsx", async () => {
+    const { w } = await setup();
+    expect(w.find("input[type=file]").attributes("accept")).toBe(".ofx,.xlsx");
+  });
+
+  it("file_hint_follows_selected_account_type", async () => {
+    const { w } = await setup({
+      accounts: [
+        acc({ id: "a1", name: "Conta Exemplo", type: "Checking" }),
+        acc({ id: "card", name: "Cartão Exemplo", type: "CreditCard" }),
+      ],
+    });
+    const none = w.find("[data-test=file-hint]").text();
+    await w.find("[data-test=account]").setValue("a1");
+    const chk = w.find("[data-test=file-hint]").text();
+    await w.find("[data-test=account]").setValue("card");
+    const card = w.find("[data-test=file-hint]").text();
+    expect(card).toContain(".xlsx");
+    expect(chk).not.toContain(".xlsx");
+    expect(new Set([none, chk, card]).size).toBe(3);
+  });
+
   it("Upload_sends_account_and_file_and_shows_tabs_with_counts", async () => {
     const { w, imports } = await setup({
       accounts: [

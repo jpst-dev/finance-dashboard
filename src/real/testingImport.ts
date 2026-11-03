@@ -51,6 +51,19 @@ export function preview(over: Partial<ImportPreview> = {}): ImportPreview {
   };
 }
 
+/** Prévia sintética de fatura de cartão do Itaú (linhas com parcela e final de cartão). */
+export function invoicePreview(over: Partial<ImportPreview> = {}): ImportPreview {
+  return preview({
+    source: "ItauCard",
+    invoice: { dueDate: "2026-04-10", declaredTotal: "150.00" },
+    lines: [
+      line({ sourceKey: "i1", description: "Loja Exemplo", amount: "-100.00", installmentNumber: 1, installmentTotal: 3, cardSuffix: "1234" }),
+      line({ sourceKey: "i1", ordinal: 1, description: "Loja Exemplo", amount: "-50.00", cardSuffix: "1234" }),
+    ],
+    ...over,
+  });
+}
+
 export function batch(over: Partial<ImportBatch> = {}): ImportBatch {
   return {
     batchId: "h1",
@@ -75,6 +88,10 @@ export const importCats: Category[] = [
 
 export function ofx(name = "extrato.ofx", content = "<OFX></OFX>"): File {
   return new File([content], name, { type: "application/x-ofx" });
+}
+
+export function xlsx(name = "fatura.xlsx", content = "PK"): File {
+  return new File([content], name, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
 export function fakeImportApi(opts: { accounts?: Account[]; preview?: ImportPreview; history?: ImportBatch[] } = {}) {

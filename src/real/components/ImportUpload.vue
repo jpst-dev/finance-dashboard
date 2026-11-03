@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useImportsStore } from "../stores/imports";
 
@@ -18,6 +18,13 @@ async function submit() {
   // A store valida extensão, tamanho, vazio, quantidade e conta antes de enviar qualquer coisa.
   await store.upload(accountId.value, files.value);
 }
+
+const accountType = computed(() => store.importableAccounts.find((a) => a.id === accountId.value)?.type);
+const hintKey = computed(() =>
+  accountType.value === "Checking" || accountType.value === "CreditCard"
+    ? `real.import.fileHint.${accountType.value}`
+    : "real.import.fileHint.none",
+);
 
 const field =
   "rounded border border-gray-600 bg-gray-800 px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400";
@@ -43,11 +50,13 @@ const field =
       <input
         id="import-file"
         type="file"
-        accept=".ofx,.OFX"
+        accept=".ofx,.xlsx"
+        aria-describedby="import-file-hint"
         :class="field"
         data-test="file"
         @change="onFiles"
       />
+      <p id="import-file-hint" class="mt-1 text-xs text-gray-400" data-test="file-hint">{{ t(hintKey) }}</p>
     </div>
     <button
       type="submit"
