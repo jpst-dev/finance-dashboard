@@ -248,27 +248,35 @@ public sealed class ImportLinkingTests(PostgresFixture postgres)
         Assert.Empty(await LinksAsync(f, c));
     }
 
+    /// <summary>
+    /// One side of the pair per confirm, fired together. Deterministic: each confirm inserts its line, then takes the
+    /// per-user advisory lock and reads at that point (read committed). The one that locks first sees only its own side
+    /// (the other is uncommitted), links nothing and commits; the second waits for the lock, then sees both and links.
+    /// So exactly one Confirmed link and linked == 1 in total, whatever the order.
+    /// </summary>
     [Fact]
     public async Task Concurrent_confirms_never_create_two_confirmed_for_one_line()
     {
         await using var f = await NewFactoryAsync();
         using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
         var checking = await AccountAsync(c, "Nu conta", "Checking");
-        var cardA = await AccountAsync(c, "Nu cartao A", "CreditCard");
-        var cardB = await AccountAsync(c, "Nu cartao B", "CreditCard");
-        await ImportAsync(c, checking, NuChecking(Pay, "-500.00", 10));
-        var a = await PreviewAsync(c, cardA, NuCard(Received, "500.00", 10));
-        var b = await PreviewAsync(c, cardB, NuCard(Received, "500.00", 11));
+        var card = await AccountAsync(c, "Nu cartao", "CreditCard");
+        var a = await PreviewAsync(c, checking, NuChecking(Pay, "-500.00", 10));
+        var b = await PreviewAsync(c, card, NuCard(Received, "500.00", 10));
 
         var responses = await RaceAsync(c, [
             ($"/api/imports/{a}/confirm", new { acknowledgeBlockingWarnings = false }),
             ($"/api/imports/{b}/confirm", new { acknowledgeBlockingWarnings = false })]);
         Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+        var bodies = await Task.WhenAll(responses.Select(JsonOf));
+        Assert.Equal(1, bodies.Sum(x => x.GetProperty("linked").GetInt32()));
+        Assert.Equal(0, bodies.Sum(x => x.GetProperty("suggested").GetInt32()));
 
-        var confirmed = (await LinksAsync(f, c)).Where(l => l.State == LinkState.Confirmed).ToList();
-        Assert.True(confirmed.Count <= 1);
-        Assert.Equal(confirmed.Count, confirmed.Select(l => l.OutTransactionId).Distinct().Count());
-        Assert.Equal(confirmed.Count, confirmed.Select(l => l.InTransactionId).Distinct().Count());
+        var links = await LinksAsync(f, c);
+        var confirmed = Assert.Single(links);
+        Assert.Equal(LinkState.Confirmed, confirmed.State);
+        Assert.Equal(links.Count, links.Select(l => l.OutTransactionId).Distinct().Count());
+        Assert.Equal(links.Count, links.Select(l => l.InTransactionId).Distinct().Count());
     }
 
     [Fact]
