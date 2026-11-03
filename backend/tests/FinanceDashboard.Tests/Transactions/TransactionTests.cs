@@ -118,6 +118,9 @@ public sealed class TransactionTests(PostgresFixture postgres)
         var big = await JsonOf(await c.GetAsync("/api/transactions?size=1000"));
         Assert.Equal(200, big.GetProperty("size").GetInt32());
         Assert.Equal(HttpStatusCode.BadRequest, (await c.GetAsync("/api/transactions?page=0")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.GetAsync("/api/transactions?page=20000000&size=200")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await c.GetAsync("/api/transactions?page=1000001")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await c.GetAsync("/api/transactions?page=1000000&size=200")).StatusCode);
     }
 
     [Fact]

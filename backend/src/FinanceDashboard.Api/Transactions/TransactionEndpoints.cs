@@ -24,6 +24,7 @@ public static class TransactionEndpoints
 {
     private const int MaxDescription = 300;
     private const int MaxPageSize = 200;
+    private const int MaxPage = 1_000_000;
     private const decimal MaxAbsAmount = 10_000_000_000_000_000m; // 10^16
 
     public static IEndpointRouteBuilder MapTransactions(this IEndpointRouteBuilder app)
@@ -69,7 +70,7 @@ public static class TransactionEndpoints
     {
         var pageNo = page ?? 1;
         var pageSize = Math.Min(size ?? 50, MaxPageSize);
-        if (pageNo < 1 || pageSize < 1) return Results.BadRequest();
+        if (pageNo < 1 || pageNo > MaxPage || pageSize < 1) return Results.BadRequest();
 
         var query = db.Transactions.AsNoTracking().Visible();
         if (accountId is not null) query = query.Where(t => t.AccountId == accountId);
@@ -83,7 +84,7 @@ public static class TransactionEndpoints
 
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(t => t.Date).ThenByDescending(t => t.Id)
-            .Skip((pageNo - 1) * pageSize).Take(pageSize)
+            .Skip((int)Math.Min((long)(pageNo - 1) * pageSize, int.MaxValue)).Take(pageSize)
             .Select(t => new TransactionResponse(
                 t.Id, t.AccountId, t.Date, t.PurchaseDate, t.StatementDate, t.Amount, t.NormalizedDescription,
                 t.OriginalDescription, t.CategoryId, t.State, t.Origin, t.EditedByUser, t.CounterpartyName))
@@ -154,7 +155,8 @@ public static class TransactionEndpoints
             transaction.EditedByUser = true; // SourceKey, Ordinal, BatchId, Origin and the original text stay as imported.
         }
 
-        await db.SaveChangesAsync();
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException) { return Results.NotFound(); } // removed by an undo meanwhile
         return Results.Ok(ToResponse(transaction));
     }
 
@@ -166,7 +168,8 @@ public static class TransactionEndpoints
         if (transaction.Origin == TransactionOrigin.Manual) db.Transactions.Remove(transaction);
         else transaction.IsDeleted = true; // keeps SourceKey so a re-import does not bring the line back
 
-        await db.SaveChangesAsync();
+        try { await db.SaveChangesAsync(); }
+        catch (DbUpdateConcurrencyException) { return Results.NotFound(); } // removed by an undo meanwhile
         return Results.NoContent();
     }
 
