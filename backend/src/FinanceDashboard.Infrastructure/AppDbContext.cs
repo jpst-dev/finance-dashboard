@@ -14,8 +14,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<Link> Links => Set<Link>();
 
-    // Read per query by the global filters (EF parameterizes it).
-    private string? CurrentUserId => currentUser.UserId;
+    // Read per query by the global filters (EF parameterizes it); services read it for per-user locks.
+    public string? CurrentUserId => currentUser.UserId;
 
     protected override void OnModelCreating(ModelBuilder b)
     {
