@@ -85,7 +85,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md), [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md), [ADR 0005 (identidade por conteúdo e leitores do Itaú)](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md) e [ADR 0006 (demo estático por adaptador e fixtures geradas)](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md), [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md), [ADR 0005 (identidade por conteúdo e leitores do Itaú)](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md) [ADR 0006 (demo estático por adaptador e fixtures geradas)](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md) e [ADR 0007 (vínculos e neutralidade derivada)](docs/adr/0007-vinculos-e-neutralidade-derivada.md).
 
 ### Rodando localmente
 
@@ -255,6 +255,16 @@ Regras:
 - **Fatura com linhas faltando**: se a fatura (mesma conta e vencimento) já tem linhas confirmadas que não aparecem no arquivo novo, a prévia mostra `InvoiceHasMissingLines`, que **bloqueia sem override** (o confirm dá `409 blocking_warnings` mesmo com `acknowledgeBlockingWarnings`). Desfaça o lote anterior dessa fatura e importe de novo. Nada é apagado ou substituído sozinho. Use uma conta `CreditCard` por cartão: dois cartões com o mesmo vencimento na mesma conta se bloqueiam.
 - **Desfazer**: igual ao Nubank. Linhas que você **excluiu** continuam ocupando a chave e não voltam ao reimportar.
 - **Erros de arquivo** (`422`, só com o código): `unsupported_bank`, `not_xlsx`, `encrypted_xlsx`, `xlsx_limits_exceeded`, `xlsx_unsafe_content` (macro, link externo, conteúdo embutido), `unsupported_layout` (layout desconhecido) e `invalid_cell` (a resposta traz só o código; a linha da planilha fica apenas no diagnóstico interno e nos testes, nunca na resposta nem nos logs). Fórmulas nunca são avaliadas.
+
+### Conciliação (S3a)
+
+Pagamentos de fatura e transferências entre contas próprias aparecem como duas linhas pendentes (uma em cada conta). A conciliação liga as duas pontas (valores opostos iguais, contas diferentes, até 3 dias de diferença) e roda sozinha na confirmação de cada importação.
+
+- **Vincula sozinho**: pares sem ambiguidade; pagamento de fatura só dentro do mesmo banco (conta e cartão do Nubank, ou do Itaú) e transferência entre contas correntes com no máximo 1 dia de diferença.
+- **Fica como sugestão ou pendente**: pares ambíguos, transferências com 2 ou 3 dias de diferença, fatura paga por outro banco e pagamentos parciais.
+- **Na tela Pendências**: confirme ou rejeite as sugestões; em Vinculados, desfaça um vínculo (ele não será sugerido de novo). Linhas vinculadas saem da fila e não mudam saldos nem receitas/despesas.
+- **API** (`/api/links`): `GET /` (lista, filtro por estado), `POST /reconcile`, `POST /{id}/confirm`, `POST /{id}/reject` e `DELETE /{id}` (desfaz).
+- O demo público mostra vínculos de exemplo (somente leitura). Decisões em [ADR 0007](docs/adr/0007-vinculos-e-neutralidade-derivada.md).
 
 ### Desenvolvimento
 
