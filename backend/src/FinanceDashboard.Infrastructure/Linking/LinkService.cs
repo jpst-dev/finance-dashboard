@@ -422,26 +422,7 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
         return LinkOutcome.Ok;
     }
 
-    /// <summary>
-    /// Runs <paramref name="body"/> holding the user's advisory transaction lock. The lock only lives inside a
-    /// transaction: the ambient one is used when present (the caller commits), otherwise one is opened and committed here.
-    /// </summary>
-    private async Task<T> InLockedTransactionAsync<T>(Func<Task<T>> body, CancellationToken ct)
-    {
-        var userId = db.CurrentUserId ?? throw new InvalidOperationException("No authenticated user.");
-        if (db.Database.CurrentTransaction is not null)
-        {
-            await LockAsync(userId, ct);
-            return await body();
-        }
-
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        await LockAsync(userId, ct);
-        var result = await body();
-        await tx.CommitAsync(ct);
-        return result;
-    }
-
-    private Task<int> LockAsync(string userId, CancellationToken ct) =>
-        db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({userId}, 0))", ct);
+    /// <summary>See <see cref="UserLock.InLockedTransactionAsync{T}"/> (shared with the category rules).</summary>
+    private Task<T> InLockedTransactionAsync<T>(Func<Task<T>> body, CancellationToken ct) =>
+        UserLock.InLockedTransactionAsync(db, body, ct);
 }

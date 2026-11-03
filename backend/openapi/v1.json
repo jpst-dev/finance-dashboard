@@ -1514,7 +1514,8 @@
           "created",
           "skipped",
           "linked",
-          "suggested"
+          "suggested",
+          "categorized"
         ],
         "type": "object",
         "properties": {
@@ -1547,6 +1548,14 @@
             "format": "int32"
           },
           "suggested": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "categorized": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",

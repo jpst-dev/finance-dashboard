@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<Link> Links => Set<Link>();
     public DbSet<OwnAlias> OwnAliases => Set<OwnAlias>();
+    public DbSet<CategoryRule> CategoryRules => Set<CategoryRule>();
 
     // Read per query by the global filters (EF parameterizes it); services read it for per-user locks.
     public string? CurrentUserId => currentUser.UserId;
@@ -130,6 +131,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
         {
             e.Property(x => x.Fragment).HasMaxLength(200);
             e.HasIndex(x => new { x.UserId, x.Fragment }).IsUnique();
+            e.HasQueryFilter(x => x.UserId == CurrentUserId);
+        });
+
+        b.Entity<CategoryRule>(e =>
+        {
+            // Pattern is stored normalized (CategoryRuleMatcher.NormalizePattern), so uniqueness is on the normalized text.
+            e.Property(x => x.Pattern).HasMaxLength(CategoryRuleMatcher.MaxPatternLength);
+            // Deleting a category deletes its rules (there is no rule without a target).
+            e.HasOne<Category>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.Pattern }).IsUnique();
             e.HasQueryFilter(x => x.UserId == CurrentUserId);
         });
     }

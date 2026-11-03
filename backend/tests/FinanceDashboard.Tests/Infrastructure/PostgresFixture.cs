@@ -13,6 +13,9 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public async Task<string> CreateDatabaseAsync()
     {
+        // Every test gets a fresh database (its own pool): the idle connections of earlier databases would only pile
+        // up until the server's max_connections. Clearing closes idle ones; connections in use close on return.
+        NpgsqlConnection.ClearAllPools();
         var name = $"test_{Guid.NewGuid():N}";
         await using (var admin = new NpgsqlConnection(_container.GetConnectionString()))
         {
