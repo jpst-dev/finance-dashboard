@@ -20,8 +20,8 @@ public class NameKeysTests
     [Fact]
     public void Coincide_prefix_in_both_directions()
     {
-        Assert.True(NameKeys.Coincide("JOSE LUIS DA SILVA", "MARIA L"));
-        Assert.True(NameKeys.Coincide("MARIA L", "JOSE LUIS DA SILVA"));
+        Assert.True(NameKeys.Coincide("MARIA LUISA SANTOS", "MARIA L"));
+        Assert.True(NameKeys.Coincide("MARIA L", "MARIA LUISA SANTOS"));
     }
 
     [Fact]

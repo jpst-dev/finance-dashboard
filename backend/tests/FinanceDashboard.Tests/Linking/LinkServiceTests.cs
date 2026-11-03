@@ -447,7 +447,7 @@ public sealed class LinkServiceTests(PostgresFixture postgres)
         await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
         var w = new World(db);
         var o1 = await w.ItauPix("MARIA L", -300m, 10);
-        var i1 = await w.NubankPix("JOÃO PEDRO DA SILVA", 300m, 10);
+        var i1 = await w.NubankPix("MARIA LUISA SANTOS", 300m, 10);
         var o2 = await w.ItauPix("ALUGUEL", -1500m, 10);
         var i2 = await w.NubankPix("CLIENTE FICTICIO", 1500m, 10);
 
@@ -460,6 +460,78 @@ public sealed class LinkServiceTests(PostgresFixture postgres)
         Assert.False(await CountsAsIncomeOrExpense(db, i1.Id));
         Assert.True(await CountsAsIncomeOrExpense(db, o2.Id));
         Assert.True(await CountsAsIncomeOrExpense(db, i2.Id));
+    }
+
+    // ---- S3(b): demotion of legacy auto-confirmed transfer pairs with incoherent names ----
+
+    private static async Task<Link> AddTransferLinkAsync(AppDbContext db, Guid outId, Guid inId, LinkOrigin origin)
+    {
+        var link = new Link
+        {
+            Id = Guid.NewGuid(), Kind = LinkKind.OwnTransfer, State = LinkState.Confirmed, OutTransactionId = outId,
+            InTransactionId = inId, Origin = origin, CreatedAt = DateTimeOffset.UtcNow, DecidedAt = DateTimeOffset.UtcNow,
+        };
+        db.Links.Add(link);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        return link;
+    }
+
+    [Fact]
+    public async Task Legacy_incoherent_auto_pair_is_demoted_to_suggested_and_lines_count_again()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var w = new World(db);
+        var o = await w.ItauPix("ALUGUEL", -1500m, 10);
+        var i = await w.NubankPix("CLIENTE FICTICIO", 1500m, 10);
+        await AddTransferLinkAsync(db, o.Id, i.Id, LinkOrigin.Auto);
+        Assert.False(await CountsAsIncomeOrExpense(db, o.Id));
+
+        var result = await Service(db).ReconcileAsync();
+
+        Assert.Equal(new ReconcileResult(0, 1, 0), result);
+        var link = Assert.Single(await db.Links.AsNoTracking().ToListAsync());
+        Assert.Equal(LinkState.Suggested, link.State);
+        Assert.Equal((o.Id, i.Id), (link.OutTransactionId, link.InTransactionId));
+        Assert.True(await CountsAsIncomeOrExpense(db, o.Id));
+        Assert.True(await CountsAsIncomeOrExpense(db, i.Id));
+
+        // Second run is a no-op: same single suggestion.
+        Assert.Equal(new ReconcileResult(0, 1, 0), await Service(db).ReconcileAsync());
+        Assert.Equal(LinkState.Suggested, (await db.Links.AsNoTracking().SingleAsync()).State);
+    }
+
+    [Fact]
+    public async Task Coherent_auto_pair_stays_confirmed()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var w = new World(db);
+        var o = await w.ItauPix("MARIA L", -300m, 10);
+        var i = await w.NubankPix("MARIA LUISA SANTOS", 300m, 10);
+        var seeded = await AddTransferLinkAsync(db, o.Id, i.Id, LinkOrigin.Auto);
+
+        await Service(db).ReconcileAsync();
+
+        var link = Assert.Single(await db.Links.AsNoTracking().ToListAsync());
+        Assert.Equal((seeded.Id, LinkState.Confirmed), (link.Id, link.State));
+        Assert.False(await CountsAsIncomeOrExpense(db, o.Id));
+    }
+
+    [Fact]
+    public async Task User_confirmed_incoherent_pair_is_never_demoted()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var w = new World(db);
+        var o = await w.ItauPix("ALUGUEL", -1500m, 10);
+        var i = await w.NubankPix("CLIENTE FICTICIO", 1500m, 10);
+        var seeded = await AddTransferLinkAsync(db, o.Id, i.Id, LinkOrigin.User);
+
+        await Service(db).ReconcileAsync();
+        await Service(db).ReconcileAsync();
+
+        var link = Assert.Single(await db.Links.AsNoTracking().ToListAsync());
+        Assert.Equal((seeded.Id, LinkState.Confirmed, LinkOrigin.User), (link.Id, link.State, link.Origin));
+        Assert.False(await CountsAsIncomeOrExpense(db, o.Id));
     }
 
     // ---- S3(b): "é meu" (MarkOwn) and aliases ----
@@ -562,7 +634,7 @@ public sealed class LinkServiceTests(PostgresFixture postgres)
         await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
         var w = new World(db);
         var itau = await w.ItauPix("MARIA L", -300m, 10);
-        var nu = await w.NubankPix("João Pedro da Silva", 220m, 25); // different amount: no pair
+        var nu = await w.NubankPix("Maria Luisa Santos", 220m, 25); // different amount: no pair
 
         Assert.Equal(LinkOutcome.Ok, (await Service(db).MarkOwnAsync(itau.Id)).Outcome);
 
@@ -735,7 +807,7 @@ public sealed class LinkServiceTests(PostgresFixture postgres)
         var w = new World(db);
         var o = await w.ItauPix("MARIA L", -300m, 10);
         Assert.Equal(LinkOutcome.Ok, (await Service(db).MarkOwnAsync(o.Id)).Outcome);
-        var i = await w.NubankPix("JOSE LUIS DA SILVA", 300m, 10);
+        var i = await w.NubankPix("MARIA LUISA SANTOS", 300m, 10);
 
         Assert.Equal(new ReconcileResult(1, 0, 0), await Service(db).ReconcileAsync());
 

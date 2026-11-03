@@ -320,7 +320,7 @@ public sealed class ImportLinkingTests(PostgresFixture postgres)
         var nu = await AccountAsync(c, "Nu conta", "Checking");
 
         Assert.Equal((0, 0), Counts(await ImportAsync(c, itau, ItauChecking("PIX TRANSF MARIA L10 10", "-800.00", 10))));
-        var second = await ImportAsync(c, nu, NuChecking(NuPix("recebida", "JOÃO PEDRO DA SILVA"), "800.00", 10));
+        var second = await ImportAsync(c, nu, NuChecking(NuPix("recebida", "MARIA LUISA SANTOS"), "800.00", 10));
 
         Assert.Equal((1, 0), Counts(second));
         var link = Assert.Single(await LinksAsync(f, c));
@@ -360,7 +360,7 @@ public sealed class ImportLinkingTests(PostgresFixture postgres)
         var itau = await AccountAsync(c, "Itau conta", "Checking");
         var nu = await AccountAsync(c, "Nu conta", "Checking");
         var itauFile = ItauChecking("PIX TRANSF MARIA L10 10", "-300.00", 10);
-        var nuFile = NuChecking(NuPix("recebida", "JOSE LUIS DA SILVA"), "300.00", 10);
+        var nuFile = NuChecking(NuPix("recebida", "MARIA LUISA SANTOS"), "300.00", 10);
 
         await ImportAsync(c, itauFirst ? itau : nu, itauFirst ? itauFile : nuFile);
         var first = await LineIdAsync(f, c, itauFirst ? itau : nu);

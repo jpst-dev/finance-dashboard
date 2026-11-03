@@ -92,6 +92,7 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
     private async Task<ReconcileResult> ReconcileCoreAsync(CancellationToken ct)
     {
         var reclassified = await ReclassifyAsync(ct);
+        await DemoteIncoherentAutoTransfersAsync(ct);
 
         var candidates = new List<PairingCandidate>();
         foreach (var r in await CandidateRowsAsync(ct))
@@ -177,6 +178,39 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
 
         await db.SaveChangesAsync(ct);
         return new ReconcileResult(linked, suggested, reclassified);
+    }
+
+    /// <summary>
+    /// Pairs the old S3(a) rule confirmed automatically without checking names (Confirmed, Origin=Auto, OwnTransfer)
+    /// whose counterparty names do not coincide go back to the suggestion queue. The row is deleted and both lines
+    /// become candidates again, so the normal flow recreates the pair as Suggested (no unique-index conflict, nothing
+    /// to flip in place). User-origin links are never touched; once demoted nothing matches again, so it is idempotent.
+    /// </summary>
+    private async Task DemoteIncoherentAutoTransfersAsync(CancellationToken ct)
+    {
+        var pairs = await (
+                from l in db.Links.AsNoTracking()
+                where l.State == LinkState.Confirmed && l.Origin == LinkOrigin.Auto && l.Kind == LinkKind.OwnTransfer
+                    && l.OutTransactionId != null && l.InTransactionId != null
+                join o in db.Transactions.AsNoTracking() on l.OutTransactionId equals o.Id
+                join ob in db.ImportBatches.AsNoTracking() on o.BatchId equals ob.Id
+                join i in db.Transactions.AsNoTracking() on l.InTransactionId equals i.Id
+                join ib in db.ImportBatches.AsNoTracking() on i.BatchId equals ib.Id
+                select new
+                {
+                    l.Id,
+                    OutSource = ob.Source, OutDescription = o.OriginalDescription,
+                    InSource = ib.Source, InDescription = i.OriginalDescription,
+                })
+            .ToListAsync(ct);
+
+        var ids = pairs
+            .Where(p => !NameKeys.Coincide(PairingRules.CounterpartyKey(p.OutSource, p.OutDescription),
+                PairingRules.CounterpartyKey(p.InSource, p.InDescription)))
+            .Select(p => p.Id).ToList();
+        if (ids.Count == 0) return;
+        await db.Links.Where(l => ids.Contains(l.Id) && l.State == LinkState.Confirmed && l.Origin == LinkOrigin.Auto)
+            .ExecuteDeleteAsync(ct);
     }
 
     /// <summary>

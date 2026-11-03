@@ -209,7 +209,7 @@ public class LinkMatcherTests
     [Fact]
     public void OwnTransfer_with_coherent_names_is_auto_confirmed()
     {
-        var o = Out(ImportSource.NubankChecking, PairingRole.Transfer, 10, name: "JOSE LUIS DA SILVA");
+        var o = Out(ImportSource.NubankChecking, PairingRole.Transfer, 10, name: "MARIA LUISA SANTOS");
         var i = In(ImportSource.ItauChecking, PairingRole.Transfer, 10, name: "MARIA L");
         Assert.True(Assert.Single(Match(o, i)).AutoConfirm);
     }
