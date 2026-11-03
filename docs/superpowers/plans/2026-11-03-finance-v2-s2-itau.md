@@ -219,7 +219,7 @@
     - `Pagamento_requires_whole_token_and_positive_amount` (`"PAGAMENTOS ONLINE FICTICIO"` cobrança → Normal; `"PAGAMENTO X"` cobrança positiva no arquivo → Normal).
     - `Saldo_anterior_is_pending`; `Encargos_iof_juros_anuidade_are_normal`.
     - `Installment_after_first_is_dated_due_minus_one_month` (vencimento 2026-11-10, compra 2026-03-15 `"Parcela 3 de 10"` → `Date 2026-10-10`, `PurchaseDate 2026-03-15`, `StatementDate 2026-11-10`, `InstallmentNumber 3`, `InstallmentTotal 10`); `First_installment_and_cash_keep_purchase_date`; `Due_on_31st_minus_one_month_clamps` (vencimento 2026-03-31 → 2026-02-28).
-    - `Identical_lines_get_increasing_ordinals`; `Key_contract_matches_spec_components` (linha 2026-10-03 `"Loja Ficticia"` `120.00` `"Parcela 2 de 10"` `****1234`, vencimento 2026-11-10 → `SourceKey == "9b7512557b951f38da6f343be4ebed8cde8c1f487551e502bdfa7244da56510d"`).
+    - `Identical_lines_get_increasing_ordinals`; `Key_contract_matches_spec_components` (linha 2026-10-03 `"Loja Ficticia"` `120.00` `"Parcela 2 de 10"` `****1234`, vencimento 2026-11-10 → mesmo hash da fatura fixado em `SourceKeysTests.Content_key_contract` da Task 2; o teste compara com a constante compartilhada `SourceKeysTests.InvoiceContractHash`).
     - `Declared_total_equal_to_non_pending_sum_has_no_warning` (compras + estorno + IOF, pagamento fora da soma); `Total_mismatch_is_blocking_overridable_warning`.
     - `Invoice_has_no_period_and_no_checkpoint` (`PeriodStart/End`, `LedgerBalance`, `LedgerRead` nulos; `Invoice` preenchido).
     - `Reader_exceptions_carry_no_cell_content` (marcadores em descrição/valor-texto/nome → nenhuma mensagem de exceção os contém).
