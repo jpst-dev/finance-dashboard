@@ -1210,7 +1210,9 @@
         "required": [
           "batchId",
           "created",
-          "skipped"
+          "skipped",
+          "linked",
+          "suggested"
         ],
         "type": "object",
         "properties": {
@@ -1227,6 +1229,22 @@
             "format": "int32"
           },
           "skipped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "linked": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "suggested": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
