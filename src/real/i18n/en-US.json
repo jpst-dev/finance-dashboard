@@ -1,11 +1,40 @@
 {
   "real": {
-    "app": {
-      "title": "Finance Dashboard",
-      "placeholder": "Real mode under construction"
+    "app": { "title": "Finance Dashboard", "placeholder": "Real mode under construction" },
+    "money": { "hidden": "hidden value" },
+    "nav": {
+      "overview": "Overview",
+      "transactions": "Transactions",
+      "pending": "Pending",
+      "accounts": "Accounts",
+      "import": "Import"
     },
-    "money": {
-      "hidden": "hidden value"
+    "titles": {
+      "login": "Sign in",
+      "overview": "Overview",
+      "transactions": "Transactions",
+      "pending": "Pending",
+      "accounts": "Accounts",
+      "import": "Import"
+    },
+    "login": {
+      "title": "Sign in",
+      "email": "E-mail",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "errorInvalid": "Incorrect e-mail or password.",
+      "errorRateLimit": "Too many attempts. Wait a moment and try again.",
+      "errorNetwork": "Could not sign in. Check your connection and try again."
+    },
+    "shell": {
+      "skip": "Skip to content",
+      "navLabel": "Main navigation",
+      "hideValues": "Hide values",
+      "showValues": "Show values",
+      "language": "Language",
+      "logout": "Sign out",
+      "logoutFailed": "Could not sign out. Your session may still be active; try again."
     }
   }
 }

@@ -1,11 +1,40 @@
 {
   "real": {
-    "app": {
-      "title": "Finance Dashboard",
-      "placeholder": "Modo real em construção"
+    "app": { "title": "Finance Dashboard", "placeholder": "Modo real em construção" },
+    "money": { "hidden": "valor oculto" },
+    "nav": {
+      "overview": "Visão geral",
+      "transactions": "Lançamentos",
+      "pending": "Pendentes",
+      "accounts": "Contas",
+      "import": "Importar"
     },
-    "money": {
-      "hidden": "valor oculto"
+    "titles": {
+      "login": "Entrar",
+      "overview": "Visão geral",
+      "transactions": "Lançamentos",
+      "pending": "Pendentes",
+      "accounts": "Contas",
+      "import": "Importar"
+    },
+    "login": {
+      "title": "Entrar",
+      "email": "E-mail",
+      "password": "Senha",
+      "submit": "Entrar",
+      "submitting": "Entrando…",
+      "errorInvalid": "E-mail ou senha incorretos.",
+      "errorRateLimit": "Muitas tentativas. Aguarde um pouco e tente novamente.",
+      "errorNetwork": "Não foi possível entrar. Verifique a conexão e tente novamente."
+    },
+    "shell": {
+      "skip": "Pular para o conteúdo",
+      "navLabel": "Navegação principal",
+      "hideValues": "Esconder valores",
+      "showValues": "Mostrar valores",
+      "language": "Idioma",
+      "logout": "Sair",
+      "logoutFailed": "Não foi possível sair. Sua sessão pode continuar ativa; tente novamente."
     }
   }
 }
