@@ -10,15 +10,21 @@ public sealed class AuthedClient : IDisposable
 {
     private readonly HttpClient _client;
 
-    private AuthedClient(HttpClient client) => _client = client;
+    private AuthedClient(HttpClient client, string userId)
+    {
+        _client = client;
+        UserId = userId;
+    }
+
+    public string UserId { get; }
 
     public HttpClient Raw => _client;
 
     public static async Task<AuthedClient> CreateAsync(ApiFactory f, string email, string password)
     {
-        await CreateUserAsync(f, email, password);
+        var user = await CreateUserAsync(f, email, password);
         var (client, _) = await LoginAsync(f, email, password);
-        return new AuthedClient(client);
+        return new AuthedClient(client, user.Id);
     }
 
     public Task<HttpResponseMessage> GetAsync(string url, object? body = null) => SendAsync(HttpMethod.Get, url, body, false);

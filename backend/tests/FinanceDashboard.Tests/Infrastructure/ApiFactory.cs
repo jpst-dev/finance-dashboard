@@ -8,6 +8,8 @@ namespace FinanceDashboard.Tests.Infrastructure;
 public sealed class ApiFactory(string connectionString, Dictionary<string, string?>? extraConfig = null)
     : WebApplicationFactory<Program>
 {
+    public string ConnectionString => connectionString;
+
     /// <summary>Optional extra logger provider (e.g. to capture the host's logs in a test).</summary>
     public ILoggerProvider? LoggerProvider { get; init; }
 
