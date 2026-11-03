@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FinanceDashboard.Api.Auth;
 using FinanceDashboard.Api.Health;
+using FinanceDashboard.Api.Security;
 using FinanceDashboard.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
     }
 });
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAuth();
 builder.Services.AddHealthChecks()
@@ -69,6 +72,11 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 }
 
 await SeedUser.EnsureAsync(app.Services, app.Configuration);
+// Needs the schema; liveness/readiness setups run without a database (MigrateOnStartup=false).
+if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
+{
+    await DefaultCategories.EnsureForAllUsersAsync(app.Services);
+}
 
 app.UseForwardedHeaders();
 app.UseRouting();
