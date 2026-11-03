@@ -214,6 +214,15 @@ public sealed class XlsxTestFile
         return WriteRawZip(raw);
     }
 
+    /// <summary>
+    /// Valid invoice written by the raw writer the way Excel streams it: every entry has flag bit 3 (data
+    /// descriptor), zero CRC/sizes in the local header and the real ones in a data descriptor after the data
+    /// (and in the central directory).
+    /// </summary>
+    public static byte[] WithDataDescriptors() =>
+        WriteRawZip(ReadEntries(SampleInvoice().Build())
+            .Select(p => RawEntry.Deflated(p.Name, p.Data) with { Flags = 8 }).ToList());
+
     /// <summary>OLE/CFB container holding an <c>EncryptedPackage</c> stream name (password-protected xlsx).</summary>
     public static byte[] EncryptedCfb() => FakeCfb("EncryptionInfo", "EncryptedPackage");
 
@@ -634,9 +643,16 @@ public sealed class XlsxTestFile
             w.Write(0x04034b50u);
             w.Write((ushort)20); w.Write(e.Flags); w.Write(e.Method);
             w.Write((ushort)0); w.Write((ushort)0x21);
-            w.Write(e.Crc); w.Write(e.LocalCompressedSize ?? (uint)e.Data.Length); w.Write(e.DeclaredSize);
+            var descriptor = (e.Flags & 8) != 0;
+            if (descriptor) { w.Write(0u); w.Write(0u); w.Write(0u); }
+            else { w.Write(e.Crc); w.Write(e.LocalCompressedSize ?? (uint)e.Data.Length); w.Write(e.DeclaredSize); }
             w.Write((ushort)name.Length); w.Write((ushort)0);
             w.Write(name); w.Write(e.Data);
+            if (descriptor)
+            {
+                w.Write(0x08074b50u);
+                w.Write(e.Crc); w.Write((uint)e.Data.Length); w.Write(e.DeclaredSize);
+            }
         }
         var cdStart = (uint)ms.Position;
         for (var i = 0; i < entries.Count; i++)
