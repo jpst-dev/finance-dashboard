@@ -230,6 +230,75 @@ public class LinkMatcherTests
         Assert.False(Assert.Single(Match(o, i)).AutoConfirm);
     }
 
+    static IEnumerable<PairingCandidate> PixGroup(int outs, int ins, int outDay, int inDay, decimal amount = 100m) =>
+        Enumerable.Range(0, outs).Select(_ => PxDebit(outDay, amount))
+            .Concat(Enumerable.Range(0, ins).Select(_ => PxCredit(inDay, amount))).ToList();
+
+    [Fact]
+    public void PixCredit_three_identical_pairs_same_day_are_all_auto_confirmed()
+    {
+        var r = LinkMatcher.Match(PixGroup(3, 3, 10, 10).ToList(), NoRejected);
+        Assert.Equal(3, r.Count);
+        Assert.All(r, p => Assert.True(p.AutoConfirm));
+        Assert.All(r, p => Assert.Equal(LinkKind.PixCredit, p.Kind));
+        Assert.Equal(3, r.Select(p => p.OutId).Distinct().Count());
+        Assert.Equal(3, r.Select(p => p.InId).Distinct().Count());
+    }
+
+    [Fact]
+    public void PixCredit_two_credits_three_debits_identical_pairs_two_and_leaves_one()
+    {
+        var r = LinkMatcher.Match(PixGroup(3, 2, 10, 10).ToList(), NoRejected);
+        Assert.Equal(2, r.Count);
+        Assert.All(r, p => Assert.True(p.AutoConfirm));
+        Assert.Equal(2, r.Select(p => p.OutId).Distinct().Count());
+        Assert.Equal(2, r.Select(p => p.InId).Distinct().Count());
+    }
+
+    [Fact]
+    public void PixCredit_same_day_different_amounts_stay_suggested()
+    {
+        var c = new[] { PxDebit(10), PxDebit(10, 150m), PxCredit(10), PxCredit(10, 150m) };
+        // Two independent single-edge components (100/100 and 150/150): auto. Make amounts collide on one side instead:
+        var r = LinkMatcher.Match(new[] { PxDebit(10), PxDebit(10), PxCredit(10), PxCredit(11) }, NoRejected);
+        Assert.Equal(4, r.Count);
+        Assert.All(r, p => Assert.False(p.AutoConfirm));
+        Assert.Equal(2, LinkMatcher.Match(c, NoRejected).Count);
+    }
+
+    [Fact]
+    public void PixCredit_interchangeable_group_with_neighbor_day_still_confirms_when_each_side_is_uniform()
+    {
+        var r = LinkMatcher.Match(PixGroup(3, 3, 10, 11).ToList(), NoRejected);
+        Assert.Equal(3, r.Count);
+        Assert.All(r, p => Assert.True(p.AutoConfirm));
+    }
+
+    [Fact]
+    public void PixCredit_group_with_a_rejected_pair_falls_back_to_suggested()
+    {
+        var g = PixGroup(2, 2, 10, 10).ToList();
+        var rejected = new HashSet<(Guid OutId, Guid InId)> { (g[0].Id, g[2].Id) };
+        var r = LinkMatcher.Match(g, rejected);
+        Assert.Equal(3, r.Count);
+        Assert.All(r, p => Assert.False(p.AutoConfirm));
+        Assert.DoesNotContain(r, p => p.OutId == g[0].Id && p.InId == g[2].Id);
+    }
+
+    [Fact]
+    public void PixCredit_group_result_independent_of_input_order()
+    {
+        var g = PixGroup(3, 2, 10, 11).ToList();
+        var a = LinkMatcher.Match(g, NoRejected);
+        Assert.Equal(a, LinkMatcher.Match(Enumerable.Reverse(g).ToList(), NoRejected));
+        Assert.Equal(a, LinkMatcher.Match(g.OrderBy(x => x.Id.GetHashCode() % 7).ThenBy(x => x.Date).ToList(), NoRejected));
+        // The pairing is the Id-ordered zip.
+        var outs = g.Where(x => x.Amount < 0).Select(x => x.Id).Order().ToList();
+        var ins = g.Where(x => x.Amount > 0).Select(x => x.Id).Order().ToList();
+        Assert.Equal(outs.Zip(ins).OrderBy(z => z.First).Select(z => (z.First, z.Second)),
+            a.OrderBy(p => p.OutId).Select(p => (p.OutId, p.InId)));
+    }
+
     public static IEnumerable<object[]> Seeds() => Enumerable.Range(1, 20).Select(s => new object[] { s });
 
     [Theory]
@@ -258,6 +327,8 @@ public class LinkMatcherTests
             if (role == PairingRole.PixCreditCredit && isOut) role = PairingRole.PixCreditDebit;
             list.Add(isOut ? Out(src, role, day, amt, name: nm) : In(src, role, day, amt, name: nm));
         }
+        if (rng.Next(2) == 0)
+            list.AddRange(PixGroup(rng.Next(1, 4), rng.Next(1, 4), rng.Next(1, 8), rng.Next(1, 8), 77m));
         var first = LinkMatcher.Match(list, NoRejected);
         var shuffled = list.OrderBy(_ => rng.Next()).ToList();
         Assert.Equal(first, LinkMatcher.Match(shuffled, NoRejected));

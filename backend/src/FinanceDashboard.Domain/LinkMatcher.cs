@@ -50,17 +50,40 @@ public static class LinkMatcher
         }
         var edgesPerRoot = pairs.GroupBy(p => Find(p.Out.Id)).ToDictionary(g => g.Key, g => g.Count());
 
-        return pairs
+        // Pix-no-cartão: lines on each side with the same (Date, Amount) are interchangeable. When the component is the
+        // complete bipartite graph of such lines, pair them by Id order (min(nOut, nIn) pairs); leftovers stay unpaired.
+        var grouped = new List<ProposedLink>();
+        var interchangeable = new HashSet<Guid>(); // roots resolved by the zip
+        foreach (var comp in pairs.Where(p => p.Kind == LinkKind.PixCredit).GroupBy(p => Find(p.Out.Id)))
+        {
+            var edges = comp.ToList();
+            var cOuts = edges.Select(e => e.Out).DistinctBy(x => x.Id).ToList();
+            var cIns = edges.Select(e => e.In).DistinctBy(x => x.Id).ToList();
+            if (edges.Count != cOuts.Count * cIns.Count) continue;
+            if (cOuts.Select(x => (x.Date, x.Amount)).Distinct().Count() != 1
+                || cIns.Select(x => (x.Date, x.Amount)).Distinct().Count() != 1) continue;
+            interchangeable.Add(comp.Key);
+            var so = cOuts.OrderBy(x => x.Id).ToList();
+            var si = cIns.OrderBy(x => x.Id).ToList();
+            for (var k = 0; k < Math.Min(so.Count, si.Count); k++)
+                grouped.Add(new ProposedLink(so[k].Id, si[k].Id, LinkKind.PixCredit, true));
+        }
+
+        var result = pairs
+            .Where(p => !interchangeable.Contains(Find(p.Out.Id)))
             .Select(p =>
             {
                 var single = edgesPerRoot[Find(p.Out.Id)] == 1;
                 var auto = single && !(p.Kind == LinkKind.OwnTransfer
                     && (Math.Abs(p.Out.Date.DayNumber - p.In.Date.DayNumber) > AutoTransferDays
                         || !NameKeys.Coincide(p.Out.NameKey, p.In.NameKey)));
-                return (p, link: new ProposedLink(p.Out.Id, p.In.Id, p.Kind, auto));
+                return new ProposedLink(p.Out.Id, p.In.Id, p.Kind, auto);
             })
-            .OrderBy(x => x.p.Out.Date).ThenBy(x => x.p.Out.Id).ThenBy(x => x.p.In.Id)
-            .Select(x => x.link)
+            .Concat(grouped);
+
+        var dates = candidates.ToDictionary(c => c.Id, c => c.Date);
+        return result
+            .OrderBy(l => dates[l.OutId]).ThenBy(l => l.OutId).ThenBy(l => l.InId)
             .ToList();
     }
 

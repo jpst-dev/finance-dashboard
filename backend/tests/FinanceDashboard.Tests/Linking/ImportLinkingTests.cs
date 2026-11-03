@@ -430,6 +430,25 @@ public sealed class ImportLinkingTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task PixCredit_three_identical_pairs_via_import_are_all_confirmed()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        var file = OfxTestFile.Itau();
+        for (var k = 0; k < 3; k++) file = file.Line(Ofx(10), "200.00", $"CREDITO LIBERAD PIX 123{k}");
+        for (var k = 0; k < 3; k++) file = file.Line(Ofx(10), "-200.00", $"PIX CARTAO LOJA FIC1{k} 10");
+
+        var result = await ImportAsync(c, itau, file.Build());
+
+        Assert.Equal((3, 0), Counts(result));
+        var links = await LinksAsync(f, c);
+        Assert.Equal(3, links.Count);
+        Assert.All(links, l => Assert.Equal((LinkKind.PixCredit, LinkState.Confirmed), (l.Kind, l.State)));
+        Assert.DoesNotContain(links, l => l.State == LinkState.Suggested);
+    }
+
+    [Fact]
     public async Task Reconcile_failure_rolls_back_the_whole_confirm()
     {
         await using var f = await NewFactoryAsync();
