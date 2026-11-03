@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { ImportBatch } from "../api/types";
+import Money from "../money/Money.vue";
 import { useAccountsStore } from "../stores/accounts";
 import { useImportsStore } from "../stores/imports";
 
@@ -99,7 +100,12 @@ async function doUndo() {
           <tr v-for="b in store.history" :key="b.batchId" class="border-t border-gray-800" data-test="history-row">
             <td class="py-1.5 pr-3">{{ fmtStamp(b.createdAt) }}</td>
             <td class="py-1.5 pr-3">{{ accountName(b.accountId) }}</td>
-            <td class="py-1.5 pr-3">{{ fmtDate(b.periodStart) }} – {{ fmtDate(b.periodEnd) }}</td>
+            <td class="py-1.5 pr-3">
+              <template v-if="b.invoice">
+                {{ t("real.import.invoice", { due: fmtDate(b.invoice.dueDate) }) }} <Money :value="b.invoice.declaredTotal" />
+              </template>
+              <template v-else>{{ fmtDate(b.periodStart) }} – {{ fmtDate(b.periodEnd) }}</template>
+            </td>
             <td class="py-1.5 pr-3">{{ t("real.import.history.countsValue", { new: b.newCount, existing: b.existingCount }) }}</td>
             <td class="py-1.5 pr-3">{{ t(`real.import.history.states.${b.state}`) }}</td>
             <td class="py-1.5">
@@ -150,6 +156,7 @@ async function doUndo() {
         </div>
         <p v-else data-test="edited-count">{{ t("real.import.history.edited", { n: pending.edited }) }}</p>
         <p class="text-amber-300">{{ t("real.import.history.crossBatch") }}</p>
+        <p class="text-amber-300" data-test="deleted-keys">{{ t("real.import.history.deletedKeys") }}</p>
       </div>
       <div class="mt-2 flex gap-2">
         <button

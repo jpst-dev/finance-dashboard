@@ -157,6 +157,15 @@
       "blocking": "Exige confirmação",
       "notice": "Aviso",
       "ack": "Entendo os avisos e quero confirmar",
+      "blockedHelp": "Esta importação não pode ser confirmada: desfaça a importação anterior desta fatura e importe de novo.",
+      "installment": "Parcela {n} de {total}",
+      "cardKinds": {
+        "Physical": "Cartão físico",
+        "Virtual": "Cartão virtual",
+        "VirtualRecurring": "Cartão virtual recorrente",
+        "Other": "Outro cartão"
+      },
+      "invoice": "Fatura com vencimento em {due}, total declarado:",
       "state": "Estado",
       "keepPending": "Manter pendente",
       "normal": "Normal",
@@ -213,6 +222,7 @@
         "crossBatch": "Atenção: linhas que outro lote deixou de importar por já existirem também serão removidas, porque foram criadas por esta importação.",
         "undoYes": "Sim, desfazer",
         "undoNo": "Voltar",
+        "deletedKeys": "Linhas que você excluiu e que pertencem a outras importações continuam ocupando a chave e não voltam ao reimportar; as excluídas desta importação voltam se você importar o arquivo de novo.",
         "undone": "Importação desfeita."
       }
     },

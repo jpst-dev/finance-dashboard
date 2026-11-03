@@ -174,6 +174,7 @@ describe("Import page", () => {
     expect(dlg.exists()).toBe(true);
     expect(dlg.text()).toContain("4");
     expect(dlg.text()).toContain("outro lote");
+    expect(dlg.text()).toContain("as excluídas desta importação voltam se você importar o arquivo de novo");
     expect(document.activeElement).toBe(w.find("[data-test=undo-yes]").element);
 
     await w.find("[data-test=undo-yes]").trigger("click");

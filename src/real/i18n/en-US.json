@@ -157,6 +157,15 @@
       "blocking": "Needs confirmation",
       "notice": "Notice",
       "ack": "I understand the warnings and want to confirm",
+      "blockedHelp": "This import cannot be confirmed: undo the previous import of this bill and import again.",
+      "installment": "Installment {n} of {total}",
+      "cardKinds": {
+        "Physical": "Physical card",
+        "Virtual": "Virtual card",
+        "VirtualRecurring": "Recurring virtual card",
+        "Other": "Other card"
+      },
+      "invoice": "Bill due on {due}, declared total:",
       "state": "State",
       "keepPending": "Keep pending",
       "normal": "Normal",
@@ -213,6 +222,7 @@
         "crossBatch": "Note: lines that another batch skipped because they already existed will also be removed, since this import created them.",
         "undoYes": "Yes, undo",
         "undoNo": "Back",
+        "deletedKeys": "Lines you deleted that belong to other imports keep occupying their key and do not come back when you re-import; lines deleted from this import come back if you import the file again.",
         "undone": "Import undone."
       }
     },

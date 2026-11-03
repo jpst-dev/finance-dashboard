@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { ImportLine, ImportWarning, TransactionState } from "../api/types";
+import { formatCardSuffix } from "../money/card";
 import Money from "../money/Money.vue";
 import { lineId, useImportsStore } from "../stores/imports";
 import CategorySelect from "./CategorySelect.vue";
@@ -63,6 +64,18 @@ function warningText(w: ImportWarning): string {
   return te(key) ? t(key) : t("real.import.warnings.unknown");
 }
 
+/** Parcela, tipo e final do cartão da linha, só como texto (final de cartão nunca vai para atributo). */
+function metaText(l: ImportLine): string {
+  const parts: string[] = [];
+  if (l.installmentNumber != null && l.installmentTotal != null) {
+    parts.push(t("real.import.installment", { n: l.installmentNumber, total: l.installmentTotal }));
+  }
+  if (l.cardKind) parts.push(t(`real.import.cardKinds.${l.cardKind}`));
+  const suffix = formatCardSuffix(l.cardSuffix);
+  if (suffix) parts.push(suffix);
+  return parts.join(" · ");
+}
+
 function stateOf(l: ImportLine): TransactionState {
   return store.overrides.get(lineId(l))?.state ?? l.state;
 }
@@ -77,8 +90,9 @@ function onCategory(l: ImportLine, v: string | null) {
 }
 
 const newCount = computed(() => store.preview?.newCount ?? 0);
+const blocked = computed(() => store.blockedForGood && !done.value);
 const canConfirm = computed(
-  () => !done.value && !store.busy && !store.expired && (!store.ackRequired || ack.value),
+  () => !done.value && !blocked.value && !store.busy && !store.expired && (!store.ackRequired || ack.value),
 );
 
 async function confirm() {
@@ -103,6 +117,10 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
     <p v-if="store.preview.checkpoint" class="text-sm text-gray-400" data-test="checkpoint">
       {{ t("real.import.checkpoint", { date: fmtDate(store.preview.checkpoint.date) }) }}
       <Money :value="store.preview.checkpoint.amount" signed />
+    </p>
+    <p v-if="store.preview.invoice" class="text-sm text-gray-400" data-test="invoice">
+      {{ t("real.import.invoice", { due: fmtDate(store.preview.invoice.dueDate) }) }}
+      <Money :value="store.preview.invoice.declaredTotal" />
     </p>
     <p v-if="expiresText" class="text-xs text-gray-400" data-test="expires">{{ t("real.import.expires", { when: expiresText }) }}</p>
 
@@ -132,8 +150,9 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
       <p v-else class="text-sm text-gray-400">{{ t("real.import.newHelp") }}</p>
       <p v-if="store.newLines.length === 0" class="mt-2 text-gray-400">{{ t("real.import.noLines") }}</p>
       <ul v-else class="mt-2 divide-y divide-gray-800" :class="{ 'opacity-60': done }">
-        <li v-for="(l, idx) in store.newLines" :key="`${l.sourceKey}-${idx}`" class="flex flex-wrap justify-between gap-2 py-1.5">
-          <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}</span>
+        <li v-for="l in store.newLines" :key="lineId(l)" class="flex flex-wrap justify-between gap-2 py-1.5">
+          <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}
+            <span v-if="metaText(l)" class="block text-xs text-gray-400" data-test="line-meta">{{ metaText(l) }}</span></span>
           <Money :value="l.amount" signed />
         </li>
       </ul>
@@ -144,23 +163,24 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
       <p v-else class="text-sm text-gray-300">{{ t("real.import.pendingHelp") }}</p>
       <p v-if="store.pendingLines.length === 0" class="mt-2 text-gray-400">{{ t("real.import.noLines") }}</p>
       <ul v-else class="mt-2 space-y-2" :class="{ 'opacity-60': done }">
-        <li v-for="(l, idx) in store.pendingLines" :key="`${l.sourceKey}-${idx}`" class="rounded border border-gray-700 p-2" data-test="pending-line">
+        <li v-for="l in store.pendingLines" :key="lineId(l)" class="rounded border border-gray-700 p-2" data-test="pending-line">
           <div class="flex flex-wrap justify-between gap-2">
-            <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}</span>
+            <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}
+            <span v-if="metaText(l)" class="block text-xs text-gray-400" data-test="line-meta">{{ metaText(l) }}</span></span>
             <Money :value="l.amount" signed />
           </div>
           <div v-if="!done" class="mt-2 flex flex-wrap items-end gap-3">
             <div>
-              <label :for="`imp-st-${idx}`" class="mb-1 block text-sm">{{ t("real.import.state") }}</label>
-              <select :id="`imp-st-${idx}`" :class="field" :value="stateOf(l)" data-test="line-state" @change="onState(l, $event)">
+              <label :for="`imp-st-${lineId(l)}`" class="mb-1 block text-sm">{{ t("real.import.state") }}</label>
+              <select :id="`imp-st-${lineId(l)}`" :class="field" :value="stateOf(l)" data-test="line-state" @change="onState(l, $event)">
                 <option value="PendingClassification">{{ t("real.import.keepPending") }}</option>
                 <option value="Normal">{{ t("real.import.normal") }}</option>
               </select>
             </div>
             <div>
-              <label :for="`imp-cat-${idx}`" class="mb-1 block text-sm">{{ t("real.categories.label") }}</label>
+              <label :for="`imp-cat-${lineId(l)}`" class="mb-1 block text-sm">{{ t("real.categories.label") }}</label>
               <CategorySelect
-                :id="`imp-cat-${idx}`"
+                :id="`imp-cat-${lineId(l)}`"
                 :model-value="categoryOf(l)"
                 :amount="l.amount"
                 data-test="line-category"
@@ -176,8 +196,9 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
       <p class="text-sm text-gray-400">{{ t("real.import.existingHelp") }}</p>
       <p v-if="store.existingLines.length === 0" class="mt-2 text-gray-400">{{ t("real.import.noLines") }}</p>
       <ul v-else class="mt-2 divide-y divide-gray-800 opacity-60">
-        <li v-for="(l, idx) in store.existingLines" :key="`${l.sourceKey}-${idx}`" class="flex flex-wrap justify-between gap-2 py-1.5">
-          <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}</span>
+        <li v-for="l in store.existingLines" :key="lineId(l)" class="flex flex-wrap justify-between gap-2 py-1.5">
+          <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}
+            <span v-if="metaText(l)" class="block text-xs text-gray-400" data-test="line-meta">{{ metaText(l) }}</span></span>
           <Money :value="l.amount" signed />
         </li>
       </ul>
@@ -195,7 +216,7 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
     </div>
 
     <div class="mt-3 flex flex-wrap items-center gap-3">
-      <label v-if="store.ackRequired && !done" class="flex items-center gap-2 text-sm text-amber-300">
+      <label v-if="store.ackRequired && !done && !blocked" class="flex items-center gap-2 text-sm text-amber-300">
         <input v-model="ack" type="checkbox" :class="focusRing" data-test="ack" />
         {{ t("real.import.ack") }}
       </label>
@@ -213,5 +234,6 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
         {{ t("real.import.cancel") }}
       </button>
     </div>
+    <p v-if="blocked" class="mt-2 text-sm text-amber-300" data-test="blocked-help">{{ t("real.import.blockedHelp") }}</p>
   </section>
 </template>
