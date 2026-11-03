@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
+using FinanceDashboard.Api.Security;
 using FinanceDashboard.Infrastructure;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
@@ -91,7 +92,7 @@ public static class AuthEndpoints
             .WithName("GetCsrfToken").WithSummary("Issue an antiforgery token (send it in X-XSRF-TOKEN)");
 
         group.MapPost("/login", LoginAsync)
-            .AddEndpointFilter(ValidateAntiforgeryAsync)
+            .AddEndpointFilter(AntiforgeryFilter.ValidateAsync)
             .RequireRateLimiting(LoginRateLimitPolicy)
             .WithName("Login").WithSummary("Sign in with e-mail and password; sets the session cookie")
             .Produces(StatusCodes.Status200OK)
@@ -100,7 +101,7 @@ public static class AuthEndpoints
             .Produces(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/logout", LogoutAsync)
-            .AddEndpointFilter(ValidateAntiforgeryAsync)
+            .AddEndpointFilter(AntiforgeryFilter.ValidateAsync)
             .WithName("Logout").WithSummary("Sign out and invalidate the session")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status400BadRequest);
@@ -151,20 +152,4 @@ public static class AuthEndpoints
     // Same status and body for unknown e-mail and wrong password.
     private static IResult InvalidCredentials() =>
         Results.Json(new { error = "invalid_credentials" }, statusCode: StatusCodes.Status401Unauthorized);
-
-    private static async ValueTask<object?> ValidateAntiforgeryAsync(
-        EndpointFilterInvocationContext ctx, EndpointFilterDelegate next)
-    {
-        var antiforgery = ctx.HttpContext.RequestServices.GetRequiredService<IAntiforgery>();
-        try
-        {
-            await antiforgery.ValidateRequestAsync(ctx.HttpContext);
-        }
-        catch (AntiforgeryValidationException)
-        {
-            return Results.BadRequest();
-        }
-
-        return await next(ctx);
-    }
 }

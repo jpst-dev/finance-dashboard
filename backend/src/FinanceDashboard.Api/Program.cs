@@ -1,5 +1,8 @@
 using System.Text.Json;
+using FinanceDashboard.Api.Accounts;
 using FinanceDashboard.Api.Auth;
+using FinanceDashboard.Api.Categories;
+using FinanceDashboard.Api.Json;
 using FinanceDashboard.Api.Health;
 using FinanceDashboard.Api.Security;
 using FinanceDashboard.Infrastructure;
@@ -30,6 +33,11 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAuth();
+builder.Services.ConfigureHttpJsonOptions(o =>
+{
+    o.SerializerOptions.Converters.Add(new DecimalStringConverter());
+    o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(allowIntegerValues: false));
+});
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database")
     .AddCheck<TimeZoneHealthCheck>("timezone");
@@ -86,6 +94,8 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapAuth();
+app.MapAccounts();
+app.MapCategories();
 
 // API docs for developers and reviewers: served in every environment, no authentication.
 app.MapOpenApi("/api/openapi/{documentName}.json");
