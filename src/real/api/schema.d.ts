@@ -455,6 +455,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/installments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Committed future card installments projected from the latest statement */
+        get: operations["GetInstallments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -709,6 +726,54 @@ export interface components {
             message: string;
             /** @default true */
             overridable: boolean;
+        };
+        InstallmentAccountResponse: {
+            /** Format: uuid */
+            accountId: string;
+            accountName: string;
+            /** Format: date */
+            basedOn: string;
+        };
+        InstallmentGroupResponse: {
+            /** Format: uuid */
+            accountId: string;
+            accountName: string;
+            cardSuffix: null | string;
+            description: string;
+            /** Format: int32 */
+            installmentNumber: number | string;
+            /** Format: int32 */
+            installmentTotal: number | string;
+            /** Format: int32 */
+            remaining: number | string;
+            amount: string;
+            /** Format: int32 */
+            multiplicity: number | string;
+            /** Format: date */
+            endsOn: string;
+            remainingTotal: string;
+        };
+        InstallmentItemResponse: {
+            /** Format: uuid */
+            accountId: string;
+            description: string;
+            cardSuffix: null | string;
+            /** Format: int32 */
+            installmentNumber: number | string;
+            /** Format: int32 */
+            installmentTotal: number | string;
+            amount: string;
+        };
+        InstallmentMonthResponse: {
+            month: string;
+            total: string;
+            items: components["schemas"]["InstallmentItemResponse"][];
+        };
+        InstallmentsResponse: {
+            totalCommitted: string;
+            accounts: components["schemas"]["InstallmentAccountResponse"][];
+            months: components["schemas"]["InstallmentMonthResponse"][];
+            groups: components["schemas"]["InstallmentGroupResponse"][];
         };
         LinkErrorResponse: {
             error: string;
@@ -2252,6 +2317,33 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetInstallments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InstallmentsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

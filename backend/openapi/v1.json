@@ -1422,6 +1422,30 @@
         }
       }
     },
+    "/api/installments": {
+      "get": {
+        "tags": [
+          "Installments"
+        ],
+        "summary": "Committed future card installments projected from the latest statement",
+        "operationId": "GetInstallments",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstallmentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -2345,6 +2369,207 @@
           }
         }
       },
+      "InstallmentAccountResponse": {
+        "required": [
+          "accountId",
+          "accountName",
+          "basedOn"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountName": {
+            "type": "string"
+          },
+          "basedOn": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "InstallmentGroupResponse": {
+        "required": [
+          "accountId",
+          "accountName",
+          "cardSuffix",
+          "description",
+          "installmentNumber",
+          "installmentTotal",
+          "remaining",
+          "amount",
+          "multiplicity",
+          "endsOn",
+          "remainingTotal"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountName": {
+            "type": "string"
+          },
+          "cardSuffix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "installmentNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "installmentTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "remaining": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,2})?$",
+            "type": "string"
+          },
+          "multiplicity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "endsOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "remainingTotal": {
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,2})?$",
+            "type": "string"
+          }
+        }
+      },
+      "InstallmentItemResponse": {
+        "required": [
+          "accountId",
+          "description",
+          "cardSuffix",
+          "installmentNumber",
+          "installmentTotal",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": {
+            "type": "string"
+          },
+          "cardSuffix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "installmentNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "installmentTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "amount": {
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,2})?$",
+            "type": "string"
+          }
+        }
+      },
+      "InstallmentMonthResponse": {
+        "required": [
+          "month",
+          "total",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "month": {
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,2})?$",
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstallmentItemResponse"
+            }
+          }
+        }
+      },
+      "InstallmentsResponse": {
+        "required": [
+          "totalCommitted",
+          "accounts",
+          "months",
+          "groups"
+        ],
+        "type": "object",
+        "properties": {
+          "totalCommitted": {
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,2})?$",
+            "type": "string"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstallmentAccountResponse"
+            }
+          },
+          "months": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstallmentMonthResponse"
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstallmentGroupResponse"
+            }
+          }
+        }
+      },
       "LinkErrorResponse": {
         "required": [
           "error"
@@ -2942,6 +3167,9 @@
     },
     {
       "name": "CategoryRules"
+    },
+    {
+      "name": "Installments"
     }
   ]
 }

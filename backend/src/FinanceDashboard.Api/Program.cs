@@ -8,6 +8,7 @@ using FinanceDashboard.Api.Health;
 using FinanceDashboard.Api.Imports;
 using FinanceDashboard.Api.Links;
 using FinanceDashboard.Api.Security;
+using FinanceDashboard.Api.Installments;
 using FinanceDashboard.Api.Summary;
 using FinanceDashboard.Api.Transactions;
 using FinanceDashboard.Infrastructure;
@@ -130,6 +131,7 @@ app.MapSummary();
 app.MapImports();
 app.MapLinks();
 app.MapCategoryRules();
+app.MapInstallments();
 
 // API docs for developers and reviewers: served in every environment, no authentication.
 app.MapOpenApi("/api/openapi/{documentName}.json");

@@ -95,3 +95,17 @@ export type CategoryRule = IntFields<S["CategoryRuleResponse"], "matches">;
 export type NewCategoryRule = S["CreateCategoryRuleRequest"];
 export type CategoryRuleError = S["CategoryRuleErrorResponse"];
 export type ApplyRulesResult = IntFields<S["ApplyRulesResponse"], "applied">;
+
+// Parcelas comprometidas (S3(d)): inteiros estreitados para number (ver IntFields); dinheiro continua string.
+export type InstallmentAccount = S["InstallmentAccountResponse"];
+export type InstallmentItem = IntFields<S["InstallmentItemResponse"], "installmentNumber" | "installmentTotal">;
+export type InstallmentMonth = Omit<S["InstallmentMonthResponse"], "items"> & { items: InstallmentItem[] };
+export type InstallmentGroup = IntFields<
+  S["InstallmentGroupResponse"],
+  "installmentNumber" | "installmentTotal" | "remaining" | "multiplicity"
+>;
+export type Installments = Omit<S["InstallmentsResponse"], "accounts" | "months" | "groups"> & {
+  accounts: InstallmentAccount[];
+  months: InstallmentMonth[];
+  groups: InstallmentGroup[];
+};
