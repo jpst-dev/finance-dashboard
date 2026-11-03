@@ -30,3 +30,6 @@ Fatia nova: brainstorming (perguntas ao João viram decisões registradas, com a
 
 ## Pedidos de permissão do Claude Code
 O modo ausente não desliga os pedidos de permissão da ferramenta. Se a ferramenta pedir aprovação, o João pode aprovar pelo celular; para reduzir isso, o projeto pode ter uma lista de comandos pré-aprovados em `.claude/settings.json` (testes, builds, git local, docker compose sem `down -v`).
+
+## Escopo e parada (definido pelo João em 2026-11-03)
+Neste período ausente: **S2 (importador do Itaú) completa** — brainstorm, design, plano, execução, PR, CI verde, merge — e **depois a S1c** (demo estático que substitui o legado) completa, do mesmo jeito. **Depois da S1c, parar**: escrever o resumo de 5 linhas no `away-log.md`, atualizar a memória e não começar a S3 (conciliação) nem outra fatia até o João voltar; a S3 tem decisões de produto grandes que ele quer acompanhar. Se ficar sem trabalho antes dele voltar, não inventar escopo: no máximo preparar perguntas objetivas para ele no diário.
