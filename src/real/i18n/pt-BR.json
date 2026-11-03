@@ -361,7 +361,7 @@
       "categorized": "nenhuma linha categorizada | 1 linha categorizada | {n} linhas categorizadas"
     },
     "rules": {
-      "help": "Regras categorizam automaticamente linhas sem categoria cuja descrição original contém o trecho. Vence o trecho mais longo.",
+      "help": "Regras categorizam automaticamente linhas sem categoria cuja descrição original contém o trecho como palavra inteira (\"BAR\" não pega \"BARBEARIA\"). Vence o trecho mais longo.",
       "empty": "Nenhuma regra criada",
       "loading": "Carregando regras…",
       "tablePattern": "Trecho",

@@ -361,7 +361,7 @@
       "categorized": "no lines categorized | 1 line categorized | {n} lines categorized"
     },
     "rules": {
-      "help": "Rules automatically categorize uncategorized lines whose original description contains the snippet. The longest snippet wins.",
+      "help": "Rules automatically categorize uncategorized lines whose original description contains the snippet as a whole word (\"BAR\" does not match \"BARBEARIA\"). The longest snippet wins.",
       "empty": "No rules yet",
       "loading": "Loading rules…",
       "tablePattern": "Snippet",

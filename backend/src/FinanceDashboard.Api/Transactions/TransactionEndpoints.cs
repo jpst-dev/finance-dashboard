@@ -214,6 +214,9 @@ public static class TransactionEndpoints
         transaction.Amount = amount;
         transaction.NormalizedDescription = description;
         transaction.CategoryId = request.CategoryId;
+        // The edit is a full replacement: always write the category (even null -> null) so the UPDATE takes the row lock
+        // and the user's choice is serialized with the category rules' Apply instead of racing with it.
+        db.Entry(transaction).Property(t => t.CategoryId).IsModified = true;
         transaction.State = request.State ?? transaction.State;
         if (transaction.Origin == TransactionOrigin.Manual)
         {

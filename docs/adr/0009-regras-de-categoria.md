@@ -20,7 +20,7 @@ Depois das importações (Nubank, Itaú) e da conciliação (S3(a)/(b)), as linh
 - Sem prévia da categorização no import: o resultado aparece no `categorized` da confirmação e nas linhas.
 - Sem edição de regra: exclua e crie de novo.
 - Estornos e créditos de despesa ficam sem categoria (o tipo da categoria não combina com o sinal).
-- Seguimentos conhecidos: (1) corrida preexistente edição × aplicar quando a edição mantém a categoria nula (`null` → `null`) pode marcar a linha como editada sem efeito prático; (2) `ReclassifyAsync` pode ter risco de deadlock com edições em voo, igual ao que a reserva `SKIP LOCKED` evita aqui.
+- Seguimentos conhecidos: (1) a edição de uma linha sem categoria que mantém a categoria nula (`null` → `null`) agora também grava `CategoryId` (marcado como modificado), então o UPDATE toma o bloqueio da linha e a escolha do usuário é serializada com o "Aplicar" em vez de disputar com ele; (2) `ReclassifyAsync` pode ter risco de deadlock com edições em voo, igual ao que a reserva `SKIP LOCKED` evita aqui.
 
 ## Alternativas consideradas
 - Contém qualquer substring: "LOJA" pegaria "GLOJA"; limite de palavra erra menos.
