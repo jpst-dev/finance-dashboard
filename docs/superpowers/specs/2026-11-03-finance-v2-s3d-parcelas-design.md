@@ -40,7 +40,7 @@ O app mostra o que sobra no mês, mas não o que já está amarrado nos meses se
 - Sem escrita.
 
 ## Front
-- Página **Parcelas** (`/installments`, `real.titles.installments`, `real.nav.installments`, item de menu): barras do comprometido por mês (`chartMoneyOptions`/`toPlot`) e lista de grupos (descrição, conta/cartão, "N de T", restantes, valor, termina em). Aviso por conta quando `basedOn` é anterior ao mês passado ("baseado na fatura de MM/AAAA; importe a mais recente"). Estado vazio explicado. Valores via `Money.vue`, respeitando "esconder valores". Texto de terceiros sempre como texto.
+- Página **Parcelas** (`/installments`, `real.titles.installments`, `real.nav.installments`, item de menu): barras do comprometido por mês (`chartMoneyOptions`/`toPlot`) e lista de grupos (descrição, conta/cartão, "N de T", restantes, valor, termina em). Aviso por conta quando o mês de `basedOn` é anterior ao mês atual (no dia 1 a próxima parcela da fatura anterior já saiu da projeção) ("baseado na fatura de MM/AAAA; importe a mais recente"). Estado vazio explicado. Valores via `Money.vue`, respeitando "esconder valores". Texto de terceiros sempre como texto.
 - **Visão geral**: cartão "Comprometido nos próximos meses" com o total do mês corrente + 2 seguintes e link para a página; fica fora do MonthPicker; some se `totalCommitted` for 0; store próprio com loading/erro.
 - Plurais (nenhuma | 1 | N) em pt-BR e en-US ("1 parcela restante" / "N parcelas restantes").
 
@@ -52,6 +52,7 @@ O app mostra o que sobra no mês, mas não o que já está amarrado nos meses se
 - Mês de exibição = mês em que a parcela cai no resumo (não o do vencimento): evita a "comprometido em dezembro, aparece em novembro". Custo: quem pensa pelo vencimento da fatura vê o mês anterior ao vencimento.
 - Projetar por linha da fatura-base: elimina a multiplicidade e a identidade de grupo entre faturas; custo: sem histórico de grupos.
 - "Hoje" corta parcelas passadas; custo: com a fatura-base antiga o comprometido some até importar a mais recente (a tela avisa).
+- Aviso de base antiga quando `basedOn` é de um mês anterior ao atual (não "antes do mês passado"): no dia 1 a parcela seguinte da fatura anterior já foi cortada por "hoje" e o usuário precisa saber; custo: aviso também no mês entre o vencimento e a nova importação.
 - Estorno de compra parcelada não cancela; Pix parcelado entra se trouxer N/T; um vencimento por conta.
 - Contas arquivadas incluídas.
 

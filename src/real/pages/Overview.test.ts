@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import i18n from "../i18n";
@@ -43,6 +43,7 @@ beforeEach(() => {
   localStorage.clear();
   i18n.global.locale.value = "pt-BR";
 });
+afterEach(() => setAppConfig(null));
 
 describe("Overview committed card", () => {
   it("shows_card_with_next_three_months_and_loads_once", async () => {
@@ -50,7 +51,13 @@ describe("Overview committed card", () => {
     const { w, api } = await setup({ installments: installments({ months: [month("2026-11", "40.00"), month("2026-12", "60.50"), month("2027-03", "9.00")] }) });
     expect(w.find("[data-test=committed-total]").text()).toContain("100,50");
     expect(api.installments.get).toHaveBeenCalledTimes(1);
-    setAppConfig(null);
+  });
+  it("keeps_card_hidden_when_installments_request_fails", async () => {
+    setAppConfig({ fixedToday: "2026-11-03" });
+    const { w, api } = await setup({ installmentsError: new ApiError(500) });
+    expect(api.installments.get).toHaveBeenCalledTimes(1);
+    expect(w.find("[data-test=committed-card]").exists()).toBe(false);
+    expect(w.find("[data-test=committed-total]").exists()).toBe(false);
   });
   it("hides_card_when_nothing_is_committed", async () => {
     const { w } = await setup();

@@ -53,9 +53,9 @@ export function nextMonthsTotal(data: Installments | null, today: string, n = 3)
   return sumDecimals(data.months.filter((m) => wanted.has(m.month)).map((m) => m.total));
 }
 
-/** Contas cuja fatura-base é anterior ao mês passado: o comprometido delas pode estar defasado. */
+/** Contas cuja fatura-base é de um mês anterior ao atual: a próxima parcela dela já saiu da projeção ("hoje" corta o passado). */
 export function staleBases(data: Installments | null, today: string): InstallmentAccount[] {
   if (!data) return [];
-  const limit = addMonths(today.slice(0, 7), -1);
-  return data.accounts.filter((a) => a.basedOn.slice(0, 7) < limit);
+  const current = today.slice(0, 7);
+  return data.accounts.filter((a) => a.basedOn.slice(0, 7) < current);
 }

@@ -39,7 +39,7 @@ export function group(over: Partial<InstallmentGroup> = {}): InstallmentGroup {
 export function installments(over: Partial<Installments> = {}): Installments {
   return {
     totalCommitted: "700.00",
-    accounts: [{ accountId: "a1", accountName: "Cartão Exemplo", basedOn: "2026-10-10" }],
+    accounts: [{ accountId: "a1", accountName: "Cartão Exemplo", basedOn: "2026-11-02" }],
     months: [month("2026-11", "100.00"), month("2026-12", "100.00"), month("2027-01", "100.00")],
     groups: [group()],
     ...over,

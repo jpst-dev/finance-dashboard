@@ -26,6 +26,7 @@ export function fakeOverviewApi(opts: {
   recentTotal?: number;
   pending?: number;
   installments?: Installments;
+  installmentsError?: unknown;
 } = {}) {
   const recent = opts.recent ?? [];
   const summary = { month: vi.fn(opts.summaryImpl ?? (async (m: string) => sum(m))) };
@@ -39,7 +40,10 @@ export function fakeOverviewApi(opts: {
     ),
   };
   const installments = {
-    get: vi.fn(async () => opts.installments ?? { totalCommitted: "0.00", accounts: [], months: [], groups: [] }),
+    get: vi.fn(async () => {
+      if (opts.installmentsError) throw opts.installmentsError;
+      return opts.installments ?? { totalCommitted: "0.00", accounts: [], months: [], groups: [] };
+    }),
   };
   setApi({ summary, accounts, categories, transactions, installments } as unknown as ApiClient);
   return { summary, accounts, categories, transactions, installments };

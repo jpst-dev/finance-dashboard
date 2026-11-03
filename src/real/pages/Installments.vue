@@ -53,12 +53,11 @@ const account = (g: { accountName: string; cardSuffix: string | null }) =>
       {{ t("real.installments.loading") }}
     </p>
 
-    <ul v-if="stale.length" class="mt-3 space-y-1">
+    <ul v-if="stale.length" class="mt-3 space-y-1" role="status">
       <li
         v-for="s in stale"
         :key="s.id"
         class="rounded border border-amber-600 bg-amber-950/40 px-3 py-2 text-sm"
-        role="status"
         data-test="stale-base"
       >
         {{ s.text }}
@@ -90,7 +89,7 @@ const account = (g: { accountName: string; cardSuffix: string | null }) =>
       </ul>
 
       <h2 class="mt-6 mb-2 text-lg font-semibold">{{ t("real.installments.groupsTitle") }}</h2>
-      <table class="w-full text-left text-sm" data-test="groups-table">
+      <table class="w-full text-left text-sm" data-test="groups-table" :aria-label="t('real.installments.groupsTitle')">
         <thead>
           <tr class="border-b border-gray-700 text-gray-400">
             <th scope="col" class="py-1 pr-3">{{ t("real.installments.colDescription") }}</th>

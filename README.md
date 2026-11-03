@@ -283,7 +283,7 @@ Regras "trecho da descrição → categoria" categorizam sozinhas as linhas impo
 
 Mostra quanto já está amarrado nos próximos meses por compras parceladas no cartão Itaú. É só uma visão: nada futuro vira lançamento, saldo ou categoria.
 
-- **De onde vem**: das linhas da fatura **mais recente importada de cada conta** que trazem "Parcela N de T" (cobrança, valor negativo). As parcelas `N+1 … T` são projetadas mês a mês a partir do vencimento dessa fatura. Importe a fatura mais recente para atualizar; se a base tiver ficado para trás, a página avisa por conta.
+- **De onde vem**: das linhas da fatura **mais recente importada de cada conta** que trazem "Parcela N de T" (cobrança, valor negativo). As parcelas `N+1 … T` são projetadas mês a mês a partir do vencimento dessa fatura. Importe a fatura mais recente para atualizar; a página avisa por conta quando a fatura-base é de um mês anterior ao atual.
 - **Mês exibido**: o mês em que a parcela vai aparecer no resumo mensal (um mês antes do vencimento da fatura). Só entram parcelas do mês corrente em diante.
 - **Onde ver**: página **Parcelas** (barras por mês e lista de compras com "N de T", restantes, valor e quando termina) e o cartão "Comprometido nos próximos meses" na Visão geral.
 - **API**: `GET /api/installments` (somente leitura; dinheiro como string decimal).

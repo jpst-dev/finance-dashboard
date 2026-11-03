@@ -83,12 +83,12 @@ describe("Installments page", () => {
     expect(w.find("[data-test=group-row]").text()).toContain("×2");
   });
 
-  it("warns_per_account_when_base_is_older_than_last_month", async () => {
+  it("warns_per_account_when_base_is_from_a_previous_month", async () => {
     const { w } = await setup(
       installments({
         accounts: [
           { accountId: "a1", accountName: "Cartão Velho", basedOn: "2026-08-10" },
-          { accountId: "a2", accountName: "Cartão Novo", basedOn: "2026-10-10" },
+          { accountId: "a2", accountName: "Cartão Novo", basedOn: "2026-11-02" },
         ],
       }),
     );

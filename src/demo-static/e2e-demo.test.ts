@@ -217,7 +217,9 @@ describe("demo estático: interface real somente leitura", () => {
     const { router } = await boot();
     // Visão geral: cartão do comprometido com o total do mês corrente + 2 seguintes (fixtures do servidor real).
     expect(q("[data-test=committed-card]")).not.toBeNull();
-    expect(q("[data-test=committed-total]")!.textContent).toMatch(MONEY_LIKE);
+    // Mês corrente (2026-10) + 2 seguintes: 514,90 + 514,90 + 189,90.
+    expect(f.installments.totalCommitted).toBe("1219.70");
+    expect(q("[data-test=committed-total]")!.textContent).toContain("1.219,70");
 
     await visit(router, "/installments");
     expect(router.currentRoute.value.path).toBe("/installments");
@@ -229,7 +231,14 @@ describe("demo estático: interface real somente leitura", () => {
       f.installments.groups.map((g) => g.description),
     );
     expect(f.installments.groups.length).toBeGreaterThan(0);
-    expect(q("[data-test=total]")!.textContent).toMatch(MONEY_LIKE);
+    expect(q("[data-test=total]")!.textContent).toContain("1.219,70");
+    const rows = qa("[data-test=group-row]").map((r) => r.textContent!.replace(/\s+/g, " "));
+    expect(rows[0]).toContain("Móveis Fictícios");
+    expect(rows[0]).toContain("325,00");
+    expect(rows[1]).toContain("Eletrodomésticos Exemplo");
+    expect(rows[1]).toContain("189,90");
+    expect(qa("[data-test=group-progress]").map((e) => e.textContent?.trim())).toEqual(["2 de 4", "3 de 6"]);
+    expect(qa("[data-test=group-remaining]").map((e) => e.textContent?.trim())).toEqual(["2 parcelas restantes", "3 parcelas restantes"]);
   });
 
   it("transactions_show_link_badges_and_mark_actions_without_network", async () => {

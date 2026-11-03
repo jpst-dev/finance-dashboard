@@ -81,12 +81,16 @@ describe("nextMonthsTotal", () => {
 
 describe("staleBases", () => {
   const acc = (basedOn: string) => ({ accountId: "a", accountName: "C", basedOn });
-  it("flags_only_bases_older_than_last_month", () => {
+  it("flags_bases_from_a_month_before_the_current_one", () => {
     const d = installments({ accounts: [acc("2026-10-10"), acc("2026-09-10"), acc("2026-11-02")] });
-    expect(staleBases(d, "2026-11-03").map((a) => a.basedOn)).toEqual(["2026-09-10"]);
+    expect(staleBases(d, "2026-11-03").map((a) => a.basedOn)).toEqual(["2026-10-10", "2026-09-10"]);
   });
-  it("january_looks_back_to_december", () => {
-    const d = installments({ accounts: [acc("2025-12-31"), acc("2025-11-30")] });
-    expect(staleBases(d, "2026-01-05").map((a) => a.basedOn)).toEqual(["2025-11-30"]);
+  it("base_in_the_current_month_does_not_warn_even_on_day_one", () => {
+    const d = installments({ accounts: [acc("2026-11-30")] });
+    expect(staleBases(d, "2026-11-01")).toEqual([]);
+  });
+  it("january_flags_december", () => {
+    const d = installments({ accounts: [acc("2025-12-31"), acc("2026-01-02")] });
+    expect(staleBases(d, "2026-01-05").map((a) => a.basedOn)).toEqual(["2025-12-31"]);
   });
 });
