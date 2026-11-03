@@ -35,4 +35,34 @@ public sealed class OpenApiTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
     }
+
+    [Fact]
+    public async Task Documents_accounts_categories_transactions_summary_imports_routes()
+    {
+        await using var factory = new ApiFactory(await postgres.CreateDatabaseAsync());
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/openapi/v1.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var paths = json.RootElement.GetProperty("paths");
+        (string Path, string Method)[] expected =
+        [
+            ("/api/accounts", "get"), ("/api/accounts", "post"), ("/api/accounts/{id}", "put"),
+            ("/api/accounts/{accountId}/checkpoints", "get"), ("/api/accounts/{accountId}/checkpoints", "post"),
+            ("/api/categories", "get"), ("/api/categories", "post"),
+            ("/api/categories/{id}", "put"), ("/api/categories/{id}", "delete"),
+            ("/api/transactions", "get"), ("/api/transactions", "post"),
+            ("/api/transactions/{id}", "put"), ("/api/transactions/{id}", "delete"),
+            ("/api/summary", "get"),
+            ("/api/imports", "get"), ("/api/imports", "post"), ("/api/imports/{id}", "get"),
+            ("/api/imports/{id}/confirm", "post"), ("/api/imports/{id}/undo", "post"),
+        ];
+        foreach (var (path, method) in expected)
+        {
+            Assert.True(paths.TryGetProperty(path, out var item), $"missing path {path}");
+            Assert.True(item.TryGetProperty(method, out _), $"missing {method} on {path}");
+        }
+    }
 }

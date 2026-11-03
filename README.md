@@ -88,7 +88,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md) e [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md) e [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md) e [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md).
 
 ### Rodando localmente
 
@@ -124,6 +124,51 @@ Depois de recriar o container da API (`docker compose up -d --build api`), reini
 ```bash
 docker compose restart web
 ```
+
+### Importando um extrato Nubank (S1a)
+
+A API aceita o OFX do Nubank (conta corrente e cartão), mostra uma **prévia** e só grava depois da confirmação. Tudo pode ser exercitado pelo `curl` (ou pelo Scalar). O token antiforgery está **atrelado à identidade**: depois do login é preciso pedir um **novo** token em `/api/auth/csrf`.
+
+```bash
+B=http://127.0.0.1:8080
+J=jar.txt
+
+# 1) token antes do login e login
+T=$(curl -s -c $J -b $J $B/api/auth/csrf | sed -E 's/.*"token":"([^"]+)".*/\1/')
+curl -s -c $J -b $J -X POST $B/api/auth/login -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $T" \
+  -d '{"email":"<SEED_USER_EMAIL>","password":"<SEED_USER_PASSWORD>"}'
+
+# 2) novo token (agora ligado ao usuário logado)
+T=$(curl -s -c $J -b $J $B/api/auth/csrf | sed -E 's/.*"token":"([^"]+)".*/\1/')
+
+# 3) criar a conta (Checking para conta corrente, CreditCard para cartão)
+ACC=$(curl -s -c $J -b $J -X POST $B/api/accounts -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $T" \
+  -d '{"name":"Nubank conta","type":"Checking","institution":"Nubank"}' | sed -E 's/.*"id":"([^"]+)".*/\1/')
+
+# 4) enviar o OFX (multipart: file + accountId) -> prévia (200); nada foi gravado ainda
+BATCH=$(curl -s -c $J -b $J -X POST $B/api/imports -H "X-XSRF-TOKEN: $T" \
+  -F "accountId=$ACC" -F "file=@extrato.ofx" | sed -E 's/.*"batchId":"([^"]+)".*/\1/')
+curl -s -b $J $B/api/imports/$BATCH          # reler a prévia (novas, existentes, avisos)
+
+# 5) confirmar (200); avisos bloqueantes exigem {"acknowledgeBlockingWarnings":true}
+curl -s -c $J -b $J -X POST $B/api/imports/$BATCH/confirm -H "Content-Type: application/json" \
+  -H "X-XSRF-TOKEN: $T" -d '{"acknowledgeBlockingWarnings":false}'
+
+# 6) resumo do mês, calculado no servidor
+curl -s -b $J "$B/api/summary?month=2026-10"
+
+# 7) desfazer o lote (204)
+curl -s -o /dev/null -w "%{http_code}\n" -c $J -b $J -X POST $B/api/imports/$BATCH/undo -H "X-XSRF-TOKEN: $T"
+```
+
+Regras e limites:
+
+- **Limites do upload**: 1 arquivo `.ofx` de até **5 MB** (o nginx aceita até 6 MB de corpo; acima disso `413`). O formato é validado pelo conteúdo: arquivo vazio, não-OFX ou com `<!DOCTYPE`/entidades responde `422` com um código de erro, sem repetir o conteúdo. O arquivo **não é guardado**; só a prévia fica no servidor, por **24 h**. Depois disso a confirmação é recusada e é preciso enviar de novo.
+- **Idempotência**: reenviar o mesmo arquivo, ou outro com períodos sobrepostos, não duplica lançamentos (identidade = conta + FITID + ordinal). Veja o [ADR 0003](docs/adr/0003-importacao-idempotente-e-desfazer.md).
+- **Pendentes de classificação**: linhas que as regras não sabem classificar (ex.: parte do cartão sem categoria clara) entram com `state = PendingClassification`. Elas **ficam fora do resumo** (receitas, despesas e categorias) e são só contadas em `pendingCount`/`pendingTotal` até serem reclassificadas. Para reclassificar, use `PUT /api/transactions/{id}` com `state` (`Normal`) e/ou `categoryId`; a linha passa a contar no resumo.
+- **Exclusão lógica**: `DELETE /api/transactions/{id}` de uma linha importada a marca como excluída (marcador); ela some das listagens e do resumo e **não volta** se o mesmo arquivo for importado de novo.
+- **Desfazer**: `POST /api/imports/{id}/undo` apaga as linhas criadas pelo lote (inclusive as excluídas logicamente) e o checkpoint de saldo que ele gerou, e libera o arquivo para reimportar. Atenção: se outro lote sobreposto "pulou" linhas que o primeiro criou, desfazer o primeiro **remove essas linhas também**; reimporte o arquivo para recuperá-las. Desfazer uma prévia apenas a descarta.
+- **Documentação interativa**: abra **http://127.0.0.1:8080/api/docs** (Scalar). Faça login pelas rotas `/api/auth/*` e use o campo de cabeçalho `X-XSRF-TOKEN` nas chamadas que alteram dados; a especificação OpenAPI fica em `/api/openapi/v1.json`.
 
 ### Desenvolvimento
 
