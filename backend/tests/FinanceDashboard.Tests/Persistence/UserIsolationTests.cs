@@ -1,7 +1,12 @@
+using System.Net;
+using System.Text.Json;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure;
+using FinanceDashboard.Tests.Importing;
 using FinanceDashboard.Tests.Infrastructure;
+using FinanceDashboard.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using static FinanceDashboard.Tests.Importing.ImportTestApi;
 
 namespace FinanceDashboard.Tests.Persistence;
 
@@ -84,5 +89,83 @@ public sealed class UserIsolationTests(PostgresFixture postgres)
         await db.SaveChangesAsync();
         Assert.Empty(await db.Transactions.Visible().ToListAsync());
         Assert.Single(await db.Transactions.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Itau_files_are_isolated_between_users()
+    {
+        await using var f = new ApiFactory(await postgres.CreateDatabaseAsync());
+        using var a = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        using var b = await AuthedClient.CreateAsync(f, "b@example.com", Password);
+
+        var ofx = OfxTestFile.Itau().NoLedger()
+            .Line("20261005000000", "-2.50", "PIX QRS CAFE FICTICIO").Line("20261005000000", "-2.50", "PIX QRS CAFE FICTICIO")
+            .Line("20261006000000", "-12.30", "PIX QRS PADARIA FICTICIA")
+            .Build();
+        static XlsxTestFile Invoice(bool withB) => withB
+            ? XlsxTestFile.Invoice("2026-11-10", total: "130.00").Line("2026-10-03", "LOJA A FICTICIA", "100.00")
+                .Line("2026-10-04", "LOJA B FICTICIA", "30.00")
+            : XlsxTestFile.Invoice("2026-11-10", total: "100.00").Line("2026-10-03", "LOJA A FICTICIA", "100.00");
+
+        static string[] Codes(JsonElement preview) =>
+            preview.GetProperty("warnings").EnumerateArray().Select(w => w.GetProperty("code").GetString()!).ToArray();
+
+        async Task<JsonElement> Preview(AuthedClient c, Guid account, byte[] file, string name)
+        {
+            var r = await UploadAsync(c, account, file, name);
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            return await JsonOf(r);
+        }
+
+        // A imports the statement and the full invoice.
+        var aChecking = await CreateAccountAsync(a);
+        var aCard = await CreateAccountAsync(a, "CreditCard");
+        var aOfx = await Preview(a, aChecking, ofx, "extrato.ofx");
+        var aInvoice = await Preview(a, aCard, Invoice(withB: true).Build(), "fatura.xlsx");
+        var aOfxBatch = aOfx.GetProperty("batchId").GetGuid();
+        var aInvoiceBatch = aInvoice.GetProperty("batchId").GetGuid();
+
+        // B uploads the very same OFX bytes while A's preview is open: it must not replace A's preview.
+        var bChecking = await CreateAccountAsync(b);
+        var bCard = await CreateAccountAsync(b, "CreditCard");
+        var bOfxEarly = await Preview(b, bChecking, ofx, "extrato.ofx");
+        Assert.Equal(HttpStatusCode.OK, (await a.GetAsync($"/api/imports/{aOfxBatch}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await UndoAsync(b, bOfxEarly.GetProperty("batchId").GetGuid())).StatusCode);
+
+        Assert.Equal(3, (await ConfirmOkAsync(a, aOfxBatch)).GetProperty("created").GetInt32());
+        Assert.Equal(2, (await ConfirmOkAsync(a, aInvoiceBatch)).GetProperty("created").GetInt32());
+
+        // After A confirmed: same OFX bytes and a smaller version of the same invoice for B.
+        var bOfx = await Preview(b, bChecking, ofx, "extrato.ofx");
+        Assert.Empty(Codes(bOfx)); // no AlreadyImported, FitidInOtherAccount, PossibleDuplicate, PeriodOverlap
+        Assert.Equal(3, bOfx.GetProperty("newCount").GetInt32());
+        Assert.All(bOfx.GetProperty("lines").EnumerateArray(), l => Assert.False(l.GetProperty("existing").GetBoolean()));
+        var bInvoice = await Preview(b, bCard, Invoice(withB: false).Build(), "fatura.xlsx");
+        Assert.Empty(Codes(bInvoice)); // A's line B is not "missing" from B's invoice
+        Assert.Equal(1, bInvoice.GetProperty("newCount").GetInt32());
+
+        // B cannot read, confirm or undo A's batches.
+        Assert.Equal(HttpStatusCode.NotFound, (await b.GetAsync($"/api/imports/{aOfxBatch}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await b.GetAsync($"/api/imports/{aInvoiceBatch}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await UndoAsync(b, aOfxBatch)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await a.GetAsync($"/api/imports/{bOfx.GetProperty("batchId").GetGuid()}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ConfirmAsync(a, bOfx.GetProperty("batchId").GetGuid())).StatusCode);
+
+        Assert.Equal(3, (await ConfirmOkAsync(b, bOfx.GetProperty("batchId").GetGuid())).GetProperty("created").GetInt32());
+        Assert.Equal(1, (await ConfirmOkAsync(b, bInvoice.GetProperty("batchId").GetGuid())).GetProperty("created").GetInt32());
+
+        // Each one sees only their own batches and lines.
+        var aList = (await JsonOf(await a.GetAsync("/api/imports"))).EnumerateArray().Select(x => x.GetProperty("batchId").GetGuid()).ToHashSet();
+        Assert.Equal(new HashSet<Guid> { aOfxBatch, aInvoiceBatch }, aList);
+        var bList = (await JsonOf(await b.GetAsync("/api/imports"))).EnumerateArray().Select(x => x.GetProperty("batchId").GetGuid()).ToHashSet();
+        Assert.Equal(new HashSet<Guid> { bOfx.GetProperty("batchId").GetGuid(), bInvoice.GetProperty("batchId").GetGuid() }, bList);
+        Assert.Equal(5, (await JsonOf(await a.GetAsync("/api/transactions"))).GetProperty("total").GetInt32());
+        Assert.Equal(4, (await JsonOf(await b.GetAsync("/api/transactions"))).GetProperty("total").GetInt32());
+
+        await using var dbA = PersistenceTestSupport.Create(f.ConnectionString, a.UserId);
+        Assert.All(await dbA.Transactions.ToListAsync(), t => Assert.Contains(t.AccountId, new[] { aChecking, aCard }));
+        await using var dbB = PersistenceTestSupport.Create(f.ConnectionString, b.UserId);
+        Assert.All(await dbB.Transactions.ToListAsync(), t => Assert.Contains(t.AccountId, new[] { bChecking, bCard }));
+        Assert.Equal(9, await dbB.Transactions.IgnoreQueryFilters().CountAsync());
     }
 }
