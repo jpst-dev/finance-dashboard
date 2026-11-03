@@ -264,6 +264,48 @@ public sealed class CategoryRuleServiceTests(PostgresFixture postgres)
         Assert.Equal(lazerId, (await ReloadAsync(db, lineId)).CategoryId);
     }
 
+    [Theory]
+    [InlineData("edited")]
+    [InlineData("pending")]
+    [InlineData("deleted")]
+    public async Task Apply_update_guard_rechecks_line_state_committed_concurrently(string change)
+    {
+        var cs = await NewDbAsync();
+        Guid lineId;
+        await using (var seed = PersistenceTestSupport.Create(cs, User))
+        {
+            var w = new World(seed);
+            var mercado = await w.CategoryAsync("Mercado");
+            await w.RuleAsync("SUPERMERCADO EXEMPLO", mercado.Id);
+            lineId = (await w.LineAsync("SUPERMERCADO EXEMPLO", -50m)).Id;
+        }
+
+        // Committed (CategoryId still null) after the candidates were read and before the reservation: only the WHERE of
+        // the final UPDATE can notice.
+        var hook = new CommandHook("SKIP LOCKED", async () =>
+        {
+            await using var other = PersistenceTestSupport.Create(cs, User);
+            var lines = other.Transactions.Where(t => t.Id == lineId);
+            _ = change switch
+            {
+                "edited" => await lines.ExecuteUpdateAsync(s => s.SetProperty(t => t.EditedByUser, true)),
+                "pending" => await lines.ExecuteUpdateAsync(s => s.SetProperty(t => t.State, TransactionState.PendingClassification)),
+                _ => await lines.ExecuteUpdateAsync(s => s.SetProperty(t => t.IsDeleted, true)),
+            };
+        });
+        await using var db = Hooked(cs, User, hook);
+
+        var applied = await Service(db).ApplyAsync();
+
+        Assert.True(hook.Fired);
+        Assert.Equal(0, applied);
+        var after = await ReloadAsync(db, lineId);
+        Assert.Null(after.CategoryId);
+        Assert.Equal(change == "edited", after.EditedByUser);
+        Assert.Equal(change == "deleted", after.IsDeleted);
+        Assert.Equal(change == "pending" ? TransactionState.PendingClassification : TransactionState.Normal, after.State);
+    }
+
     [Fact]
     public async Task Apply_skips_line_being_edited_without_waiting()
     {

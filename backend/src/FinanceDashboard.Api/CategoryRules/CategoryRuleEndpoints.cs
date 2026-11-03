@@ -8,7 +8,7 @@ public sealed record CategoryRuleResponse(
     Guid Id, string Pattern, Guid CategoryId, string CategoryName, DateTimeOffset CreatedAt, int Matches);
 
 /// <summary>Body of POST /api/category-rules.</summary>
-public sealed record CreateCategoryRuleRequest(string Pattern, Guid CategoryId);
+public sealed record CreateCategoryRuleRequest(string? Pattern, Guid CategoryId);
 
 /// <summary>Body of a 400/409 on rule creation.</summary>
 public sealed record CategoryRuleErrorResponse(string Error);

@@ -1840,7 +1840,10 @@
         "type": "object",
         "properties": {
           "pattern": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "categoryId": {
             "type": "string",

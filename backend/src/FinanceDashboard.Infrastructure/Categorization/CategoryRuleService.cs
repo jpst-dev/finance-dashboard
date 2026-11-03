@@ -47,7 +47,7 @@ public sealed class CategoryRuleService(AppDbContext db, TimeProvider time)
     }
 
     /// <summary>Creates a rule (it is not applied: the user asks for that). The pattern is stored normalized.</summary>
-    public async Task<CreateRuleResult> CreateAsync(string pattern, Guid categoryId, CancellationToken ct = default)
+    public async Task<CreateRuleResult> CreateAsync(string? pattern, Guid categoryId, CancellationToken ct = default)
     {
         if (pattern is null || pattern.Length > MaxRawPattern
             || CategoryRuleMatcher.NormalizePattern(pattern) is not { } normalized)

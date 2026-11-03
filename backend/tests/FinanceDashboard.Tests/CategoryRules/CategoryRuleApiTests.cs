@@ -129,6 +129,23 @@ public sealed class CategoryRuleApiTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Create_missing_or_null_pattern_400()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var mercado = await CategoryAsync(c, "Mercado");
+
+        foreach (var body in new object[] { new { categoryId = mercado }, new { pattern = (string?)null, categoryId = mercado } })
+        {
+            var r = await c.PostAsync("/api/category-rules", body);
+            Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+            Assert.Equal("invalid_pattern", await ErrorOf(r));
+        }
+
+        Assert.Equal(0, (await ListAsync(c)).GetArrayLength());
+    }
+
+    [Fact]
     public async Task Create_invalid_pattern_400_too_long()
     {
         await using var f = await NewFactoryAsync();
