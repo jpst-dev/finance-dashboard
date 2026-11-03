@@ -22,7 +22,7 @@ public sealed record BlockingWarningsResponse(string Error, IReadOnlyList<Import
 public static class ImportEndpoints
 {
     /// <summary>Whole multipart request: the 5 MB file plus a small envelope (boundaries, accountId).</summary>
-    public const long MaxRequestBytes = NubankOfxReader.MaxBytes + 64 * 1024;
+    public const long MaxRequestBytes = StatementReader.MaxBytes + 64 * 1024;
 
     public static IEndpointRouteBuilder MapImports(this IEndpointRouteBuilder app)
     {
@@ -146,7 +146,7 @@ public static class ImportEndpoints
         if (ids.Count != 1 || !Guid.TryParse(ids[0], out var accountId)) return Results.BadRequest();
 
         var file = form.Files[0];
-        if (file.Length > NubankOfxReader.MaxBytes) return TooLarge();
+        if (file.Length > StatementReader.MaxBytes) return TooLarge();
         var content = new byte[file.Length];
         await using (var stream = file.OpenReadStream())
         {

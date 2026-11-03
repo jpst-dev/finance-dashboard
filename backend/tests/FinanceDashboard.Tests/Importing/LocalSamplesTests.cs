@@ -49,7 +49,7 @@ public sealed class LocalSamplesTests
 
         foreach (var file in files)
         {
-            var parsed = NubankOfxReader.Parse(File.ReadAllBytes(file));
+            var parsed = StatementReader.Read(File.ReadAllBytes(file));
 
             Assert.True(parsed.Lines.Count > 0, "a sample has no lines");
             Assert.True(parsed.Lines.All(l => !string.IsNullOrEmpty(l.SourceKey)), "a sample line has no FITID");

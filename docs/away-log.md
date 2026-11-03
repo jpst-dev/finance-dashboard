@@ -13,3 +13,5 @@ Regras em [away-mode.md](away-mode.md).
 - S2 T2: `PossibleDuplicate` compara os 12 primeiros caracteres de `SourceKeys.NormalizeText` aplicados ao `Memo` da linha nova e ao `OriginalDescription` da linha existente; vale para todas as fontes (inclusive Nubank), só contra linhas visíveis.
 - S2 T2: o `invoice` da prévia/histórico vem das colunas `DueDate`/`DeclaredTotal` do lote (não do JSON da prévia), para continuar aparecendo depois do confirm (que zera o `PreviewJson`).
 - S2 T2: `types.ts` torna `ImportLineOverride.ordinal` opcional (o openapi-typescript marca como obrigatório todo campo com `default`) e `ConfirmBody.overrides` usa esse tipo, para o corpo do Nubank continuar sem `ordinal`.
+- S2 T3: `OfxReader` não exige FITID (o perfil Nubank é quem rejeita a ausência, com `malformed` e a linha do `STMTTRN`); `BANKID` ausente seleciona Nubank (cartão não traz), `BANKID` que só tem zeros vira `unsupported_bank`.
+- S2 T3: `StatementReader.Read` checa `too_large`/`empty` antes de ler o OFX; o limite de 5 MiB vive só em `StatementReader.MaxBytes` (o `OfxReader` o consulta).

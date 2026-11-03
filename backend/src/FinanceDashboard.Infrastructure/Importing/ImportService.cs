@@ -166,12 +166,12 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId, ct);
         if (account is null) return PreviewOutcome.Fail(PreviewError.AccountNotFound);
         if (account.IsArchived) return PreviewOutcome.Fail(PreviewError.AccountArchived);
-        if (content.Length > NubankOfxReader.MaxBytes) return PreviewOutcome.Fail(PreviewError.TooLarge, "too_large");
+        if (content.Length > StatementReader.MaxBytes) return PreviewOutcome.Fail(PreviewError.TooLarge, "too_large");
 
         ParsedStatement parsed;
         try
         {
-            parsed = NubankOfxReader.Parse(content);
+            parsed = StatementReader.Read(content);
         }
         catch (ImportFormatException e)
         {

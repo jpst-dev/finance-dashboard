@@ -16,12 +16,16 @@ public sealed class OfxTestFile
     private int _statements = 1;
     private string? _ledger = "100.50|20261031000000[-3:BRT]";
     private string _acctId = "ACC-0001";
+    private string? _bankId = "0260";
     private string? _extraBeforeOfx;
     private string _dtStart = "20261001000000[-3:BRT]";
     private string _dtEnd = "20261031000000[-3:BRT]";
 
     public static OfxTestFile Checking() => new();
     public static OfxTestFile Card() => new() { _card = true };
+    public static OfxTestFile Itau() => new OfxTestFile().Bank("0341").Unclosed().Charset("1252").AccountId("12345");
+
+    public OfxTestFile Bank(string? id) { _bankId = id; return this; }
 
     public OfxTestFile Charset(string charset) { _charset = charset; return this; }
     public OfxTestFile Encoding(string encoding) { _encodingHeader = encoding; return this; }
@@ -65,7 +69,10 @@ public sealed class OfxTestFile
               .Append(Leaf("CURDEF", "BRL")).Append(nl);
             sb.Append('<').Append(from).Append('>');
             if (!_card)
-                sb.Append(Leaf("BANKID", "0260")).Append(Leaf("BRANCHID", "0001"));
+            {
+                if (_bankId is not null) sb.Append(Leaf("BANKID", _bankId));
+                sb.Append(Leaf("BRANCHID", "0001"));
+            }
             sb.Append(Leaf("ACCTID", _acctId));
             if (!_card) sb.Append(Leaf("ACCTTYPE", "CHECKING"));
             sb.Append("</").Append(from).Append('>').Append(nl);
