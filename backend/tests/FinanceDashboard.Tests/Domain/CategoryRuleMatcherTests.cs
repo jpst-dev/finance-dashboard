@@ -88,6 +88,14 @@ public class CategoryRuleMatcherTests
 
     [Theory]
     [InlineData("Pix FULANO FICTICIO ***.123.456-** 12/05", "PIX FULANO FICTICIO")]
+    [InlineData("PIX ENVIADO Maria ***.123.456-**", "PIX ENVIADO MARIA")]
+    [InlineData("PIX ENVIADO ***.123.456-** Maria", "PIX ENVIADO ***.123.456-** MARIA")]
+    [InlineData("PG *TON-LOJA EXEMPLO", "PG *TON-LOJA EXEMPLO")]
+    [InlineData("Pix FULANO •••.123.456-••", "PIX FULANO")]
+    [InlineData("Transf ***.123.456-** 4567 12/05/2026", "TRANSF")]
+    [InlineData("IFOOD *LOJA 123", "IFOOD *LOJA")]
+    [InlineData("Pix *** Fulano", "PIX *** FULANO")]
+    [InlineData("AB ***.123.456-**", null)]
     [InlineData("Compra Supermercado Exemplo 12/05/2026", "COMPRA SUPERMERCADO EXEMPLO")]
     [InlineData("Assinatura Ficticia 03 11", "ASSINATURA FICTICIA")]
     [InlineData("Loja Exemplo 12345", "LOJA EXEMPLO")]
@@ -98,6 +106,24 @@ public class CategoryRuleMatcherTests
     public void SuggestPattern_strips_masked_documents_dates_and_trailing_numbers(string description, string? expected) =>
         Assert.Equal(expected, CategoryRuleMatcher.SuggestPattern(description));
 
+    public static TheoryData<string> SuggestionDescriptions() => new()
+    {
+        "PIX ENVIADO ***.123.456-** Maria", "PG *TON-LOJA EXEMPLO", "Pix FULANO •••.123.456-••",
+        "Compra no debito - Supermercado Exemplo 05/10", "Padaria S.A. - Centro 12/03/2026 99", "  Padaria   São João ",
+        "IFOOD *LOJA EXEMPLO 1,50", "Transf ***.123.456-** 4567 12/05", "Loja 24H - Centro", "AB ***.123.456-**",
+        "Açaí & Cia ***-1 Exemplo", "",
+    };
+
+    [Theory]
+    [MemberData(nameof(SuggestionDescriptions))]
+    public void Property_suggestion_always_matches_its_own_line(string description)
+    {
+        var suggestion = CategoryRuleMatcher.SuggestPattern(description);
+        if (suggestion is null) return;
+        Assert.True(CategoryRuleMatcher.Matches(NameKeys.Normalize(description)!, suggestion),
+            $"'{suggestion}' does not match its own description");
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
@@ -107,16 +133,32 @@ public class CategoryRuleMatcherTests
     public void Property_winner_is_deterministic_under_rule_order(int seed)
     {
         var rng = new Random(seed);
-        var patterns = new[] { "SUPER", "SUPERMERCADO", "SUPERMERCADO EXEMPLO", "EXEMPLO", "MERCADO", "SUPERMERCADO EXEMPLO" };
+        // All Expense, all matching, equal CreatedAt, distinct Ids; equal-length patterns tie on Id, mixed lengths on length.
+        var patterns = new[]
+        {
+            "SUPER", "SUPERMERCADO", "SUPERMERCADO EXEMPLO", "EXEMPLO", "MERCADO", "COMPRA", "SUPERMERCADO", "DEBITO",
+            "COMPRA NO DEBITO", "NO DEBITO",
+        };
         var rules = patterns
-            .Select((p, i) => Rule(p, i % 2 == 0 ? CategoryKind.Expense : CategoryKind.Income,
-                T0.AddDays(rng.Next(0, 3)), new Guid(rng.Next(), 0, 0, new byte[8])))
+            .Select((p, i) => Rule(p, CategoryKind.Expense, T0, new Guid(rng.Next(), 0, 0, new byte[8])))
             .ToList();
-        var expected = CategoryRuleMatcher.Winner("Compra Supermercado Exemplo 9", -10m, rules);
+        const string description = "Compra no debito - Supermercado Exemplo 9";
+        var expected = CategoryRuleMatcher.Winner(description, -10m, rules);
+        Assert.NotNull(expected);
+        Assert.Equal("SUPERMERCADO EXEMPLO", rules.Single(r => r.Id == expected).Pattern); // longest
         for (var i = 0; i < 50; i++)
         {
             var shuffled = rules.OrderBy(_ => rng.Next()).ToList();
-            Assert.Equal(expected, CategoryRuleMatcher.Winner("Compra Supermercado Exemplo 9", -10m, shuffled));
+            Assert.Equal(expected, CategoryRuleMatcher.Winner(description, -10m, shuffled));
         }
+
+        // Equal-length matching patterns, same CreatedAt: the lowest Id wins whatever the order.
+        var equal = new[] { "COMPRA", "DEBITO", "NO", "9" } // the two 6-char patterns tie on length and CreatedAt
+            .Select(p => Rule(p, CategoryKind.Expense, T0, new Guid(rng.Next(1, int.MaxValue), 0, 0, new byte[8]))).ToList();
+        var tieWinner = CategoryRuleMatcher.Winner(description, -10m, equal);
+        var lowest = equal.Where(r => r.Pattern.Length == 6).OrderBy(r => r.Id).First().Id;
+        Assert.Equal(lowest, tieWinner);
+        for (var i = 0; i < 50; i++)
+            Assert.Equal(tieWinner, CategoryRuleMatcher.Winner(description, -10m, equal.OrderBy(_ => rng.Next()).ToList()));
     }
 }

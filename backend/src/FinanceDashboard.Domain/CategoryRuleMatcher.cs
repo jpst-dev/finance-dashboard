@@ -54,21 +54,22 @@ public static class CategoryRuleMatcher
     {
         var tokens = (originalDescription ?? "")
             .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
-            .Where(t => !IsMaskedDocument(t))
             .ToList();
         return NormalizePattern(string.Join(' ', StripTrailing(tokens)));
     }
 
-    // Masked documents look like "***.123.456-**": asterisks next to digits, dots or dashes. A store marker such as "*LOJA" is kept.
+    // Masked documents look like "***.123.456-**" (Nubank: "•••.123.456-••"): only mask, digits and separators, with at
+    // least one mask char and one digit. Only a TRAILING one is dropped, so a suggestion is always a prefix of the description.
     private static bool IsMaskedDocument(string token) =>
-        token.Contains('*') && token.Any(c => char.IsDigit(c) || c is '.' or '-');
+        token.All(c => c is '*' or '•' or '.' or '-' or '/' || char.IsAsciiDigit(c))
+        && token.Any(c => c is '*' or '•') && token.Any(char.IsAsciiDigit);
 
     private static List<string> StripTrailing(List<string> tokens)
     {
         while (tokens.Count > 0)
         {
             var last = tokens[^1];
-            if (DateToken.IsMatch(last) || NumberToken.IsMatch(last)) tokens.RemoveAt(tokens.Count - 1);
+            if (DateToken.IsMatch(last) || NumberToken.IsMatch(last) || IsMaskedDocument(last)) tokens.RemoveAt(tokens.Count - 1);
             else break;
         }
         return tokens;
