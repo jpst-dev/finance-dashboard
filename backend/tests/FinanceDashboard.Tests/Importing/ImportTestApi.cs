@@ -22,13 +22,14 @@ internal static class ImportTestApi
         .Line("20261010000000[-3:BRT]", "250.00", "Transferencia recebida pelo Pix - FULANO FICTICIO - ***.123.456-** - BANCO X", Fit2)
         .Line("20261020000000[-3:BRT]", "-40.50", "Pagamento de fatura", Fit3);
 
-    public static Task<HttpResponseMessage> UploadAsync(AuthedClient c, Guid accountId, byte[] content) =>
-        c.PostFileAsync("/api/imports", content, "extrato.ofx",
+    public static Task<HttpResponseMessage> UploadAsync(
+        AuthedClient c, Guid accountId, byte[] content, string fileName = "extrato.ofx") =>
+        c.PostFileAsync("/api/imports", content, fileName,
             new Dictionary<string, string> { ["accountId"] = accountId.ToString() });
 
-    public static async Task<Guid> PreviewAsync(AuthedClient c, Guid accountId, byte[] content)
+    public static async Task<Guid> PreviewAsync(AuthedClient c, Guid accountId, byte[] content, string fileName = "extrato.ofx")
     {
-        var r = await UploadAsync(c, accountId, content);
+        var r = await UploadAsync(c, accountId, content, fileName);
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
         return (await JsonOf(r)).GetProperty("batchId").GetGuid();
     }
@@ -43,6 +44,10 @@ internal static class ImportTestApi
 
     public static Task<HttpResponseMessage> ConfirmAsync(AuthedClient c, Guid batchId, bool acknowledge = false) =>
         c.PostAsync($"/api/imports/{batchId}/confirm", new { acknowledgeBlockingWarnings = acknowledge });
+
+    /// <summary>Confirm with explicit <c>overrides</c> (each an anonymous object such as <c>{ sourceKey, ordinal, state }</c>).</summary>
+    public static Task<HttpResponseMessage> ConfirmWithAsync(AuthedClient c, Guid batchId, bool ack, params object[] overrides) =>
+        c.PostAsync($"/api/imports/{batchId}/confirm", new { acknowledgeBlockingWarnings = ack, overrides });
 
     public static Task<HttpResponseMessage> UndoAsync(AuthedClient c, Guid batchId) =>
         c.PostAsync($"/api/imports/{batchId}/undo");

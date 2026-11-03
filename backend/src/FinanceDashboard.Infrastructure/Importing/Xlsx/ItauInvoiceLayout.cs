@@ -62,11 +62,21 @@ public static partial class ItauInvoiceLayout
             previous = row.Number;
         }
 
-        // Nothing that looks like a line may come after the end of the table (it would be silently dropped).
+        // An invoice without lines is almost surely a layout change: importing nothing would hide it.
+        if (lines.Count == 0) throw Fail(UnsupportedLayout, rows[headerIndex]);
+
+        // Nothing that looks like a line (a date, as a number or as date-like text, plus an amount) may come after
+        // the end of the table: it would be silently dropped.
         for (; i < rows.Count; i++)
         {
             var row = rows[i];
-            if (row.At(dataCol) is { Kind: XlsxCellKind.Number } && row.At(valorCol) is { Kind: not XlsxCellKind.Empty })
+            var looksLikeDate = row.At(dataCol) switch
+            {
+                { Kind: XlsxCellKind.Number } => true,
+                { Kind: XlsxCellKind.Text, Text: { } text } => DateLikeText().IsMatch(text.Trim()),
+                _ => false,
+            };
+            if (looksLikeDate && row.At(valorCol) is { Kind: not XlsxCellKind.Empty })
                 throw Fail(UnsupportedLayout, row);
         }
 

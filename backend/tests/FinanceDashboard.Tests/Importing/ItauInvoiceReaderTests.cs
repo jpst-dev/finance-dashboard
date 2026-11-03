@@ -36,6 +36,22 @@ public sealed class ItauInvoiceReaderTests
     }
 
     [Fact]
+    public void Credit_starting_with_pagamento_is_pending_and_total_check_catches_it()
+    {
+        // A credit (negative in the file, positive normalized) whose first token is PAGAMENTO is taken as the payment
+        // of the previous invoice. If it was really a refund counted in the declared total, the total check is the
+        // safety net: the sum of the non-Pendente lines no longer matches.
+        var s = Read(XlsxTestFile.Invoice(total: "80.00")
+            .Line("2026-10-03", "LOJA FICTICIA", "100.00")
+            .Line("2026-10-08", "PAGAMENTO DEVOLVIDO FICTICIO", "-20.00"));
+
+        Assert.Equal(20.00m, s.Lines[1].Amount);
+        Assert.Equal(TransactionState.PendingClassification, s.Lines[1].State);
+        var w = Assert.Single(s.Warnings, x => x.Code == "InvoiceTotalMismatch");
+        Assert.Equal(ImportWarning.Blocking, w.Severity);
+    }
+
+    [Fact]
     public void Saldo_anterior_is_pending()
     {
         var s = Read(XlsxTestFile.Invoice(total: "0.00")

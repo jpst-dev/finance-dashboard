@@ -81,9 +81,10 @@ public static class XlsxSheetReader
             var shared = workbook.SharedStringTablePart is { } sst ? ReadSharedStrings(sst) : [];
             return new XlsxSheet(date1904, ReadRows(worksheet, shared));
         }
-        catch (Exception e) when (e is OpenXmlPackageException or XmlException or InvalidDataException or IOException
-                                      or FormatException or NotSupportedException or ArgumentException)
+        catch (Exception e) when (e is not ImportFormatException and not OutOfMemoryException)
         {
+            // Anything the SDK, the package or the XML stack throws is "not an xlsx": no inner exception or
+            // third-party message is kept, so file content can never leak and the caller never sees a raw 500.
             throw Fail(NotXlsx);
         }
     }

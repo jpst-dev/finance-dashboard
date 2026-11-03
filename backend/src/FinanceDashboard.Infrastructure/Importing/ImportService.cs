@@ -260,6 +260,15 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         var possibleDuplicates = await checks.PossibleDuplicatesAsync(account.Id, lines, ct);
         if (possibleDuplicates > 0) warnings.Add(ImportWarning.PossibleDuplicate(possibleDuplicates));
 
+        // Invoice: no period, no ledger (those checks above never apply); the total check comes from the reader.
+        if (parsed.Invoice is { } parsedInvoice)
+        {
+            var missing = await checks.MissingInvoiceLinesAsync(account.Id, parsedInvoice.DueDate, lines, ct);
+            if (missing > 0) warnings.Add(ImportWarning.InvoiceHasMissingLines(missing));
+            var unknownSuffix = await checks.UnknownCardSuffixLinesAsync(account.Id, lines, ct);
+            if (unknownSuffix > 0) warnings.Add(ImportWarning.UnknownCardSuffix(unknownSuffix));
+        }
+
         var checkpoint = parsed.LedgerBalance is { } lb ? new ImportCheckpointView(lb.AsOf, lb.Amount) : null;
         var invoice = parsed.Invoice is { } inv ? new ImportInvoiceView(inv.DueDate, inv.DeclaredTotal) : null;
         var batch = new ImportBatch
@@ -492,11 +501,22 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             warnings.Add(ImportWarning.AccountIdentifierMismatch());
         }
 
+        var checks = new ImportChecks(db);
         if (!ImportSources.UsesContentKeys(source))
         {
             var keys = stored.Lines.Select(l => l.SourceKey).Distinct(StringComparer.Ordinal).ToList();
-            var inOtherAccounts = await new ImportChecks(db).KeysInOtherAccountsAsync(account.Id, keys, ct);
+            var inOtherAccounts = await checks.KeysInOtherAccountsAsync(account.Id, keys, ct);
             if (inOtherAccounts > 0) warnings.Add(ImportWarning.FitidInOtherAccount(inOtherAccounts));
+        }
+
+        if (stored.Invoice is { } invoice)
+        {
+            // States as the reader gave them (overrides do not change what the invoice declares).
+            if (!ItauRules.InvoiceTotalMatches(invoice.DeclaredTotal, stored.Lines.Select(l => (l.Amount, l.State))))
+                warnings.Add(ImportWarning.InvoiceTotalMismatch());
+            // Against the database as it is now: a batch of the same invoice may have been confirmed since the preview.
+            var missing = await checks.MissingInvoiceLinesAsync(account.Id, invoice.DueDate, stored.Lines, ct);
+            if (missing > 0) warnings.Add(ImportWarning.InvoiceHasMissingLines(missing));
         }
 
         return warnings;

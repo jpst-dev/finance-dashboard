@@ -329,7 +329,8 @@ public sealed class ImportIdentityTests(PostgresFixture postgres)
     public async Task Reader_warnings_and_batch_summary_fields_are_kept()
     {
         var acc = await NewAccountAsync();
-        var parsed = Statement(Line(0)) with
+        // The line matches the declared total: confirm re-checks it (InvoiceTotalMismatch) from the stored preview.
+        var parsed = Statement(Line(0, amount: -120.00m)) with
         {
             Warnings = [ImportWarning.UnknownLineKinds(2)],
             Invoice = new ParsedInvoice(new DateOnly(2026, 11, 10), 120.00m),

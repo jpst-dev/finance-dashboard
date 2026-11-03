@@ -280,6 +280,22 @@ public sealed class XlsxSheetReaderTests
         Assert.Equal("not_xlsx", Fails(Utf8("not a zip")).Kind);
     }
 
+    [Theory]
+    [InlineData("<?xml version=\"1.0\"?><worksheet xmlns=\"" + MainNs + "\"><sheetData><row r=\"1\">")]
+    [InlineData("<?xml version=\"1.0\"?><worksheet xmlns=\"" + MainNs + "\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>999</v></c></row></sheetData></worksheet>")]
+    [InlineData("<?xml version=\"1.0\"?><worksheet xmlns=\"" + MainNs + "\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>-1</v></c></row></sheetData></worksheet>")]
+    [InlineData("<?xml version=\"1.0\"?><worksheet xmlns=\"" + MainNs + "\"><sheetData><row r=\"99999999999\"/></sheetData></worksheet>")]
+    [InlineData("ÿþ garbage")]
+    public void Malformed_sheet_part_in_a_valid_zip_is_not_xlsx(string sheet)
+    {
+        // Whatever the SDK or the XML stack throws on a broken part, the caller only ever sees a kind, never a raw
+        // exception (no third-party message, no 500).
+        var bytes = Sample().Entry("xl/worksheets/sheet1.xml", Utf8(sheet)).Build();
+        var e = Fails(bytes);
+        Assert.Contains(e.Kind, new[] { "not_xlsx", "invalid_cell", "xlsx_limits_exceeded" });
+        Assert.Null(e.InnerException);
+    }
+
     [Fact]
     public void Main_part_other_than_xl_workbook_xml_is_not_xlsx()
     {

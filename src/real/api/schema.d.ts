@@ -225,7 +225,7 @@ export interface paths {
         /** List the user's import batches (expired previews are discarded) */
         get: operations["ListImports"];
         put?: never;
-        /** Upload a Nubank OFX (multipart: file, accountId) and get a preview; nothing is recorded yet */
+        /** Upload a Nubank or Itaú OFX, or an Itaú credit card invoice xlsx (multipart: file, accountId; format detected by content), and get a preview; nothing is recorded yet */
         post: operations["UploadImport"];
         delete?: never;
         options?: never;

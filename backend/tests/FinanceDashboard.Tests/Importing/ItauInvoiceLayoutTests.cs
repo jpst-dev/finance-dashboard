@@ -99,6 +99,36 @@ public sealed class ItauInvoiceLayoutTests
             Fails(TwoLines().Header([.. XlsxTestFile.DefaultHeader, "Coluna Ficticia"])).Kind);
 
     [Fact]
+    public void Duplicate_header_label_is_unsupported_layout() =>
+        Assert.Equal("unsupported_layout",
+            Fails(TwoLines().Header([.. XlsxTestFile.DefaultHeader, "Valor"])).Kind);
+
+    [Fact]
+    public void Table_without_lines_is_unsupported_layout()
+    {
+        // An invoice with no lines at all is almost surely a layout change; importing nothing would hide it.
+        var e = Fails(XlsxTestFile.Invoice(total: "0.00"));
+        Assert.Equal("unsupported_layout", e.Kind);
+    }
+
+    [Fact]
+    public void Date_like_text_line_after_table_end_is_unsupported_layout()
+    {
+        // Blank row ends the table; the next line has its date written as text: never dropped silently.
+        var e = Fails(TwoLines().BlankRowBefore(1).DateAsText(1, "05/10/2026"));
+        Assert.Equal("unsupported_layout", e.Kind);
+        Assert.NotNull(e.Line);
+    }
+
+    [Fact]
+    public void Omitted_row_ends_table_and_later_lines_are_unsupported_layout()
+    {
+        // A row number with no <row> element is a blank row: it ends the table.
+        Assert.Equal("unsupported_layout", Fails(TwoLines().OmitRowBefore(1)).Kind);
+        Assert.Equal(2, Parse(TwoLines().OmitRowBefore(2)).Lines.Count);
+    }
+
+    [Fact]
     public void Two_summary_blocks_is_unsupported_layout() =>
         Assert.Equal("unsupported_layout", Fails(TwoLines().SecondSummaryBlock()).Kind);
 

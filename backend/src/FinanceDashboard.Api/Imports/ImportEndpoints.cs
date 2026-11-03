@@ -55,7 +55,7 @@ public static class ImportEndpoints
                 valueCountLimit: 8)
             .Accepts<IFormFile>("multipart/form-data")
             .WithName("UploadImport")
-            .WithSummary("Upload a Nubank OFX (multipart: file, accountId) and get a preview; nothing is recorded yet")
+            .WithSummary("Upload a Nubank or Itaú OFX, or an Itaú credit card invoice xlsx (multipart: file, accountId; format detected by content), and get a preview; nothing is recorded yet")
             .Produces<ImportPreviewView>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)

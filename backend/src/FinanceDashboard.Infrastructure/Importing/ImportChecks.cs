@@ -31,6 +31,36 @@ internal sealed class ImportChecks(AppDbContext db)
     }
 
     /// <summary>
+    /// Invoice re-import: how many lines of the account in the invoice scope (<c>StatementDate == dueDate</c>, with a
+    /// key, not soft-deleted — edited ones included) have no (key, ordinal) pair in the file. Soft-deleted lines do
+    /// not count: they keep their key and never come back anyway.
+    /// </summary>
+    public async Task<int> MissingInvoiceLinesAsync(
+        Guid accountId, DateOnly dueDate, IReadOnlyList<StoredPreviewLine> lines, CancellationToken ct)
+    {
+        var inFile = lines.Select(l => (l.SourceKey, l.Ordinal)).ToHashSet();
+        var stored = await db.Transactions.AsNoTracking().Visible()
+            .Where(t => t.AccountId == accountId && t.StatementDate == dueDate && t.SourceKey != null)
+            .Select(t => new { Key = t.SourceKey!, t.Ordinal })
+            .ToListAsync(ct);
+        return stored.Count(t => !inFile.Contains((t.Key, t.Ordinal)));
+    }
+
+    /// <summary>
+    /// 0 when the account has no line with a card suffix yet (first invoice import: nothing to compare with);
+    /// otherwise how many lines of the file carry a suffix the account has never seen (soft-deleted lines included).
+    /// </summary>
+    public async Task<int> UnknownCardSuffixLinesAsync(Guid accountId, IReadOnlyList<StoredPreviewLine> lines, CancellationToken ct)
+    {
+        var known = (await db.Transactions.AsNoTracking()
+                .Where(t => t.AccountId == accountId && t.CardSuffix != null)
+                .Select(t => t.CardSuffix!).Distinct().ToListAsync(ct))
+            .ToHashSet(StringComparer.Ordinal);
+        if (known.Count == 0) return 0;
+        return lines.Count(l => l.CardSuffix is { } suffix && !known.Contains(suffix));
+    }
+
+    /// <summary>
     /// New lines of the file for which the account has a visible line (imported or manual) whose key is null or none
     /// of the file's keys, with the same amount, a date at most one day apart and the same first 12 normalized
     /// characters of description. Sibling ordinals of one key are never compared with each other.

@@ -49,6 +49,8 @@ public sealed class XlsxTestFile
     private readonly Dictionary<int, string> _amountText = new();
     private readonly Dictionary<int, string> _dateText = new();
     private readonly HashSet<int> _blankBefore = new();
+    private readonly HashSet<int> _omitBefore = new();
+    private DateTimeOffset? _zipTimestamp;
     private readonly List<(string Name, byte[] Data)> _entries = new();
     private readonly List<(string PartName, string Type)> _contentTypes = new();
     private readonly List<(string RelsPart, string Target, bool External, string Type)> _relationships = new();
@@ -102,6 +104,15 @@ public sealed class XlsxTestFile
     /// footer). The row is written explicitly with one empty date-styled cell in the date column, as exports do.
     /// </summary>
     public XlsxTestFile BlankRowBefore(int index) { _blankBefore.Add(index); return this; }
+
+    /// <summary>
+    /// Skips a row number before line <paramref name="index"/> (0-based; <c>index == line count</c> = before the
+    /// footer) without writing any <c>&lt;row&gt;</c> element for it: a gap in the row numbering.
+    /// </summary>
+    public XlsxTestFile OmitRowBefore(int index) { _omitBefore.Add(index); return this; }
+
+    /// <summary>Last-write time of every generated zip entry (default: the builder's clock), so two builds can differ only in it.</summary>
+    public XlsxTestFile ZipTimestamp(DateTimeOffset when) { _zipTimestamp = when; return this; }
 
     /// <summary>
     /// Replaces the column header: labels in the given order. Line values are placed by label (compared without
@@ -285,6 +296,7 @@ public sealed class XlsxTestFile
             foreach (var (name, data) in parts)
             {
                 var e = zip.CreateEntry(name, CompressionLevel.Optimal);
+                if (_zipTimestamp is { } when) e.LastWriteTime = when;
                 using var s = e.Open();
                 s.Write(data);
             }
@@ -390,6 +402,7 @@ public sealed class XlsxTestFile
         {
             if (_blankBefore.Contains(i))
                 rows.Add(new Row(r++, [new Cell(Math.Max(dateCol, 0), Style: DateStyle)]));
+            if (_omitBefore.Contains(i)) r++;
             if (i == _lines.Count) break;
             var line = _lines[i];
             sum += decimal.Parse(line.Amount, NumberStyles.Float, CultureInfo.InvariantCulture);
