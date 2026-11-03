@@ -83,6 +83,33 @@ public sealed class OpenApiSnapshotTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task No_schema_in_the_document_has_type_number()
+    {
+        using var doc = JsonDocument.Parse(await GetDocumentAsync());
+        var offenders = new List<string>();
+        void Walk(JsonElement e, string path)
+        {
+            if (e.ValueKind == JsonValueKind.Object)
+            {
+                // A property literally called "type" is an object, not a schema type keyword.
+                if (e.TryGetProperty("type", out var t) && t.ValueKind is JsonValueKind.String or JsonValueKind.Array && HasType(e, "number"))
+                {
+                    offenders.Add(path);
+                }
+                foreach (var p in e.EnumerateObject()) Walk(p.Value, $"{path}/{p.Name}");
+            }
+            else if (e.ValueKind == JsonValueKind.Array)
+            {
+                var i = 0;
+                foreach (var item in e.EnumerateArray()) Walk(item, $"{path}/{i++}");
+            }
+        }
+        Walk(doc.RootElement, "");
+
+        Assert.True(offenders.Count == 0, $"Money must be a string; schemas with type number: {string.Join(", ", offenders)}");
+    }
+
+    [Fact]
     public async Task Enums_are_documented_as_strings()
     {
         using var doc = JsonDocument.Parse(await GetDocumentAsync());

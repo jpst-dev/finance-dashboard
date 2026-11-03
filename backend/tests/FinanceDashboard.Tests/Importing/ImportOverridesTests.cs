@@ -167,6 +167,20 @@ public sealed class ImportOverridesTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Invalid_state_value_is_400()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var acc = await CreateAccountAsync(c);
+        var batchId = await PreviewAsync(c, acc, ThreeLines().Build());
+
+        var r = await ConfirmWithAsync(c, batchId, new { sourceKey = Fit1, state = "Bogus" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        await AssertNothingWrittenAsync(f, c, batchId);
+    }
+
+    [Fact]
     public async Task Duplicate_source_key_in_overrides_is_422()
     {
         await using var f = await NewFactoryAsync();
@@ -306,7 +320,7 @@ public sealed class ImportOverridesTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
 
         Assert.NotEmpty(logs.Entries);
-        foreach (var marker in new[] { keyMarker, unknownMarker })
+        foreach (var marker in new[] { keyMarker, unknownMarker, cat.ToString() })
         {
             Assert.DoesNotContain(logs.Entries, e => e.Contains(marker, StringComparison.OrdinalIgnoreCase));
         }
