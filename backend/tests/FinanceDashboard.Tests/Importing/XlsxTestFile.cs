@@ -410,7 +410,7 @@ public sealed class XlsxTestFile
             footer.Add(new Cell(amountCol, Number: Fmt(sum), Style: MoneyStyle,
                 Formula: _footerFormula ? $"SUM({letter}{firstLineRow}:{letter}{lastLineRow})" : null));
         }
-        rows.Add(new Row(r++, footer));
+        rows.Add(new Row(r++, footer.OrderBy(c => c.Col).ToList())); // cells must be in column order
 
         if (_secondSummary) AddSummary(rows, r + 1);
         return rows;

@@ -5,6 +5,9 @@ namespace FinanceDashboard.Tests.Importing;
 /// <summary>Contract of the content keys: changing any of this changes stored keys and needs a migration.</summary>
 public sealed class SourceKeysTests
 {
+    /// <summary>Frozen key of the invoice contract line (shared with the invoice reader's contract test).</summary>
+    public const string InvoiceContractHash = "9b7512557b951f38da6f343be4ebed8cde8c1f487551e502bdfa7244da56510d";
+
     [Fact]
     public void Normalization_is_frozen()
     {
@@ -19,7 +22,7 @@ public sealed class SourceKeysTests
         var checking = SourceKeys.ContentKey("itau-conta", "2026-10-05", "-10.00", "PIX QRS PADARIA FICTICIA");
         Assert.Equal("48d3baf8781065ccc10dae077df3ff95df5cb5eced28ff91a4640210a51e99b0", checking);
         var invoice = SourceKeys.ContentKey("itau-fatura", "2026-11-10", "2026-10-03", "-120.00", "LOJA FICTICIA", "2/10", "1234");
-        Assert.Equal("9b7512557b951f38da6f343be4ebed8cde8c1f487551e502bdfa7244da56510d", invoice);
+        Assert.Equal(InvoiceContractHash, invoice);
         Assert.Equal(64, checking.Length);
         Assert.True(checking.Length <= 200); // Transactions.SourceKey (MaxSourceKey)
     }

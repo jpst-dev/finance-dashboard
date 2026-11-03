@@ -29,4 +29,35 @@ public static class ItauRules
                 return (state, true);
         return (TransactionState.Normal, false);
     }
+
+    // ---- invoice ----
+
+    private static readonly string[] InvoicePendingPrefixes = ["SALDO ANTERIOR", "SALDO ROTATIVO"];
+
+    /// <summary>
+    /// Pendente = payment of the previous invoice (first whole token <c>PAGAMENTO</c> and an amount that became
+    /// positive in the normalized convention) or <c>SALDO ANTERIOR</c>/<c>SALDO ROTATIVO</c>; everything else
+    /// (purchases, refunds, fees, IOF, interest, annual fee) = Normal.
+    /// </summary>
+    public static TransactionState ClassifyInvoice(string description, decimal normalizedAmount)
+    {
+        var normalized = SourceKeys.NormalizeText(description);
+        var firstToken = normalized.Split(' ', 2)[0];
+        if (firstToken == "PAGAMENTO" && normalizedAmount > 0) return TransactionState.PendingClassification;
+        foreach (var prefix in InvoicePendingPrefixes)
+            if (normalized.StartsWith(prefix, StringComparison.Ordinal))
+                return TransactionState.PendingClassification;
+        return TransactionState.Normal;
+    }
+
+    /// <summary>
+    /// Installments after the first carry the original purchase date in the file; they are dated one month before
+    /// the due date (clamped by <see cref="DateOnly.AddMonths"/>). Cash purchases and installment 1 keep the line date.
+    /// </summary>
+    public static DateOnly InvoiceLineDate(DateOnly purchaseDate, DateOnly dueDate, int? installmentNumber) =>
+        installmentNumber > 1 ? dueDate.AddMonths(-1) : purchaseDate;
+
+    /// <summary>Declared total = minus the sum of the normalized amounts of the lines that are not Pendente.</summary>
+    public static bool InvoiceTotalMatches(decimal declaredTotal, IEnumerable<(decimal Amount, TransactionState State)> lines) =>
+        declaredTotal == -lines.Where(l => l.State != TransactionState.PendingClassification).Sum(l => l.Amount);
 }
