@@ -403,6 +403,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/category-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the category rules with the lines each would catch now */
+        get: operations["ListCategoryRules"];
+        put?: never;
+        /** Create a rule (it is not applied until asked) */
+        post: operations["CreateCategoryRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/category-rules/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give uncategorized lines the category of their winning rule */
+        post: operations["ApplyCategoryRules"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/category-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a rule (categories it already gave stay) */
+        delete: operations["DeleteCategoryRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -453,6 +505,10 @@ export interface components {
         };
         /** @enum {string} */
         AccountType: "Checking" | "CreditCard" | "Wallet";
+        ApplyRulesResponse: {
+            /** Format: int32 */
+            applied: number | string;
+        };
         BlockingWarningsResponse: {
             error: string;
             warnings: components["schemas"]["ImportWarning"][];
@@ -467,6 +523,21 @@ export interface components {
             name: string;
             kind: components["schemas"]["CategoryKind"];
             isDefault: boolean;
+        };
+        CategoryRuleErrorResponse: {
+            error: string;
+        };
+        CategoryRuleResponse: {
+            /** Format: uuid */
+            id: string;
+            pattern: string;
+            /** Format: uuid */
+            categoryId: string;
+            categoryName: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            matches: number | string;
         };
         CategoryTotalResponse: {
             /** Format: uuid */
@@ -502,6 +573,8 @@ export interface components {
             linked: number | string;
             /** Format: int32 */
             suggested: number | string;
+            /** Format: int32 */
+            categorized: number | string;
         };
         CreateAccountRequest: {
             name: null | string;
@@ -512,6 +585,11 @@ export interface components {
         CreateCategoryRequest: {
             name: null | string;
             kind: null | components["schemas"]["CategoryKind"];
+        };
+        CreateCategoryRuleRequest: {
+            pattern: string;
+            /** Format: uuid */
+            categoryId: string;
         };
         CreateCheckpointRequest: {
             /** Format: date */
@@ -2030,6 +2108,150 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ListCategoryRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRuleResponse"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CreateCategoryRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCategoryRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRuleResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRuleErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRuleErrorResponse"];
+                };
+            };
+        };
+    };
+    ApplyCategoryRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyRulesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DeleteCategoryRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

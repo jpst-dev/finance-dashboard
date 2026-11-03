@@ -115,7 +115,7 @@ describe("imports store", () => {
     const { store, imports } = await setup();
     await store.upload("a1", ofx());
     expect(await store.confirm(false)).toBe(true);
-    expect(store.result).toEqual({ batchId: "b1", created: 3, skipped: 1, linked: 2, suggested: 1 });
+    expect(store.result).toEqual({ batchId: "b1", created: 3, skipped: 1, linked: 2, suggested: 1, categorized: 0 });
     expect(store.preview).toBeNull();
     expect(useTransactionsStore().pendingCount).toBe(7);
     expect(imports.list).toHaveBeenCalled();

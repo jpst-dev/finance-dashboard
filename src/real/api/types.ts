@@ -80,7 +80,7 @@ export type ImportPreview = Omit<IntFields<S["ImportPreviewView"], "newCount" | 
 };
 /** Corpo do confirm com `overrides` no formato de ImportLineOverride acima (`ordinal` opcional). */
 export type ConfirmBody = Omit<S["ConfirmImportRequest"], "overrides"> & { overrides?: ImportLineOverride[] | null };
-export type ConfirmResult = IntFields<S["ConfirmResult"], "created" | "skipped" | "linked" | "suggested">;
+export type ConfirmResult = IntFields<S["ConfirmResult"], "created" | "skipped" | "linked" | "suggested" | "categorized">;
 /** Corpo do 409 `blocking_warnings` do confirm. */
 export type BlockingWarnings = S["BlockingWarningsResponse"];
 
@@ -89,3 +89,9 @@ export type BlockingWarnings = S["BlockingWarningsResponse"];
 export type CurrentUser = { email: string };
 export type CsrfTokenResponse = { token: string };
 export type LoginBody = S["LoginRequest"];
+
+// Regras de categoria (S3(c)): `matches` e `applied` estreitados para number (ver IntFields).
+export type CategoryRule = IntFields<S["CategoryRuleResponse"], "matches">;
+export type NewCategoryRule = S["CreateCategoryRuleRequest"];
+export type CategoryRuleError = S["CategoryRuleErrorResponse"];
+export type ApplyRulesResult = IntFields<S["ApplyRulesResponse"], "applied">;

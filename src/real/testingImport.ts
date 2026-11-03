@@ -100,7 +100,7 @@ export function fakeImportApi(opts: { accounts?: Account[]; preview?: ImportPrev
     preview: vi.fn(async (_accountId: string, _file: File) => opts.preview ?? preview()),
     list: vi.fn(async () => opts.history ?? []),
     get: vi.fn(async (id: string) => preview({ batchId: id, state: "Confirmed", expiresAt: null })),
-    confirm: vi.fn(async (id: string, _b: unknown): Promise<ConfirmResult> => ({ batchId: id, created: 3, skipped: 1, linked: 2, suggested: 1 })),
+    confirm: vi.fn(async (id: string, _b: unknown): Promise<ConfirmResult> => ({ batchId: id, created: 3, skipped: 1, linked: 2, suggested: 1, categorized: 0 })),
     undo: vi.fn(async (_id: string) => undefined),
   };
   const transactions = {
