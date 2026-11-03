@@ -32,6 +32,48 @@
     "link": null
   },
   {
+    "id": "00000007-0000-4000-8000-00000000004d",
+    "accountId": "0000000a-0000-4000-8000-000000000004",
+    "date": "2026-10-12",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "350.00",
+    "description": "Pix recebido da Conta Corrente Exemplo",
+    "originalDescription": "Transferência recebida pelo Pix",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": "Pessoa Exemplo",
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000002",
+      "kind": "OwnTransfer",
+      "state": "Confirmed",
+      "counterpartTransactionId": "00000007-0000-4000-8000-00000000004c"
+    }
+  },
+  {
+    "id": "00000007-0000-4000-8000-00000000004c",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-12",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-350.00",
+    "description": "Pix para Conta Digital Exemplo",
+    "originalDescription": "PIX TRANSF PESSOA EXEMPLO",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000002",
+      "kind": "OwnTransfer",
+      "state": "Confirmed",
+      "counterpartTransactionId": "00000007-0000-4000-8000-00000000004d"
+    }
+  },
+  {
     "id": "00000007-0000-4000-8000-00000000003f",
     "accountId": "0000000a-0000-4000-8000-000000000001",
     "date": "2026-10-12",
@@ -46,6 +88,27 @@
     "editedByUser": false,
     "counterpartyName": null,
     "link": null
+  },
+  {
+    "id": "00000007-0000-4000-8000-00000000004b",
+    "accountId": "0000000a-0000-4000-8000-000000000002",
+    "date": "2026-10-11",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "499.65",
+    "description": "Pagamento recebido (exemplo)",
+    "originalDescription": "PAGAMENTO EFETUADO EXEMPLO",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000001",
+      "kind": "InvoicePayment",
+      "state": "Confirmed",
+      "counterpartTransactionId": "00000007-0000-4000-8000-00000000004a"
+    }
   },
   {
     "id": "00000007-0000-4000-8000-000000000048",
@@ -64,6 +127,27 @@
     "link": null
   },
   {
+    "id": "00000007-0000-4000-8000-00000000004a",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-10",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-499.65",
+    "description": "Pagamento da fatura do cartão (exemplo)",
+    "originalDescription": "FATURA PAGA CARTAO EXEMPLO",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000001",
+      "kind": "InvoicePayment",
+      "state": "Confirmed",
+      "counterpartTransactionId": "00000007-0000-4000-8000-00000000004b"
+    }
+  },
+  {
     "id": "00000007-0000-4000-8000-000000000042",
     "accountId": "0000000a-0000-4000-8000-000000000003",
     "date": "2026-10-09",
@@ -80,6 +164,27 @@
     "link": null
   },
   {
+    "id": "00000007-0000-4000-8000-00000000004f",
+    "accountId": "0000000a-0000-4000-8000-000000000004",
+    "date": "2026-10-08",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "180.00",
+    "description": "Pix recebido da Conta Corrente Exemplo (reserva)",
+    "originalDescription": "Transferência recebida pelo Pix",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": "Pessoa Exemplo",
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000003",
+      "kind": "OwnTransfer",
+      "state": "Suggested",
+      "counterpartTransactionId": "00000007-0000-4000-8000-00000000004e"
+    }
+  },
+  {
     "id": "00000007-0000-4000-8000-00000000003e",
     "accountId": "0000000a-0000-4000-8000-000000000001",
     "date": "2026-10-08",
@@ -94,6 +199,27 @@
     "editedByUser": false,
     "counterpartyName": null,
     "link": null
+  },
+  {
+    "id": "00000007-0000-4000-8000-00000000004e",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-06",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-180.00",
+    "description": "Pix para Conta Digital Exemplo (reserva)",
+    "originalDescription": "PIX TRANSF OUTRA EXEMPLO",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000003",
+      "kind": "OwnTransfer",
+      "state": "Suggested",
+      "counterpartTransactionId": "00000007-0000-4000-8000-00000000004f"
+    }
   },
   {
     "id": "00000007-0000-4000-8000-00000000003d",

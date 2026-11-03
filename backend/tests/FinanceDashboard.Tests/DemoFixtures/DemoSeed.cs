@@ -3,6 +3,7 @@ using System.Text;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure;
 using FinanceDashboard.Infrastructure.Importing;
+using FinanceDashboard.Infrastructure.Linking;
 using FinanceDashboard.Tests.Infrastructure;
 using FinanceDashboard.Tests.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -32,6 +33,7 @@ public static class DemoSeed
     private const int TransactionKind = 0x7;
     private const int CheckpointKind = 0xB;
     private const int BatchKind = 0x1B;
+    private const int LinkKind = 0x1E;
 
     public static Guid Id(int kind, int n) => new(FormattableString.Invariant($"{kind:x8}-0000-4000-8000-{n:x12}"));
 
@@ -39,8 +41,17 @@ public static class DemoSeed
     public static Guid CardId => Id(AccountKind, 2);
     public static Guid WalletId => Id(AccountKind, 3);
 
+    /// <summary>Second checking account (another bank): the other end of the own-transfer pairs.</summary>
+    public static Guid DigitalId => Id(AccountKind, 4);
+
     public static Guid ConfirmedBatchId => Id(BatchKind, 1);
     public static Guid PreviewBatchId => Id(BatchKind, 2);
+    private static Guid ItauCheckingLinksBatchId => Id(BatchKind, 3);
+    private static Guid ItauCardLinksBatchId => Id(BatchKind, 4);
+    private static Guid DigitalLinksBatchId => Id(BatchKind, 5);
+
+    /// <summary>Deterministic id for the n-th link in the generated fixtures (the server uses random ones).</summary>
+    public static Guid FixtureLinkId(int n) => Id(LinkKind, n);
 
     // Same names and kinds as DefaultCategories, in its order: 10 expenses then 3 incomes.
     private static readonly (string Name, CategoryKind Kind)[] Categories =
@@ -110,7 +121,8 @@ public static class DemoSeed
         db.Accounts.AddRange(
             new Account { Id = CheckingId, UserId = UserId, Name = "Conta Corrente Exemplo", Type = AccountType.Checking, Institution = "Banco Exemplo" },
             new Account { Id = CardId, UserId = UserId, Name = "Cartão Exemplo", Type = AccountType.CreditCard, Institution = "Banco Exemplo" },
-            new Account { Id = WalletId, UserId = UserId, Name = "Carteira", Type = AccountType.Wallet, Institution = "" });
+            new Account { Id = WalletId, UserId = UserId, Name = "Carteira", Type = AccountType.Wallet, Institution = "" },
+            new Account { Id = DigitalId, UserId = UserId, Name = "Conta Digital Exemplo", Type = AccountType.Checking, Institution = "Banco Digital Exemplo" });
 
         for (var i = 0; i < Categories.Length; i++)
         {
@@ -131,6 +143,11 @@ public static class DemoSeed
             {
                 Id = Id(CheckpointKind, 2), UserId = UserId, AccountId = WalletId, Date = new DateOnly(2026, 4, 30),
                 Amount = 1200.00m, Origin = CheckpointOrigin.Manual, CreatedAt = CheckpointCreatedAt,
+            },
+            new BalanceCheckpoint
+            {
+                Id = Id(CheckpointKind, 3), UserId = UserId, AccountId = DigitalId, Date = new DateOnly(2026, 4, 30),
+                Amount = 800.00m, Origin = CheckpointOrigin.Manual, CreatedAt = CheckpointCreatedAt,
             });
 
         var lines = new List<Transaction>();
@@ -224,8 +241,10 @@ public static class DemoSeed
             NewCount = batchLines.Count, ExistingCount = 0,
         };
 
+        var linkBatches = AddLinkCandidates(Add, confirmed.DeclaredTotal!.Value);
+
         // Preview of an Itaú checking statement: 3 lines already imported, 2 new normal, 1 new pending.
-        var existing = lines.Where(t => t.AccountId == CheckingId && t.Origin == TransactionOrigin.Imported)
+        var existing = lines.Where(t => t.AccountId == CheckingId && t.Origin == TransactionOrigin.Imported && t.BatchId is null)
             .OrderBy(t => t.Date).ToList();
         if (existing.Count != 3) throw new InvalidOperationException($"Expected 3 imported checking lines, got {existing.Count}.");
 
@@ -260,8 +279,16 @@ public static class DemoSeed
         };
 
         db.ImportBatches.AddRange(confirmed, preview);
+        db.ImportBatches.AddRange(linkBatches);
         db.Transactions.AddRange(lines);
         await db.SaveChangesAsync(ct);
+
+        // The pairs come from the real matcher (LinkService), not hand-made rows.
+        var reconciled = await new LinkService(db, f.Services.GetRequiredService<TimeProvider>()).ReconcileAsync(ct);
+        if (reconciled.Linked != 2 || reconciled.Suggested != 1)
+        {
+            throw new InvalidOperationException($"Demo links drifted: {reconciled.Linked} linked, {reconciled.Suggested} suggested.");
+        }
 
         var before = await db.Categories.CountAsync(ct);
         await DefaultCategories.EnsureForUserAsync(db, UserId, ct);
@@ -270,6 +297,63 @@ public static class DemoSeed
         {
             throw new InvalidOperationException($"Demo categories drifted from DefaultCategories ({before} → {after}).");
         }
+    }
+
+    /// <summary>
+    /// Pending lines of three confirmed imports (Itaú checking, Itaú card, digital-bank checking) that the real pairing
+    /// rules turn into: an invoice payment and an own transfer (both auto-confirmed) and an own transfer 2 days apart
+    /// (suggested). Amounts are distinct so no line has two candidates.
+    /// </summary>
+    private static ImportBatch[] AddLinkCandidates(
+        Func<Guid, DateOnly, decimal, string, string?, TransactionState, Transaction> add, decimal invoiceTotal)
+    {
+        void Line(Guid account, Guid batch, string keyPrefix, DateOnly date, decimal amount, string original,
+            string description, string slug, string? counterparty = null, bool card = false)
+        {
+            var t = add(account, date, amount, original, null, TransactionState.PendingClassification);
+            t.NormalizedDescription = description;
+            t.Origin = TransactionOrigin.Imported;
+            t.BatchId = batch;
+            t.SourceKey = FormattableString.Invariant($"{keyPrefix}-{date:yyyy-MM-dd}-{slug}");
+            t.CounterpartyName = counterparty;
+            if (card)
+            {
+                t.CardSuffix = "0000";
+                t.CardKind = CardKind.Physical;
+            }
+        }
+
+        // Invoice payment: both sides inside the 3-day window, same amount.
+        Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 10), -invoiceTotal,
+            "FATURA PAGA CARTAO EXEMPLO", "Pagamento da fatura do cartão (exemplo)", "fatura-paga-cartao-exemplo");
+        Line(CardId, ItauCardLinksBatchId, "demo-itau-cartao", new DateOnly(2026, 10, 11), invoiceTotal,
+            "PAGAMENTO EFETUADO EXEMPLO", "Pagamento recebido (exemplo)", "pagamento-efetuado-exemplo", card: true);
+
+        // Own transfer, same day: auto-confirmed.
+        Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 12), -350.00m,
+            "PIX TRANSF PESSOA EXEMPLO", "Pix para Conta Digital Exemplo", "pix-transf-pessoa-exemplo");
+        Line(DigitalId, DigitalLinksBatchId, "demo-digital-cc", new DateOnly(2026, 10, 12), 350.00m,
+            "Transferência recebida pelo Pix", "Pix recebido da Conta Corrente Exemplo", "pix-recebido-350", "Pessoa Exemplo");
+
+        // Own transfer 2 days apart: only suggested.
+        Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 6), -180.00m,
+            "PIX TRANSF OUTRA EXEMPLO", "Pix para Conta Digital Exemplo (reserva)", "pix-transf-outra-exemplo");
+        Line(DigitalId, DigitalLinksBatchId, "demo-digital-cc", new DateOnly(2026, 10, 8), 180.00m,
+            "Transferência recebida pelo Pix", "Pix recebido da Conta Corrente Exemplo (reserva)", "pix-recebido-180", "Pessoa Exemplo");
+
+        ImportBatch Batch(Guid id, Guid account, ImportSource source, string label, DateOnly end, int count) => new()
+        {
+            Id = id, UserId = UserId, AccountId = account, Source = source, FileHash = Hash(label),
+            PeriodStart = new DateOnly(2026, 10, 1), PeriodEnd = end, State = ImportBatchState.Confirmed,
+            CreatedAt = new DateTimeOffset(2026, 10, 14, 10, 0, 0, TimeSpan.Zero), NewCount = count, ExistingCount = 0,
+        };
+
+        return
+        [
+            Batch(ItauCheckingLinksBatchId, CheckingId, ImportSource.ItauChecking, "demo-extrato-conta-vinculos-2026-10", new DateOnly(2026, 10, 12), 3),
+            Batch(ItauCardLinksBatchId, CardId, ImportSource.ItauCard, "demo-fatura-cartao-vinculos-2026-10", new DateOnly(2026, 10, 11), 1),
+            Batch(DigitalLinksBatchId, DigitalId, ImportSource.NubankChecking, "demo-extrato-digital-2026-10", new DateOnly(2026, 10, 12), 2),
+        ];
     }
 
     private static string Slug(string description) =>

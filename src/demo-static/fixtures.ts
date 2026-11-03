@@ -7,6 +7,7 @@ import type {
   CurrentUser,
   ImportBatch,
   ImportPreview,
+  LinkResponse,
   Summary,
   Transaction,
 } from "../real/api/types";
@@ -15,6 +16,7 @@ import categories from "./fixtures/categories.json";
 import checkpoints from "./fixtures/checkpoints.json";
 import importDetails from "./fixtures/import-details.json";
 import imports from "./fixtures/imports.json";
+import links from "./fixtures/links.json";
 import meta from "./fixtures/meta.json";
 import summaries from "./fixtures/summaries.json";
 import emptySummary from "./fixtures/summary-empty.json";
@@ -33,6 +35,8 @@ export interface DemoFixtures {
   emptySummary: Summary;
   imports: ImportBatch[];
   importDetails: Record<string, ImportPreview>;
+  /** Vínculos gerados pelo pareador real, por estado (sem envelope de página: o adaptador pagina). */
+  links: { confirmed: LinkResponse[]; suggested: LinkResponse[] };
 }
 
 export const DEMO_FIXTURES = {
@@ -45,4 +49,5 @@ export const DEMO_FIXTURES = {
   emptySummary,
   imports,
   importDetails,
+  links,
 } as unknown as DemoFixtures;

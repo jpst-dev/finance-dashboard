@@ -70,8 +70,10 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
             Assert.True(inMonth.Where(t => t.Amount < 0).Select(t => t.CategoryId).Distinct().Count() > 1, month);
         }
 
-        Assert.Equal(3, lines.Count(t => t.State == TransactionState.PendingClassification));
-        Assert.Equal(2, lines.Count(t => t.State == TransactionState.PendingClassification && t.Date.Month == 10));
+        // Manual pending lines (the link-candidate lines below come from imports and are asserted in the links test).
+        var manualPending = lines.Where(t => t.State == TransactionState.PendingClassification && t.BatchId is null).ToList();
+        Assert.Equal(3, manualPending.Count);
+        Assert.Equal(2, manualPending.Count(t => t.Date.Month == 10));
         Assert.Contains(lines, t => t.State == TransactionState.Normal && t.CategoryId is null);
         Assert.Contains(lines, t => t.EditedByUser);
         Assert.Equal([1, 2, 3], lines.Where(t => t.InstallmentTotal == 3).OrderBy(t => t.Date).Select(t => t.InstallmentNumber ?? 0));
@@ -85,6 +87,26 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
         Assert.True(invoice.DueDate <= DemoSeed.ReferenceDate);
         Assert.Equal(invoice.DeclaredTotal, -invoiceLines.Where(t => t.State == TransactionState.Normal).Sum(t => t.Amount));
         Assert.Contains(invoiceLines, t => t.InstallmentNumber == 3);
+    }
+
+    [Fact]
+    public async Task Generated_links_cover_each_kind_and_a_suggestion_from_the_real_matcher()
+    {
+        var files = await DemoFixtureGenerator.GenerateAsync(postgres);
+
+        var links = JsonNode.Parse(files["links.json"])!;
+        var confirmed = links["confirmed"]!.AsArray();
+        var suggested = links["suggested"]!.AsArray();
+        Assert.Equal(new[] { "InvoicePayment", "OwnTransfer" }, confirmed.Select(l => l!["kind"]!.GetValue<string>()).Order().ToArray());
+        Assert.Equal(new[] { "OwnTransfer" }, suggested.Select(l => l!["kind"]!.GetValue<string>()).ToArray());
+        Assert.All(confirmed, l => Assert.Equal("Auto", l!["origin"]!.GetValue<string>()));
+
+        // Ids are the deterministic fixture ids and the lines' badge points at the same link.
+        var ids = confirmed.Concat(suggested).Select(l => l!["id"]!.GetValue<string>()).ToList();
+        Assert.Equal(Enumerable.Range(1, 3).Select(n => DemoSeed.FixtureLinkId(n).ToString()), ids);
+        var badges = JsonNode.Parse(files["transactions.json"])!.AsArray()
+            .Where(t => t!["link"] is not null).Select(t => t!["link"]!["id"]!.GetValue<string>()).Distinct().Order(StringComparer.Ordinal).ToList();
+        Assert.Equal(ids.Order(StringComparer.Ordinal).ToList(), badges);
     }
 
     [Fact]
@@ -121,7 +143,7 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
         Assert.Contains(preview["warnings"]!.AsArray(), w => w!["code"]!.GetValue<string>() == "PossibleDuplicate");
 
         var states = JsonNode.Parse(files["imports.json"])!.AsArray().Select(b => b!["state"]!.GetValue<string>()).Order().ToList();
-        Assert.Equal(["Confirmed", "Preview"], states);
+        Assert.Equal(["Confirmed", "Confirmed", "Confirmed", "Confirmed", "Preview"], states);
     }
 
     [Fact]

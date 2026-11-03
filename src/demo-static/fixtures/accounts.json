@@ -6,7 +6,7 @@
     "institution": "Banco Exemplo",
     "externalIdentifier": null,
     "isArchived": false,
-    "balance": "-3469.45"
+    "balance": "-2969.80"
   },
   {
     "id": "0000000a-0000-4000-8000-000000000003",
@@ -24,6 +24,15 @@
     "institution": "Banco Exemplo",
     "externalIdentifier": null,
     "isArchived": false,
-    "balance": "21757.63"
+    "balance": "20727.98"
+  },
+  {
+    "id": "0000000a-0000-4000-8000-000000000004",
+    "name": "Conta Digital Exemplo",
+    "type": "Checking",
+    "institution": "Banco Digital Exemplo",
+    "externalIdentifier": null,
+    "isArchived": false,
+    "balance": "1330.00"
   }
 ]
