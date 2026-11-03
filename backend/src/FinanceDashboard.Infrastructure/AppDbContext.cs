@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<BalanceCheckpoint> Checkpoints => Set<BalanceCheckpoint>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<Link> Links => Set<Link>();
+    public DbSet<OwnAlias> OwnAliases => Set<OwnAlias>();
 
     // Read per query by the global filters (EF parameterizes it); services read it for per-user locks.
     public string? CurrentUserId => currentUser.UserId;
@@ -103,15 +104,32 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
             e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32);
-            // Nullable in the domain (open links come with S3(b)); the column stays NOT NULL until its migration.
-            e.Property(x => x.OutTransactionId).IsRequired();
-            e.Property(x => x.InTransactionId).IsRequired();
-            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.OutTransactionId).OnDelete(DeleteBehavior.Cascade);
-            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.InTransactionId).OnDelete(DeleteBehavior.Cascade);
+            // Open links (S3(b)): exactly one side is null (counterpart outside the imported accounts). Postgres
+            // treats NULLs as distinct, so the unique (Out, In) and the per-column Confirmed indexes ignore them
+            // naturally; the CHECK forbids a link with both sides null, and the two "open" partial unique indexes
+            // keep at most one live (Suggested/Confirmed) open link per line and shape. Open links are
+            // independent from pair links: a line may have an open Confirmed link and a Suggested pair link.
+            e.Property(x => x.OutTransactionId).IsRequired(false);
+            e.Property(x => x.InTransactionId).IsRequired(false);
+            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.OutTransactionId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.InTransactionId).IsRequired(false).OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t => t.HasCheckConstraint("CK_Links_AtLeastOneSide",
+                "\"OutTransactionId\" IS NOT NULL OR \"InTransactionId\" IS NOT NULL"));
             e.HasIndex(x => new { x.OutTransactionId, x.InTransactionId }).IsUnique();
-            e.HasIndex(x => x.OutTransactionId).IsUnique().HasFilter("\"State\" = 'Confirmed'");
-            e.HasIndex(x => x.InTransactionId).IsUnique().HasFilter("\"State\" = 'Confirmed'");
+            e.HasIndex(x => x.OutTransactionId, "IX_Links_OutTransactionId").IsUnique().HasFilter("\"State\" = 'Confirmed'");
+            e.HasIndex(x => x.InTransactionId, "IX_Links_InTransactionId").IsUnique().HasFilter("\"State\" = 'Confirmed'");
+            e.HasIndex(x => x.OutTransactionId, "IX_Links_OutTransactionId_LiveOpen").IsUnique()
+                .HasFilter("\"InTransactionId\" IS NULL AND \"State\" <> 'Rejected'");
+            e.HasIndex(x => x.InTransactionId, "IX_Links_InTransactionId_LiveOpen").IsUnique()
+                .HasFilter("\"OutTransactionId\" IS NULL AND \"State\" <> 'Rejected'");
             e.HasIndex(x => new { x.UserId, x.State });
+            e.HasQueryFilter(x => x.UserId == CurrentUserId);
+        });
+
+        b.Entity<OwnAlias>(e =>
+        {
+            e.Property(x => x.Fragment).HasMaxLength(200);
+            e.HasIndex(x => new { x.UserId, x.Fragment }).IsUnique();
             e.HasQueryFilter(x => x.UserId == CurrentUserId);
         });
     }
