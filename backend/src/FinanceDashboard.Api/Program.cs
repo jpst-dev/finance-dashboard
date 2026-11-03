@@ -23,6 +23,8 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
 }
 
+await SeedUser.EnsureAsync(app.Services, app.Configuration);
+
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
