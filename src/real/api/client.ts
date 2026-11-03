@@ -46,6 +46,10 @@ export interface ApiClient {
     create(b: NewTransaction): Promise<Transaction>;
     update(id: string, b: TransactionUpdate): Promise<Transaction>;
     remove(id: string): Promise<void>;
+    /** Marca uma linha OwnTransfer sem vínculo como transferência para conta fora do app. */
+    markOwn(id: string): Promise<LinkResponse>;
+    /** Marca um pagamento de fatura pendente como sem contrapartida (sem extrato). */
+    markNoCounterpart(id: string): Promise<LinkResponse>;
   };
   summary: {
     /** `month` no formato `YYYY-MM`. */

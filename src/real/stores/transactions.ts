@@ -3,7 +3,8 @@ import { ref } from "vue";
 import { getApi } from "../api/context";
 import type { Transaction, TransactionQuery, TransactionState } from "../api/types";
 import { isMoneyString } from "../money/input";
-import { errorCodeOf } from "./errorCode";
+import { errorCodeOf, linkErrorCodeOf } from "./errorCode";
+import { useLinksStore } from "./links";
 
 export const DESCRIPTION_MAX = 300;
 export const PAGE_SIZE = 50;
@@ -114,13 +115,13 @@ export const useTransactionsStore = defineStore("fd-transactions", () => {
     await Promise.all([load(), loadPendingCount()]);
   }
 
-  async function run<T>(fn: () => Promise<T>): Promise<T | null> {
+  async function run<T>(fn: () => Promise<T>, codeOf: (e: unknown) => string = errorCodeOf): Promise<T | null> {
     busy.value = true;
     error.value = null;
     try {
       return await fn();
     } catch (e) {
-      error.value = errorCodeOf(e);
+      error.value = codeOf(e);
       return null;
     } finally {
       busy.value = false;
@@ -175,6 +176,20 @@ export const useTransactionsStore = defineStore("fd-transactions", () => {
   }
 
   /**
+   * Marcações de vínculo de lado vazio ("é meu" / "sem contrapartida"): recarregam vínculos, lista e contador
+   * mesmo em erro (404/409 = tela velha); o código do erro sobrevive ao recarregamento.
+   */
+  async function mark(call: () => Promise<unknown>): Promise<boolean> {
+    const ok = (await run(async () => (await call(), true), linkErrorCodeOf)) === true;
+    const code = error.value;
+    await Promise.all([reloadAll(), useLinksStore().load()]);
+    if (!ok) error.value = code;
+    return ok;
+  }
+  const markOwn = (id: string) => mark(() => getApi().transactions.markOwn(id));
+  const markNoCounterpart = (id: string) => mark(() => getApi().transactions.markNoCounterpart(id));
+
+  /**
    * Reclassificação inline: atualização otimista + PUT com o corpo completo; rollback em erro.
    * Com filtro de estado ativo, a linha que deixou de combinar sai da lista no sucesso.
    */
@@ -216,6 +231,6 @@ export const useTransactionsStore = defineStore("fd-transactions", () => {
 
   return {
     items, page, size, total, filters, loading, error, pendingCount, busy,
-    load, loadPendingCount, setFilters, resetFilters, setPage, create, update, remove, classify,
+    load, loadPendingCount, setFilters, resetFilters, setPage, create, update, remove, classify, markOwn, markNoCounterpart,
   };
 });

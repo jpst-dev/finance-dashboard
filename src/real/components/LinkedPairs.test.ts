@@ -44,7 +44,7 @@ describe("LinkedPairs", () => {
 
   it("description_is_text_not_html", async () => {
     const l = link({ state: "Confirmed" });
-    l.in.description = "<b>x</b>";
+    l.in!.description = "<b>x</b>";
     const { w } = await setup(l);
     expect(w.find("[data-test=linked] b").exists()).toBe(false);
     expect(w.find("[data-test=linked]").text()).toContain("<b>x</b>");

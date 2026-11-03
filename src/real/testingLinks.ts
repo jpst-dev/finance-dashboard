@@ -1,10 +1,10 @@
 import { vi } from "vitest";
 import type { ApiClient } from "./api";
 import { setApi } from "./api/context";
-import type { LinkResponse, PairedLink } from "./api/types";
+import type { LinkResponse } from "./api/types";
 import { tx } from "./testingTx";
 
-export function link(over: Partial<PairedLink> = {}): PairedLink {
+export function link(over: Partial<LinkResponse> = {}): LinkResponse {
   return {
     id: "l1",
     kind: "OwnTransfer",
@@ -16,6 +16,11 @@ export function link(over: Partial<PairedLink> = {}): PairedLink {
     createdAt: "2026-03-06T10:00:00Z",
     ...over,
   };
+}
+
+/** Vínculo de lado vazio: só a saída existe; `external` marca a conta fora do app. */
+export function oneSided(over: Partial<LinkResponse> = {}): LinkResponse {
+  return link({ id: "o1", in: null, external: true, ...over });
 }
 
 /** Cliente falso com `links` e `transactions` (a loja de vínculos recarrega as pendências). */
@@ -43,6 +48,8 @@ export function fakeLinksApi(links: LinkResponse[] = []) {
   };
   const transactions = {
     list: vi.fn(async (q: { page?: number; size?: number }) => ({ items: [tx()], page: q.page ?? 1, size: q.size ?? 50, total: 1 })),
+    markOwn: vi.fn(async () => oneSided({ state: "Confirmed", origin: "User" })),
+    markNoCounterpart: vi.fn(async () => oneSided({ state: "Confirmed", origin: "User", kind: "InvoicePayment" })),
   };
   setApi({ links: linksApi, transactions } as unknown as ApiClient);
   return { links: linksApi, transactions, state };

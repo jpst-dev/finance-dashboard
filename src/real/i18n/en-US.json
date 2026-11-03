@@ -128,7 +128,8 @@
       "invalid_cell": "The spreadsheet has a cell with an invalid value and cannot be imported.",
       "one_file": "Upload one file at a time.",
       "invalid_account": "Choose an active checking or credit card account.",
-      "link_conflict": "The link changed while you were looking. The list was refreshed."
+      "link_conflict": "The link changed while you were looking. The list was refreshed.",
+      "not_applicable": "This line does not apply to that action. The list was refreshed."
     },
     "import": {
       "help": "Upload the statement or card bill (.ofx from Nubank or Itaú; Itaú card bill as .xlsx), one file at a time, up to 5 MB. Nothing is recorded until you confirm.",
@@ -233,7 +234,7 @@
         "deletedKeys": "Lines you deleted that belong to other imports keep occupying their key and do not come back when you re-import; lines deleted from this import come back if you import the file again.",
         "undone": "Import undone."
       },
-      "resultLinks": "{linked} pairs linked, {suggested} suggestions"
+      "resultLinks": "{linked}, {suggested}"
     },
     "pagination": {
       "label": "Pagination",
@@ -245,7 +246,9 @@
       "help": "Transactions waiting to be classified. Adjust the state and category right on the row.",
       "empty": "No pending transactions",
       "saved": "Transaction updated.",
-      "badge": "pending"
+      "badge": "pending",
+      "reconcileResult": "{linked}, {suggested}, {reclassified}",
+      "reconcile": "Reconcile pending items"
     },
     "transactions": {
       "filters": "Filters",
@@ -287,8 +290,13 @@
       "empty": "No transactions found.",
       "linkBadge": {
         "OwnTransfer": "Transfer",
-        "InvoicePayment": "Invoice payment"
-      }
+        "InvoicePayment": "Invoice payment",
+        "PixCredit": "Pix on credit"
+      },
+      "own": "It is mine",
+      "noCounterpart": "No counterpart",
+      "ownRow": "Mark {description} as a transfer to my account outside the app",
+      "noCounterpartRow": "Mark {description} as an invoice payment with no counterpart"
     },
     "overview": {
       "accounts": "Accounts",
@@ -331,8 +339,20 @@
       "undo": "Undo",
       "kind": {
         "OwnTransfer": "Transfer",
-        "InvoicePayment": "Invoice payment"
+        "InvoicePayment": "Invoice payment",
+        "PixCredit": "Pix on credit"
+      },
+      "external": {
+        "OwnTransfer": "account outside the app",
+        "InvoicePayment": "no statement",
+        "PixCredit": "no counterpart"
       }
+    },
+    "plural": {
+      "pairs": "no pairs linked | 1 pair linked | {n} pairs linked",
+      "suggestions": "no suggestions | 1 suggestion | {n} suggestions",
+      "linked": "none linked | 1 linked | {n} linked",
+      "reclassified": "none reclassified | 1 reclassified | {n} reclassified"
     }
   }
 }

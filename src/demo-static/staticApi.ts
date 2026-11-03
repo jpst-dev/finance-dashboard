@@ -54,6 +54,8 @@ export function createStaticApi(f: DemoFixtures): ApiClient {
       create: readOnly,
       update: readOnly,
       remove: readOnly,
+      markOwn: readOnly,
+      markNoCounterpart: readOnly,
     },
     summary: {
       month: async (m, accountId) => {

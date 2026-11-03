@@ -55,7 +55,7 @@ describe("LinkSuggestions", () => {
 
   it("renders_third_party_description_as_text_not_html", async () => {
     const l = link();
-    l.out.description = "Pix <b>negrito</b>";
+    l.out!.description = "Pix <b>negrito</b>";
     const { w } = await setup(l);
     expect(w.find("[data-test=suggestion]").text()).toContain("<b>negrito</b>");
     expect(w.find("[data-test=suggestion] b").exists()).toBe(false);

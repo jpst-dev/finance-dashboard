@@ -217,6 +217,8 @@ export function createHttpApi(opts: HttpApiOptions = {}): ApiClient {
       create: (b) => request<Transaction>("/api/transactions", { method: "POST", json: b }),
       update: (id, b) => request<Transaction>(`/api/transactions/${enc(id)}`, { method: "PUT", json: b }),
       remove: (id) => request<void>(`/api/transactions/${enc(id)}`, { method: "DELETE" }),
+      markOwn: (id) => request<LinkResponse>(`/api/transactions/${enc(id)}/own-transfer`, { method: "POST" }),
+      markNoCounterpart: (id) => request<LinkResponse>(`/api/transactions/${enc(id)}/no-counterpart`, { method: "POST" }),
     },
     summary: {
       month: (month, accountId) => request<Summary>("/api/summary", { query: { month, accountId } }),
