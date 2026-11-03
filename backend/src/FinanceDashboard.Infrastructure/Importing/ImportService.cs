@@ -10,8 +10,25 @@ namespace FinanceDashboard.Infrastructure.Importing;
 
 public sealed record ImportCheckpointView(DateOnly Date, decimal Amount);
 
-/// <summary>A preview line. <see cref="SourceKey"/> (the FITID) is what a confirm override refers to.</summary>
-public sealed record ImportLineView(string SourceKey, DateOnly Date, decimal Amount, string Description, TransactionState State, bool Existing);
+public sealed record ImportInvoiceView(DateOnly DueDate, decimal DeclaredTotal);
+
+/// <summary>
+/// A preview line. The pair (<see cref="SourceKey"/>, <see cref="Ordinal"/>) is what a confirm override refers to
+/// (Nubank: the FITID, ordinal always 0; Itaú: a content key and its k-th occurrence in the file).
+/// </summary>
+public sealed record ImportLineView(
+    string SourceKey,
+    DateOnly Date,
+    decimal Amount,
+    string Description,
+    TransactionState State,
+    bool Existing,
+    int Ordinal,
+    int? InstallmentNumber,
+    int? InstallmentTotal,
+    string? CardSuffix,
+    CardKind? CardKind,
+    DateOnly? PurchaseDate);
 
 public sealed record ImportPreviewView(
     Guid BatchId,
@@ -27,7 +44,8 @@ public sealed record ImportPreviewView(
     IReadOnlyList<ImportLineView> Lines,
     DateTimeOffset CreatedAt,
     DateTimeOffset? ExpiresAt,
-    int EditedCount);
+    int EditedCount,
+    ImportInvoiceView? Invoice);
 
 public sealed record ImportBatchSummary(
     Guid BatchId,
@@ -39,24 +57,37 @@ public sealed record ImportBatchSummary(
     int NewCount,
     int ExistingCount,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? ExpiresAt);
+    DateTimeOffset? ExpiresAt,
+    ImportInvoiceView? Invoice);
 
-/// <summary>One parsed line as kept in <see cref="ImportBatch.PreviewJson"/>: everything confirm needs, no re-upload.</summary>
+/// <summary>
+/// One parsed line as kept in <see cref="ImportBatch.PreviewJson"/>: everything confirm needs, no re-upload.
+/// The key keeps its S1a JSON name (<c>fitId</c>) and the fields added later have defaults, so a preview stored
+/// before them still confirms (ordinal 0, no metadata).
+/// </summary>
 public sealed record StoredPreviewLine(
-    string FitId,
+    [property: JsonPropertyName("fitId")] string SourceKey,
     DateOnly Date,
     decimal Amount,
     string Memo,
     TransactionState State,
     string? CounterpartyName,
     string? CounterpartyDocument,
-    bool Existing);
+    bool Existing,
+    int Ordinal = 0,
+    DateOnly? PurchaseDate = null,
+    DateOnly? StatementDate = null,
+    int? InstallmentNumber = null,
+    int? InstallmentTotal = null,
+    string? CardSuffix = null,
+    CardKind? CardKind = null);
 
 /// <summary>Shape of <see cref="ImportBatch.PreviewJson"/> (jsonb). The original file is never stored.</summary>
 public sealed record StoredPreview(
     string? AccountExternalId,
     ImportCheckpointView? Checkpoint,
-    IReadOnlyList<StoredPreviewLine> Lines)
+    IReadOnlyList<StoredPreviewLine> Lines,
+    ImportInvoiceView? Invoice = null)
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
@@ -84,10 +115,11 @@ public sealed record PreviewOutcome(ImportPreviewView? Preview, PreviewError? Er
 }
 
 /// <summary>
-/// Classification chosen in the preview for one line, by its <see cref="SourceKey"/>. <see cref="State"/> and
+/// Classification chosen in the preview for one line, by its pair (<see cref="SourceKey"/>, <see cref="Ordinal"/>);
+/// <see cref="Ordinal"/> defaults to 0 (always the case for Nubank). <see cref="State"/> and
 /// <see cref="CategoryId"/> are independent; a null one keeps what the import rules gave the line.
 /// </summary>
-public sealed record ImportLineOverride(string SourceKey, TransactionState? State = null, Guid? CategoryId = null);
+public sealed record ImportLineOverride(string SourceKey, TransactionState? State = null, Guid? CategoryId = null, int Ordinal = 0);
 
 public sealed record ConfirmResult(Guid BatchId, int Created, int Skipped);
 
@@ -148,39 +180,47 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
                 : PreviewOutcome.Fail(PreviewError.InvalidFile, e.Kind);
         }
 
+        return await CreatePreviewAsync(accountId, parsed, Convert.ToHexStringLower(SHA256.HashData(content)), ct);
+    }
+
+    /// <summary>Preview of an already parsed statement; <paramref name="fileHash"/> identifies the original file.</summary>
+    public async Task<PreviewOutcome> CreatePreviewAsync(
+        Guid accountId, ParsedStatement parsed, string fileHash, CancellationToken ct = default)
+    {
+        var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == accountId, ct);
+        if (account is null) return PreviewOutcome.Fail(PreviewError.AccountNotFound);
+        if (account.IsArchived) return PreviewOutcome.Fail(PreviewError.AccountArchived);
+
         var expectedType = ImportSources.ExpectedAccountType(parsed.Source);
         if (account.Type != expectedType) return PreviewOutcome.Fail(PreviewError.AccountTypeMismatch, "account_type_mismatch");
 
         var now = time.GetUtcNow();
-        var hash = Convert.ToHexStringLower(SHA256.HashData(content));
+        var hash = fileHash;
         await DiscardExpiredAsync(now, ct);
         // Re-sending the same file replaces its open preview.
         await db.ImportBatches.Where(b => b.State == ImportBatchState.Preview && b.FileHash == hash).ExecuteDeleteAsync(ct);
 
-        var fitIds = parsed.Lines.Select(l => l.FitId).Distinct().ToList();
-        // Existing = same key in this account, soft-deleted included (no Visible()).
-        var inAccount = (await db.Transactions.AsNoTracking()
-                .Where(t => t.AccountId == account.Id && t.SourceKey != null && fitIds.Contains(t.SourceKey))
-                .Select(t => t.SourceKey!).Distinct().ToListAsync(ct))
-            .ToHashSet(StringComparer.Ordinal);
-        var inOtherAccounts = await db.Transactions.AsNoTracking()
-            .Where(t => t.AccountId != account.Id && t.SourceKey != null && fitIds.Contains(t.SourceKey))
-            .Select(t => t.SourceKey!).Distinct().CountAsync(ct);
+        var checks = new ImportChecks(db);
+        var keys = parsed.Lines.Select(l => l.SourceKey).Distinct(StringComparer.Ordinal).ToList();
+        // Existing = the same (key, ordinal) pair in this account, soft-deleted included. Which pairs, not how many
+        // lines: a hole left by an undone overlapping batch is reported as new.
+        var inAccount = await checks.ExistingPairsAsync(account.Id, keys, ct);
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<(string, int)>();
         var lines = new List<StoredPreviewLine>(parsed.Lines.Count);
         foreach (var l in parsed.Lines)
         {
-            // A repeated FITID inside the file is imported once: later copies count as existing.
-            var existing = inAccount.Contains(l.FitId) || !seen.Add(l.FitId);
-            var (name, document) = NubankRules.ExtractCounterparty(l.Memo);
-            lines.Add(new StoredPreviewLine(l.FitId, l.Date, l.Amount, l.Memo,
-                NubankRules.Classify(parsed.Source, l.Memo), name, document, existing));
+            // A pair repeated inside the file is imported once: later copies count as existing (Nubank repeated FITID).
+            var pair = (l.SourceKey, l.Ordinal);
+            var existing = inAccount.Contains(pair) || !seen.Add(pair);
+            lines.Add(new StoredPreviewLine(l.SourceKey, l.Date, l.Amount, l.Memo, l.State, l.CounterpartyName,
+                l.CounterpartyDocument, existing, l.Ordinal, l.PurchaseDate, l.StatementDate, l.InstallmentNumber,
+                l.InstallmentTotal, l.CardSuffix, l.CardKind));
         }
 
         var existingCount = lines.Count(l => l.Existing);
         var newCount = lines.Count - existingCount;
-        var warnings = new List<ImportWarning>();
+        var warnings = new List<ImportWarning>(parsed.Warnings);
 
         var alreadyImported = await db.ImportBatches
             .AnyAsync(b => b.State == ImportBatchState.Confirmed && b.FileHash == hash, ct);
@@ -196,7 +236,12 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             warnings.Add(ImportWarning.AccountIdentifierMismatch());
         }
 
-        if (inOtherAccounts > 0) warnings.Add(ImportWarning.FitidInOtherAccount(inOtherAccounts));
+        // Content keys (Itaú) legitimately repeat across accounts; only stable ids (Nubank FITID) must not.
+        if (!ImportSources.UsesContentKeys(parsed.Source))
+        {
+            var inOtherAccounts = await checks.KeysInOtherAccountsAsync(account.Id, keys, ct);
+            if (inOtherAccounts > 0) warnings.Add(ImportWarning.FitidInOtherAccount(inOtherAccounts));
+        }
 
         var outside = lines.Count(l => (parsed.PeriodStart is { } s && l.Date < s) || (parsed.PeriodEnd is { } e && l.Date > e));
         if (outside > 0) warnings.Add(ImportWarning.DateOutsidePeriod(outside));
@@ -212,7 +257,11 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             if (periodWarning is not null) warnings.Add(periodWarning);
         }
 
+        var possibleDuplicates = await checks.PossibleDuplicatesAsync(account.Id, lines, ct);
+        if (possibleDuplicates > 0) warnings.Add(ImportWarning.PossibleDuplicate(possibleDuplicates));
+
         var checkpoint = parsed.LedgerBalance is { } lb ? new ImportCheckpointView(lb.AsOf, lb.Amount) : null;
+        var invoice = parsed.Invoice is { } inv ? new ImportInvoiceView(inv.DueDate, inv.DeclaredTotal) : null;
         var batch = new ImportBatch
         {
             Id = Guid.NewGuid(),
@@ -221,10 +270,14 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             FileHash = hash,
             PeriodStart = parsed.PeriodStart,
             PeriodEnd = parsed.PeriodEnd,
+            DueDate = parsed.Invoice?.DueDate,
+            DeclaredTotal = parsed.Invoice?.DeclaredTotal,
+            LedgerBalance = parsed.LedgerRead?.Amount,
+            LedgerBalanceDate = parsed.LedgerRead?.AsOf,
             State = ImportBatchState.Preview,
             CreatedAt = now,
             ExpiresAt = now + PreviewLifetime,
-            PreviewJson = new StoredPreview(parsed.AccountExternalId, checkpoint, lines).Serialize(),
+            PreviewJson = new StoredPreview(parsed.AccountExternalId, checkpoint, lines, invoice).Serialize(),
             WarningsJson = StoredPreview.SerializeWarnings(warnings),
             NewCount = newCount,
             ExistingCount = existingCount,
@@ -248,14 +301,14 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
 
     /// <summary>
     /// Records the stored preview of a batch. Re-validates against the current state; inserts only lines whose
-    /// (account, FITID, 0) key is free — existing lines (edited or soft-deleted included) are never touched.
+    /// (account, key, ordinal) pair is free — existing lines (edited or soft-deleted included) are never touched.
     /// Races are settled by the database: the conditional state change serializes confirms of the same batch,
     /// the partial unique hash index rejects a second confirm of the same file, and
     /// <c>ON CONFLICT DO NOTHING</c> on the (account, key, ordinal) index skips lines another confirm just wrote.
     /// </summary>
     /// <remarks>
-    /// <paramref name="overrides"/> are validated before anything is written (unknown or repeated source key,
-    /// category missing or of another user: <see cref="ConfirmError.InvalidOverride"/>). They reach only the rows
+    /// <paramref name="overrides"/> are validated before anything is written (pair unknown in the preview, repeated
+    /// pair, negative ordinal, category missing or of another user: <see cref="ConfirmError.InvalidOverride"/>). They reach only the rows
     /// this confirm actually inserts: a line that is existing (at preview time, or because another confirm recorded
     /// it since) is skipped by the insert, so its override is silently ignored and the stored row stays untouched.
     /// </remarks>
@@ -278,7 +331,7 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         var amounts = stored.Lines.Select(l => l.Amount).ToList();
         if (stored.Checkpoint is not null) amounts.Add(stored.Checkpoint.Amount);
         if (amounts.Any(a => a != decimal.Round(a, 2))) return ConfirmOutcome.Fail(ConfirmError.UnsupportedAmountPrecision);
-        if (amounts.Any(a => Math.Abs(a) >= MaxAbsAmount) || stored.Lines.Any(l => l.FitId.Length > MaxSourceKey))
+        if (amounts.Any(a => Math.Abs(a) >= MaxAbsAmount) || stored.Lines.Any(l => l.SourceKey.Length > MaxSourceKey))
         {
             return ConfirmOutcome.Fail(ConfirmError.UnsupportedLine);
         }
@@ -301,11 +354,15 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         }
 
         var blocking = await BlockingWarningsAsync(account, batch.Source, stored, ct);
-        if (blocking.Count > 0 && !acknowledgeBlockingWarnings) return ConfirmOutcome.Fail(ConfirmError.BlockingWarnings, blocking);
+        // A non-overridable warning refuses the confirm even when acknowledged.
+        if (blocking.Count > 0 && (!acknowledgeBlockingWarnings || blocking.Any(w => !w.Overridable)))
+        {
+            return ConfirmOutcome.Fail(ConfirmError.BlockingWarnings, blocking);
+        }
 
-        // One row per FITID; sorted so concurrent confirms take the key locks in the same order (no deadlock).
-        var lines = stored.Lines.DistinctBy(l => l.FitId, StringComparer.Ordinal)
-            .OrderBy(l => l.FitId, StringComparer.Ordinal).ToList();
+        // One row per (key, ordinal); sorted so concurrent confirms take the key locks in the same order (no deadlock).
+        var lines = stored.Lines.DistinctBy(l => (l.SourceKey, l.Ordinal))
+            .OrderBy(l => l.SourceKey, StringComparer.Ordinal).ThenBy(l => l.Ordinal).ToList();
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         // Holds the chosen categories until commit, so a concurrent delete cannot break the insert's foreign key.
@@ -393,17 +450,22 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         _ => ConfirmError.NotFound,
     };
 
-    /// <summary>Overrides keyed by source key, or null when one is invalid (missing, repeated or not in the preview).</summary>
-    private static Dictionary<string, ImportLineOverride>? ValidOverrides(
+    /// <summary>
+    /// Overrides keyed by (source key, ordinal), or null when one is invalid (missing, negative ordinal, repeated
+    /// pair or pair not in the preview).
+    /// </summary>
+    private static Dictionary<(string Key, int Ordinal), ImportLineOverride>? ValidOverrides(
         StoredPreview stored, IReadOnlyList<ImportLineOverride>? overrides)
     {
-        var byKey = new Dictionary<string, ImportLineOverride>(StringComparer.Ordinal);
+        var byKey = new Dictionary<(string Key, int Ordinal), ImportLineOverride>();
         if (overrides is null) return byKey;
 
-        var keys = stored.Lines.Select(l => l.FitId).ToHashSet(StringComparer.Ordinal);
+        var pairs = stored.Lines.Select(l => (l.SourceKey, l.Ordinal)).ToHashSet();
         foreach (var o in overrides)
         {
-            if (o?.SourceKey is null || !keys.Contains(o.SourceKey) || !byKey.TryAdd(o.SourceKey, o)) return null;
+            if (o?.SourceKey is null || o.Ordinal < 0) return null;
+            var pair = (o.SourceKey, o.Ordinal);
+            if (!pairs.Contains(pair) || !byKey.TryAdd(pair, o)) return null;
             if (o.State is { } state && !Enum.IsDefined(state)) return null;
         }
 
@@ -430,18 +492,21 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             warnings.Add(ImportWarning.AccountIdentifierMismatch());
         }
 
-        var fitIds = stored.Lines.Select(l => l.FitId).Distinct().ToList();
-        var inOtherAccounts = await db.Transactions.AsNoTracking()
-            .Where(t => t.AccountId != account.Id && t.SourceKey != null && fitIds.Contains(t.SourceKey))
-            .Select(t => t.SourceKey!).Distinct().CountAsync(ct);
-        if (inOtherAccounts > 0) warnings.Add(ImportWarning.FitidInOtherAccount(inOtherAccounts));
+        if (!ImportSources.UsesContentKeys(source))
+        {
+            var keys = stored.Lines.Select(l => l.SourceKey).Distinct(StringComparer.Ordinal).ToList();
+            var inOtherAccounts = await new ImportChecks(db).KeysInOtherAccountsAsync(account.Id, keys, ct);
+            if (inOtherAccounts > 0) warnings.Add(ImportWarning.FitidInOtherAccount(inOtherAccounts));
+        }
+
         return warnings;
     }
 
     /// <summary>One INSERT … ON CONFLICT DO NOTHING over arrays; returns how many lines were actually created.</summary>
     /// <remarks>Overrides ride along per line; rows skipped by ON CONFLICT (existing lines) never get theirs.</remarks>
     private Task<int> InsertLinesAsync(
-        ImportBatch batch, IReadOnlyList<StoredPreviewLine> lines, IReadOnlyDictionary<string, ImportLineOverride> overrides,
+        ImportBatch batch, IReadOnlyList<StoredPreviewLine> lines,
+        IReadOnlyDictionary<(string Key, int Ordinal), ImportLineOverride> overrides,
         CancellationToken ct)
     {
         if (lines.Count == 0) return Task.FromResult(0);
@@ -449,11 +514,15 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         const string sql = """
             INSERT INTO "Transactions" ("Id", "UserId", "AccountId", "Date", "PurchaseDate", "Amount",
                 "OriginalDescription", "NormalizedDescription", "State", "CategoryId", "Origin", "BatchId", "SourceKey", "Ordinal",
-                "CounterpartyName", "CounterpartyDocument", "IsDeleted", "EditedByUser")
-            SELECT l.id, @user, @account, l.date, l.date, l.amount, l.original, l.normalized, l.state, l.category, @origin,
-                @batch, l.key, 0, l.name, l.document, FALSE, FALSE
-            FROM unnest(@ids, @dates, @amounts, @originals, @normalized, @states, @categories, @keys, @names, @documents)
-                WITH ORDINALITY AS l(id, date, amount, original, normalized, state, category, key, name, document, n)
+                "CounterpartyName", "CounterpartyDocument", "StatementDate", "InstallmentNumber", "InstallmentTotal",
+                "CardSuffix", "CardKind", "IsDeleted", "EditedByUser")
+            SELECT l.id, @user, @account, l.date, l.purchase, l.amount, l.original, l.normalized, l.state, l.category,
+                @origin, @batch, l.key, l.ordinal, l.name, l.document, l.statement, l.installment, l.installments,
+                l.suffix, l.kind, FALSE, FALSE
+            FROM unnest(@ids, @dates, @purchases, @amounts, @originals, @normalized, @states, @categories, @keys,
+                    @ordinals, @names, @documents, @statements, @installment_numbers, @installment_totals, @suffixes, @kinds)
+                WITH ORDINALITY AS l(id, date, purchase, amount, original, normalized, state, category, key, ordinal,
+                    name, document, statement, installment, installments, suffix, kind, n)
             ORDER BY l.n
             ON CONFLICT ("AccountId", "SourceKey", "Ordinal") WHERE "SourceKey" IS NOT NULL DO NOTHING
             """;
@@ -466,6 +535,7 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             new NpgsqlParameter("batch", batch.Id),
             new NpgsqlParameter("ids", lines.Select(_ => Guid.NewGuid()).ToArray()),
             new NpgsqlParameter("dates", lines.Select(l => l.Date).ToArray()),
+            new NpgsqlParameter("purchases", lines.Select(l => l.PurchaseDate ?? l.Date).ToArray()),
             new NpgsqlParameter("amounts", lines.Select(l => l.Amount).ToArray()),
             new NpgsqlParameter("originals", lines.Select(l => Cut(l.Memo, MaxDescription)).ToArray()),
             new NpgsqlParameter("normalized", lines.Select(l => Cut(NormalizeDescription(l.Memo), MaxDescription)).ToArray()),
@@ -474,13 +544,34 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             {
                 Value = lines.Select(l => Override(l)?.CategoryId).ToArray(),
             },
-            new NpgsqlParameter("keys", lines.Select(l => l.FitId).ToArray()),
+            new NpgsqlParameter("keys", lines.Select(l => l.SourceKey).ToArray()),
+            new NpgsqlParameter("ordinals", lines.Select(l => l.Ordinal).ToArray()),
             new NpgsqlParameter("names", lines.Select(l => CutOrNull(l.CounterpartyName, MaxCounterpartyName)).ToArray()),
             new NpgsqlParameter("documents", lines.Select(l => CutOrNull(l.CounterpartyDocument, MaxCounterpartyDocument)).ToArray()),
+            new NpgsqlParameter("statements", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Date)
+            {
+                Value = lines.Select(l => l.StatementDate).ToArray(),
+            },
+            new NpgsqlParameter("installment_numbers", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer)
+            {
+                Value = lines.Select(l => l.InstallmentNumber).ToArray(),
+            },
+            new NpgsqlParameter("installment_totals", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Integer)
+            {
+                Value = lines.Select(l => l.InstallmentTotal).ToArray(),
+            },
+            new NpgsqlParameter("suffixes", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text)
+            {
+                Value = lines.Select(l => l.CardSuffix).ToArray(),
+            },
+            new NpgsqlParameter("kinds", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Text)
+            {
+                Value = lines.Select(l => l.CardKind?.ToString()).ToArray(),
+            },
         ];
         return db.Database.ExecuteSqlRawAsync(sql, parameters, ct);
 
-        ImportLineOverride? Override(StoredPreviewLine l) => overrides.GetValueOrDefault(l.FitId);
+        ImportLineOverride? Override(StoredPreviewLine l) => overrides.GetValueOrDefault((l.SourceKey, l.Ordinal));
     }
 
     /// <summary>LEDGERBAL checkpoint, unless the account already has one with the same date and amount.</summary>
@@ -541,7 +632,10 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         return await db.ImportBatches.AsNoTracking()
             .OrderByDescending(b => b.CreatedAt).ThenByDescending(b => b.Id)
             .Select(b => new ImportBatchSummary(b.Id, b.AccountId, b.Source, b.State, b.PeriodStart, b.PeriodEnd,
-                b.NewCount, b.ExistingCount, b.CreatedAt, b.ExpiresAt))
+                b.NewCount, b.ExistingCount, b.CreatedAt, b.ExpiresAt,
+                b.DueDate != null && b.DeclaredTotal != null
+                    ? new ImportInvoiceView(b.DueDate.Value, b.DeclaredTotal.Value)
+                    : null))
             .ToListAsync(ct);
     }
 
@@ -589,6 +683,11 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         IReadOnlyList<StoredPreviewLine> lines, int editedCount = 0) =>
         new(batch.Id, batch.AccountId, batch.Source, batch.State, batch.PeriodStart, batch.PeriodEnd,
             batch.NewCount, batch.ExistingCount, warnings, checkpoint,
-            lines.Select(l => new ImportLineView(l.FitId, l.Date, l.Amount, l.Memo, l.State, l.Existing)).ToList(),
-            batch.CreatedAt, batch.ExpiresAt, editedCount);
+            lines.Select(l => new ImportLineView(l.SourceKey, l.Date, l.Amount, l.Memo, l.State, l.Existing, l.Ordinal,
+                l.InstallmentNumber, l.InstallmentTotal, l.CardSuffix, l.CardKind, l.PurchaseDate)).ToList(),
+            batch.CreatedAt, batch.ExpiresAt, editedCount, InvoiceOf(batch));
+
+    /// <summary>From the batch columns, so a confirmed batch (whose preview JSON is gone) still shows it.</summary>
+    private static ImportInvoiceView? InvoiceOf(ImportBatch b) =>
+        b.DueDate is { } due && b.DeclaredTotal is { } total ? new ImportInvoiceView(due, total) : null;
 }

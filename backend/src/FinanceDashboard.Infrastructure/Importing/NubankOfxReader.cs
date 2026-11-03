@@ -113,7 +113,7 @@ public static class NubankOfxReader
         var source = (ImportSource?)null;
         string? acctId = null, balAmt = null, balDate = null, dtStart = null, dtEnd = null;
         int balLine = 0;
-        var lines = new List<ParsedLine>();
+        var raw = new List<(string FitId, DateOnly Date, decimal Amount, string Memo)>();
         TrnBuilder? trn = null;
 
         void FinishTrn()
@@ -123,7 +123,7 @@ public static class NubankOfxReader
             trn = null;
             if (string.IsNullOrEmpty(t.FitId) || t.Posted is null || t.Amount is null)
                 throw new ImportFormatException("malformed", t.Line);
-            lines.Add(new ParsedLine(t.FitId, ParseDate(t.Posted, t.Line), ParseAmount(t.Amount, t.Line), t.Memo ?? ""));
+            raw.Add((t.FitId, ParseDate(t.Posted, t.Line), ParseAmount(t.Amount, t.Line), t.Memo ?? ""));
         }
 
         var pos = text.IndexOf("<OFX>", StringComparison.OrdinalIgnoreCase);
@@ -205,13 +205,28 @@ public static class NubankOfxReader
         if (balAmt is not null && balDate is not null)
             ledger = new ParsedBalance(ParseAmount(balAmt, balLine), ParseDate(balDate, balLine));
 
+        // Nubank FITIDs are stable ids: ordinal is always 0 (a FITID repeated in the file is the same line).
+        var lines = raw.Select(r =>
+        {
+            var (name, document) = NubankRules.ExtractCounterparty(r.Memo);
+            return new ParsedLine(r.FitId, 0, r.Date, r.Amount, r.Memo, NubankRules.Classify(source.Value, r.Memo))
+            {
+                CounterpartyName = name,
+                CounterpartyDocument = document,
+                PurchaseDate = r.Date,
+            };
+        }).ToList();
+
         return new ParsedStatement(
             source.Value,
             acctId,
             dtStart is null ? null : ParseDate(dtStart, null),
             dtEnd is null ? null : ParseDate(dtEnd, null),
             lines,
-            ledger);
+            ledger)
+        {
+            LedgerRead = ledger,
+        };
     }
 
     private static DateOnly ParseDate(string value, int? line)

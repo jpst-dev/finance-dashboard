@@ -7,10 +7,11 @@ namespace FinanceDashboard.Api.Imports;
 public sealed record ImportErrorResponse(string Error);
 
 /// <summary>
-/// <c>overrides</c> (optional): classification of the preview's new lines by <c>sourceKey</c>; ignored for lines that
-/// turn out to exist already (their classification is not applied), but a category on such a line is still validated:
-/// a category the user does not own is rejected even for a line that already exists.
-/// Unknown or repeated <c>sourceKey</c>, or a category the user does not own:
+/// <c>overrides</c> (optional): classification of the preview's new lines by the pair (<c>sourceKey</c>,
+/// <c>ordinal</c>); <c>ordinal</c> defaults to 0 (always 0 for Nubank). Ignored for lines that turn out to exist
+/// already (their classification is not applied), but a category on such a line is still validated: a category the
+/// user does not own is rejected even for a line that already exists.
+/// A pair not in the preview, a repeated pair, a negative <c>ordinal</c>, or a category the user does not own:
 /// <c>422 {error: "invalid_override"}</c> and nothing is recorded.
 /// </summary>
 public sealed record ConfirmImportRequest(

@@ -164,6 +164,7 @@ function createServer() {
           existingCount: p.existingCount,
           createdAt: p.createdAt,
           expiresAt: p.expiresAt,
+          invoice: p.invoice,
         })),
       get: async (id: string) => {
         const p = batches.get(id);

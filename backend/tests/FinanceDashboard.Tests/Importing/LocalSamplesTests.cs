@@ -52,7 +52,7 @@ public sealed class LocalSamplesTests
             var parsed = NubankOfxReader.Parse(File.ReadAllBytes(file));
 
             Assert.True(parsed.Lines.Count > 0, "a sample has no lines");
-            Assert.True(parsed.Lines.All(l => !string.IsNullOrEmpty(l.FitId)), "a sample line has no FITID");
+            Assert.True(parsed.Lines.All(l => !string.IsNullOrEmpty(l.SourceKey)), "a sample line has no FITID");
             Assert.True(parsed.Lines.All(l => l.Date.Year is >= 2000 and <= 2100), "a sample line has an implausible date");
             Assert.True(Enum.IsDefined(parsed.Source), "unknown statement kind");
             if (parsed.Source == ImportSource.NubankChecking) sawChecking = true;

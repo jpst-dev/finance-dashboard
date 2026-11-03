@@ -339,6 +339,8 @@ export interface components {
             warnings: components["schemas"]["ImportWarning"][];
         };
         /** @enum {string} */
+        CardKind: "Physical" | "Virtual" | "VirtualRecurring" | "Other";
+        /** @enum {string} */
         CategoryKind: "Expense" | "Income";
         CategoryResponse: {
             /** Format: uuid */
@@ -427,6 +429,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             expiresAt: null | string;
+            invoice: null | components["schemas"]["ImportInvoiceView"];
         };
         ImportCheckpointView: {
             /** Format: date */
@@ -436,11 +439,21 @@ export interface components {
         ImportErrorResponse: {
             error: string;
         };
+        ImportInvoiceView: {
+            /** Format: date */
+            dueDate: string;
+            declaredTotal: string;
+        };
         ImportLineOverride: {
             sourceKey: string;
             state?: null | components["schemas"]["TransactionState"];
             /** Format: uuid */
             categoryId?: null | string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            ordinal: number | string;
         };
         ImportLineView: {
             sourceKey: string;
@@ -450,6 +463,16 @@ export interface components {
             description: string;
             state: components["schemas"]["TransactionState"];
             existing: boolean;
+            /** Format: int32 */
+            ordinal: number | string;
+            /** Format: int32 */
+            installmentNumber: null | number | string;
+            /** Format: int32 */
+            installmentTotal: null | number | string;
+            cardSuffix: null | string;
+            cardKind: null | components["schemas"]["CardKind"];
+            /** Format: date */
+            purchaseDate: null | string;
         };
         ImportPreviewView: {
             /** Format: uuid */
@@ -475,6 +498,7 @@ export interface components {
             expiresAt: null | string;
             /** Format: int32 */
             editedCount: number | string;
+            invoice: null | components["schemas"]["ImportInvoiceView"];
         };
         /** @enum {string} */
         ImportSource: "NubankChecking" | "NubankCard" | "ItauChecking" | "ItauCard";

@@ -14,6 +14,12 @@ export function line(over: Partial<ImportLine> = {}): ImportLine {
     description: "Compra Exemplo",
     state: "Normal",
     existing: false,
+    ordinal: 0,
+    installmentNumber: null,
+    installmentTotal: null,
+    cardSuffix: null,
+    cardKind: null,
+    purchaseDate: null,
     ...over,
   };
 }
@@ -40,6 +46,7 @@ export function preview(over: Partial<ImportPreview> = {}): ImportPreview {
     createdAt: "2026-03-31T10:00:00Z",
     expiresAt: "2026-04-01T10:00:00Z",
     editedCount: 0,
+    invoice: null,
     ...over,
   };
 }
@@ -56,6 +63,7 @@ export function batch(over: Partial<ImportBatch> = {}): ImportBatch {
     existingCount: 1,
     createdAt: "2026-03-01T10:00:00Z",
     expiresAt: null,
+    invoice: null,
     ...over,
   };
 }

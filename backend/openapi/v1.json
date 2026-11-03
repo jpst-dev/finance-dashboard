@@ -1083,6 +1083,15 @@
           }
         }
       },
+      "CardKind": {
+        "enum": [
+          "Physical",
+          "Virtual",
+          "VirtualRecurring",
+          "Other"
+        ],
+        "type": "string"
+      },
       "CategoryKind": {
         "enum": [
           "Expense",
@@ -1394,7 +1403,8 @@
           "newCount",
           "existingCount",
           "createdAt",
-          "expiresAt"
+          "expiresAt",
+          "invoice"
         ],
         "type": "object",
         "properties": {
@@ -1452,6 +1462,16 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "invoice": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImportInvoiceView"
+              }
+            ]
           }
         }
       },
@@ -1483,6 +1503,23 @@
           }
         }
       },
+      "ImportInvoiceView": {
+        "required": [
+          "dueDate",
+          "declaredTotal"
+        ],
+        "type": "object",
+        "properties": {
+          "dueDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "declaredTotal": {
+            "pattern": "^-?[0-9]{1,16}(\\.[0-9]{1,2})?$",
+            "type": "string"
+          }
+        }
+      },
       "ImportLineOverride": {
         "required": [
           "sourceKey"
@@ -1508,6 +1545,15 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "ordinal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -1518,7 +1564,13 @@
           "amount",
           "description",
           "state",
-          "existing"
+          "existing",
+          "ordinal",
+          "installmentNumber",
+          "installmentTotal",
+          "cardSuffix",
+          "cardKind",
+          "purchaseDate"
         ],
         "type": "object",
         "properties": {
@@ -1541,6 +1593,55 @@
           },
           "existing": {
             "type": "boolean"
+          },
+          "ordinal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "installmentNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "installmentTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cardSuffix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cardKind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CardKind"
+              }
+            ]
+          },
+          "purchaseDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -1559,7 +1660,8 @@
           "lines",
           "createdAt",
           "expiresAt",
-          "editedCount"
+          "editedCount",
+          "invoice"
         ],
         "type": "object",
         "properties": {
@@ -1647,6 +1749,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "invoice": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImportInvoiceView"
+              }
+            ]
           }
         }
       },
