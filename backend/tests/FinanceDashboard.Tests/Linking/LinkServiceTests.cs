@@ -651,6 +651,37 @@ public sealed class LinkServiceTests(PostgresFixture postgres)
         Assert.Empty(await db.Links.ToListAsync());
     }
 
+    [Fact]
+    public async Task MarkNoCounterpart_requires_pending_state()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var w = new World(db);
+        // Invoice roles only pair while Pending: a Normal one means the user wants it counted.
+        var counted = await w.LineAsync(ImportSource.NubankChecking, PayInvoice, -500m, 10,
+            state: TransactionState.Normal, edited: true);
+
+        Assert.Equal(LinkOutcome.NotApplicable, (await Service(db).MarkNoCounterpartAsync(counted.Id)).Outcome);
+        Assert.Empty(await db.Links.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Alias_does_not_suggest_open_link_for_line_already_on_suggested_pair_in_same_run()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var w = new World(db);
+        var marked = await w.ItauPix("MARIA L", -300m, 10);
+        Assert.Equal(LinkOutcome.Ok, (await Service(db).MarkOwnAsync(marked.Id)).Outcome);
+        // Matches the alias AND pairs (incoherent names ⇒ Suggested) with a line arriving in the same reconcile.
+        var both = await w.ItauPix("MARIA L", -150m, 20);
+        var other = await w.NubankPix("CLIENTE FICTICIO", 150m, 20);
+
+        Assert.Equal(new ReconcileResult(0, 1, 0), await Service(db).ReconcileAsync());
+
+        var only = Assert.Single(await LinksOf(db, both.Id));
+        Assert.False(only.IsOpen);
+        Assert.Equal((LinkState.Suggested, other.Id), (only.State, only.InTransactionId!.Value));
+    }
+
     // ---- S3(b): Pix no crédito ----
 
     [Fact]

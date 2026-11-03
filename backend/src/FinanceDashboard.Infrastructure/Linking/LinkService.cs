@@ -244,14 +244,16 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
                 where t.Id == transactionId
                 join b in db.ImportBatches.AsNoTracking() on t.BatchId equals b.Id into batches
                 from b in batches.DefaultIfEmpty()
-                select new { t.Id, t.Amount, t.OriginalDescription, Source = (ImportSource?)b.Source })
+                select new { t.Id, t.Amount, t.OriginalDescription, t.State, Source = (ImportSource?)b.Source })
             .FirstOrDefaultAsync(ct);
         if (line is null) return new LinkResult(LinkOutcome.NotFound, null);
 
         var role = line.Source is { } source ? PairingRules.RoleOf(source, line.OriginalDescription, line.Amount) : null;
         var applicable = kind == LinkKind.OwnTransfer
             ? role == PairingRole.Transfer
-            : role is PairingRole.InvoiceAccountSide or PairingRole.InvoiceCardSide;
+            // Invoice roles only pair while Pending: a Normal invoice line means the user wants it counted.
+            : role is PairingRole.InvoiceAccountSide or PairingRole.InvoiceCardSide
+                && line.State == TransactionState.PendingClassification;
         if (!applicable) return new LinkResult(LinkOutcome.NotApplicable, null);
 
         if (await db.Links.AnyAsync(l => l.State == LinkState.Confirmed
