@@ -58,6 +58,9 @@ public static class DemoSeed
         return i < 0 ? throw new InvalidOperationException($"Unknown default category {name}.") : Id(CategoryKindId, i + 1);
     }
 
+    /// <summary>Closing date of the confirmed October card invoice (imported 2026-10-05, due 2026-10-10).</summary>
+    private static readonly DateOnly InvoiceClosing = new(2026, 10, 3);
+
     private static readonly DateTimeOffset CheckpointCreatedAt = new(2026, 5, 1, 9, 0, 0, TimeSpan.Zero);
 
     /// <summary>A monthly template: account, day, description, amount for month index i (0 = 2026-05), category.</summary>
@@ -71,7 +74,7 @@ public static class DemoSeed
         new(CheckingId, 16, "Farmácia Exemplo", i => -(57.80m + i * 4.10m), "Saúde"),
         new(CheckingId, 20, "Mercado Exemplo", i => -(412.30m + i * 23.17m), "Alimentação"),
         new(CheckingId, 27, "Rendimento Poupança Exemplo", i => 12.40m + i * 0.83m, "Rendimentos"),
-        new(CardId, 6, "Padaria Fictícia", i => -(38.90m + i * 2.15m), "Alimentação"),
+        new(CardId, 3, "Padaria Fictícia", i => -(38.90m + i * 2.15m), "Alimentação"),
         new(CardId, 14, "Streaming Exemplo", _ => -39.90m, "Assinaturas"),
         new(CardId, 18, "Livraria Fictícia", i => -(64.00m + i * 5.50m), "Educação"),
         new(CardId, 22, "Posto Combustível Exemplo", i => -(210.00m + i * 11.40m), "Transporte"),
@@ -163,8 +166,9 @@ public static class DemoSeed
                     t.SourceKey = CheckingKey(date, Slug(tpl.Description));
                     t.OriginalDescription = SourceKeys.NormalizeText(tpl.Description);
                 }
-                else if (month == 10 && tpl.Account == CardId)
+                else if (month == 10 && tpl.Account == CardId && date <= InvoiceClosing)
                 {
+                    // Lines after the closing date belong to the next invoice (not imported yet).
                     batchLines.Add(t);
                 }
             }
@@ -174,10 +178,10 @@ public static class DemoSeed
         Add(CheckingId, new DateOnly(2026, 7, 15), -300.00m, "Transferência Fictícia", null);
 
         // A 3x installment purchase on the card (the last one is in the confirmed invoice).
-        var purchase = new DateOnly(2026, 8, 3);
+        var purchase = new DateOnly(2026, 7, 28);
         for (var k = 1; k <= 3; k++)
         {
-            var date = new DateOnly(2026, 7 + k, 10);
+            var date = new DateOnly(2026, 7 + k, 2);
             var description = FormattableString.Invariant($"Loja Eletrônicos Exemplo {k}/3");
             var t = Add(CardId, date, -450.00m, description, "Compras");
             t.PurchaseDate = purchase;
@@ -194,7 +198,7 @@ public static class DemoSeed
         Add(WalletId, new DateOnly(2026, 10, 11), -120.00m, "Despesa Sem Descrição Exemplo", null, TransactionState.PendingClassification);
         Add(CardId, new DateOnly(2026, 10, 13), -75.40m, "Compra Fictícia Não Identificada", null, TransactionState.PendingClassification);
 
-        // Confirmed Itaú card invoice: the October card lines up to the reference date.
+        // Confirmed Itaú card invoice: the October card lines up to its closing date (all before CreatedAt and DueDate).
         foreach (var t in batchLines)
         {
             t.BatchId = ConfirmedBatchId;

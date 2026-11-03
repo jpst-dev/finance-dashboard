@@ -99,7 +99,7 @@ public sealed class ImportPreviewTests(PostgresFixture postgres)
     [Fact]
     public async Task Preview_of_checking_file_counts_new_and_writes_no_transactions()
     {
-        var time = new FakeTimeProvider(new DateTimeOffset(2026, 11, 2, 12, 0, 0, TimeSpan.Zero));
+        var time = TestClock.StartingNow(); // follows the real now: see TestClock
         await using var f = await NewFactoryAsync(time);
         using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
         var acc = await CreateAccountAsync(c);
@@ -286,7 +286,7 @@ public sealed class ImportPreviewTests(PostgresFixture postgres)
     [Fact]
     public async Task Expired_previews_are_discarded_on_next_upload()
     {
-        var time = new FakeTimeProvider(new DateTimeOffset(2026, 11, 2, 12, 0, 0, TimeSpan.Zero));
+        var time = TestClock.StartingNow(); // follows the real now: see TestClock
         await using var f = await NewFactoryAsync(time);
         using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
         var acc = await CreateAccountAsync(c);

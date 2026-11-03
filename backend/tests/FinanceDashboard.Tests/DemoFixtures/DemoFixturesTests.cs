@@ -75,6 +75,16 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
         Assert.Contains(lines, t => t.State == TransactionState.Normal && t.CategoryId is null);
         Assert.Contains(lines, t => t.EditedByUser);
         Assert.Equal([1, 2, 3], lines.Where(t => t.InstallmentTotal == 3).OrderBy(t => t.Date).Select(t => t.InstallmentNumber ?? 0));
+
+        // The confirmed invoice is chronologically coherent: its lines precede the import and the due date.
+        var invoice = await db.ImportBatches.SingleAsync(b => b.Id == DemoSeed.ConfirmedBatchId);
+        var invoiceLines = lines.Where(t => t.BatchId == invoice.Id).ToList();
+        Assert.NotEmpty(invoiceLines);
+        Assert.All(invoiceLines, t => Assert.True(
+            t.Date <= DateOnly.FromDateTime(invoice.CreatedAt.UtcDateTime) && t.Date < invoice.DueDate!.Value));
+        Assert.True(invoice.DueDate <= DemoSeed.ReferenceDate);
+        Assert.Equal(invoice.DeclaredTotal, -invoiceLines.Where(t => t.State == TransactionState.Normal).Sum(t => t.Amount));
+        Assert.Contains(invoiceLines, t => t.InstallmentNumber == 3);
     }
 
     [Fact]
@@ -122,6 +132,12 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
 
         if (Environment.GetEnvironmentVariable("UPDATE_DEMO_FIXTURES") == "1")
         {
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"))
+                || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS")))
+            {
+                Assert.Fail("UPDATE_DEMO_FIXTURES não pode rodar na CI");
+            }
+
             Directory.CreateDirectory(dir);
             foreach (var old in Directory.GetFiles(dir, "*.json")) File.Delete(old);
             foreach (var (name, content) in generated) await File.WriteAllTextAsync(Path.Combine(dir, name), content);

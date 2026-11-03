@@ -8,7 +8,8 @@ namespace FinanceDashboard.Tests.DemoFixtures;
 
 /// <summary>
 /// Seeds a fresh database with <see cref="DemoSeed"/>, calls the real API as the demo visitor under a fixed clock and
-/// returns the demo fixtures (file name → normalized JSON). The numbers are the server's, never recomputed here.
+/// returns the demo fixtures (file name → normalized JSON). Balances, summaries and lists are the server's answers;
+/// the only number computed here is in the seed (the preview's declared ledger balance, as a bank file would carry it).
 /// </summary>
 public sealed class DemoFixtureGenerator
 {
@@ -20,6 +21,8 @@ public sealed class DemoFixtureGenerator
     public static async Task<IReadOnlyDictionary<string, string>> GenerateAsync(PostgresFixture pg)
     {
         await using var f = new ApiFactory(await pg.CreateDatabaseAsync()) { TimeProvider = new FakeTimeProvider(Now) };
+        // Requests run in the caller's execution context, so a test's CurrentCulture reaches the server's serialization.
+        f.Server.PreserveExecutionContext = true;
         await DemoSeed.SeedAsync(f);
         // The session cookie expires 7 days after the fake clock, i.e. already in the past for the real clock, so
         // HttpClient's cookie container would drop it: send it by hand (the server validates it with the fake clock).

@@ -6,7 +6,7 @@
     "state": "Confirmed",
     "periodStart": null,
     "periodEnd": null,
-    "newCount": 3,
+    "newCount": 2,
     "existingCount": 0,
     "warnings": [],
     "checkpoint": null,
@@ -16,7 +16,7 @@
     "editedCount": 1,
     "invoice": {
       "dueDate": "2026-10-10",
-      "declaredTotal": "539.55"
+      "declaredTotal": "499.65"
     }
   },
   "0000001b-0000-4000-8000-000000000002": {
