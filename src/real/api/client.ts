@@ -12,6 +12,7 @@ import type {
   CurrentUser,
   ImportBatch,
   ImportPreview,
+  Installments,
   LinkPage,
   LinkQuery,
   LinkResponse,
@@ -72,6 +73,10 @@ export interface ApiClient {
     reject(id: string): Promise<LinkResponse>;
     undo(id: string): Promise<void>;
     reconcile(): Promise<ReconcileResult>;
+  };
+  installments: {
+    /** Parcelas comprometidas derivadas das faturas importadas (somente leitura). */
+    get(): Promise<Installments>;
   };
   categoryRules: {
     list(): Promise<CategoryRule[]>;

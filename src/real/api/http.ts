@@ -13,6 +13,7 @@ import type {
   CurrentUser,
   ImportBatch,
   ImportPreview,
+  Installments,
   LinkPage,
   LinkResponse,
   LoginBody,
@@ -243,6 +244,9 @@ export function createHttpApi(opts: HttpApiOptions = {}): ApiClient {
       reject: (id) => request<LinkResponse>(`/api/links/${enc(id)}/reject`, { method: "POST" }),
       undo: (id) => request<void>(`/api/links/${enc(id)}`, { method: "DELETE" }),
       reconcile: () => request<ReconcileResult>("/api/links/reconcile", { method: "POST" }),
+    },
+    installments: {
+      get: () => request<Installments>("/api/installments"),
     },
     categoryRules: {
       list: () => request<CategoryRule[]>("/api/category-rules"),

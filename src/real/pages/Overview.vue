@@ -3,12 +3,14 @@ import { computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import AccountStrip from "../components/AccountStrip.vue";
 import CategoryChart from "../components/CategoryChart.vue";
+import CommittedCard from "../components/CommittedCard.vue";
 import MonthPicker from "../components/MonthPicker.vue";
 import PendingNotice from "../components/PendingNotice.vue";
 import RecentTransactions from "../components/RecentTransactions.vue";
 import SixMonthChart from "../components/SixMonthChart.vue";
 import SummaryCards from "../components/SummaryCards.vue";
 import { useAccountsStore } from "../stores/accounts";
+import { useInstallmentsStore } from "../stores/installments";
 import { useSummaryStore } from "../stores/summary";
 import { useTransactionsStore } from "../stores/transactions";
 
@@ -16,12 +18,14 @@ const { t } = useI18n();
 const summary = useSummaryStore();
 const accounts = useAccountsStore();
 const transactions = useTransactionsStore();
+const installments = useInstallmentsStore();
 
 onMounted(() => {
   void accounts.load();
   void transactions.loadPendingCount();
   void summary.loadAll();
   void summary.loadRecent();
+  void installments.load();
 });
 
 // Sem nenhum lançamento: oferece importar em vez de gráficos vazios.
@@ -34,6 +38,7 @@ const empty = computed(() => summary.recentTotal === 0 && !summary.recentError);
 
     <AccountStrip />
     <PendingNotice />
+    <CommittedCard />
 
     <MonthPicker :month="summary.month" :can-next="summary.canGoNext" @prev="summary.prev()" @next="summary.next()" />
 
