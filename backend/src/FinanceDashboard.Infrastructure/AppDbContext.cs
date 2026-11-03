@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<BalanceCheckpoint> Checkpoints => Set<BalanceCheckpoint>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
+    public DbSet<Link> Links => Set<Link>();
 
     // Read per query by the global filters (EF parameterizes it).
     private string? CurrentUserId => currentUser.UserId;
@@ -87,6 +88,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
             e.HasIndex(x => new { x.UserId, x.FileHash })
                 .IsUnique()
                 .HasFilter("\"State\" = 'Confirmed'");
+            e.HasQueryFilter(x => x.UserId == CurrentUserId);
+        });
+
+        b.Entity<Link>(e =>
+        {
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(32);
+            e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32);
+            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.OutTransactionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.InTransactionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.OutTransactionId, x.InTransactionId }).IsUnique();
+            e.HasIndex(x => x.OutTransactionId).IsUnique().HasFilter("\"State\" = 'Confirmed'");
+            e.HasIndex(x => x.InTransactionId).IsUnique().HasFilter("\"State\" = 'Confirmed'");
+            e.HasIndex(x => new { x.UserId, x.State });
             e.HasQueryFilter(x => x.UserId == CurrentUserId);
         });
     }

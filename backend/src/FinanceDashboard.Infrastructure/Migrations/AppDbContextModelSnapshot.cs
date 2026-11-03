@@ -207,6 +207,61 @@ namespace FinanceDashboard.Infrastructure.Migrations
                     b.ToTable("ImportBatches");
                 });
 
+            modelBuilder.Entity("FinanceDashboard.Domain.Link", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("OutTransactionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InTransactionId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 'Confirmed'");
+
+                    b.HasIndex("OutTransactionId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 'Confirmed'");
+
+                    b.HasIndex("OutTransactionId", "InTransactionId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "State");
+
+                    b.ToTable("Links");
+                });
+
             modelBuilder.Entity("FinanceDashboard.Domain.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -526,6 +581,21 @@ namespace FinanceDashboard.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("FinanceDashboard.Domain.Link", b =>
+                {
+                    b.HasOne("FinanceDashboard.Domain.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("InTransactionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FinanceDashboard.Domain.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("OutTransactionId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
