@@ -15,6 +15,8 @@ public sealed class DecimalStringConverterTests
     [InlineData("\"\"")]
     [InlineData("\" 1.00\"")]
     [InlineData("\"12345678901234567.00\"")]
+    [InlineData("\"12.50\\n\"")]
+    [InlineData("\"١٢.٥٠\"")]
     public void Invalid_inputs_are_rejected(string json) =>
         Assert.ThrowsAny<JsonException>(() => JsonSerializer.Deserialize<decimal>(json, Options));
 

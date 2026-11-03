@@ -8,7 +8,7 @@ namespace FinanceDashboard.Api.Json;
 /// <summary>Money as a JSON string with a dot and at most 2 decimals ("12.50"); numbers and other formats are rejected.</summary>
 public sealed partial class DecimalStringConverter : JsonConverter<decimal>
 {
-    [GeneratedRegex(@"^-?\d{1,16}(\.\d{1,2})?$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^-?[0-9]{1,16}(\.[0-9]{1,2})?\z", RegexOptions.CultureInvariant)]
     private static partial Regex MoneyPattern();
 
     public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -19,12 +19,14 @@ public sealed partial class DecimalStringConverter : JsonConverter<decimal>
         }
 
         var text = reader.GetString();
-        if (text is null || !MoneyPattern().IsMatch(text))
+        if (text is null || !MoneyPattern().IsMatch(text)
+            || !decimal.TryParse(text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture, out var value))
         {
             throw new JsonException("Invalid money format; use a string like \"12.50\".");
         }
 
-        return decimal.Parse(text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
+        return value;
     }
 
     public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options) =>
