@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure.Importing;
@@ -51,21 +53,55 @@ internal static class LocalSamples
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
 
+    public static ParsedStatement Read(string file) => Read(File.ReadAllBytes(file));
+
     /// <summary>
-    /// Reads a sample. On a format error the test fails with the error kind only (a fixed code such as
-    /// <c>xlsx_unsafe_content</c>), never the file name or content.
+    /// Reads sample bytes. On a format error the test fails with the error kind only (a fixed code such as
+    /// <c>xlsx_unsafe_content</c>); on any other exception, with the exception type name only. Never the file name,
+    /// the exception message or content.
     /// </summary>
-    public static ParsedStatement Read(string file)
+    public static ParsedStatement Read(byte[] content)
     {
         try
         {
-            return StatementReader.Read(File.ReadAllBytes(file));
+            return StatementReader.Read(content);
         }
         catch (ImportFormatException e)
         {
             Assert.Fail("a sample was rejected by the reader: " + e.Kind);
             throw;
         }
+        catch (Exception e) when (e is not Xunit.Sdk.XunitException)
+        {
+            Assert.Fail("a sample made the reader throw: " + e.GetType().Name);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// The same content in different bytes, like a new download of the same statement. OFX: a trailing line break
+    /// after <c>&lt;/OFX&gt;</c> (the reader ignores it). xlsx: the zip rewritten entry by entry, same order and
+    /// contents, with a new timestamp (what Excel/the bank does on every download).
+    /// </summary>
+    public static byte[] ReExport(byte[] content, bool isXlsx)
+    {
+        if (!isXlsx) return [.. content, (byte)'\r', (byte)'\n'];
+
+        using var output = new MemoryStream();
+        using (var source = new ZipArchive(new MemoryStream(content), ZipArchiveMode.Read))
+        using (var target = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var stamp = new DateTimeOffset(2030, 1, 2, 3, 4, 6, TimeSpan.Zero);
+            foreach (var entry in source.Entries)
+            {
+                var copy = target.CreateEntry(entry.FullName, CompressionLevel.Optimal);
+                copy.LastWriteTime = stamp;
+                using var from = entry.Open();
+                using var to = copy.Open();
+                from.CopyTo(to);
+            }
+        }
+        return output.ToArray();
     }
 
     public static bool IsItauChecking(ParsedStatement s) => s.Source == ImportSource.ItauChecking;
@@ -97,6 +133,8 @@ public sealed class LocalSamplesTests
 
         Assert.True(files.Count > 0, "no samples found");
         Assert.True(sources.Count > 0, "no statement kind recognized");
+        ImportSource[] known = [ImportSource.NubankChecking, ImportSource.NubankCard, ImportSource.ItauChecking, ImportSource.ItauCard];
+        Assert.True(sources.All(known.Contains), "a sample was read as an unexpected statement kind");
     }
 
     [LocalSamplesFact]
@@ -162,7 +200,10 @@ public sealed class LocalSamplesTests
             g.Select(l => l.Ordinal).Order().SequenceEqual(Enumerable.Range(0, g.Count())));
 }
 
-/// <summary>Preview + confirm of every real sample in an account of the right type, twice: the second creates nothing.</summary>
+/// <summary>
+/// Every real sample imported in an account of the right type, then sent again twice: the identical bytes are
+/// refused by the file hash, and a re-export (same content, other bytes) is matched line by line and creates nothing.
+/// </summary>
 [Collection(PostgresCollection.Name)]
 public sealed class LocalSamplesReimportTests(PostgresFixture postgres)
 {
@@ -181,7 +222,8 @@ public sealed class LocalSamplesReimportTests(PostgresFixture postgres)
             var bytes = File.ReadAllBytes(file);
             var parsed = LocalSamples.Read(file);
             var isCard = parsed.Source is ImportSource.NubankCard or ImportSource.ItauCard;
-            var uploadName = file.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) ? "amostra.xlsx" : "amostra.ofx";
+            var isXlsx = file.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase);
+            var uploadName = isXlsx ? "amostra.xlsx" : "amostra.ofx";
             var account = await CreateAccountAsync(c, isCard ? "CreditCard" : "Checking");
 
             var first = await UploadAsync(c, account, bytes, uploadName);
@@ -191,26 +233,44 @@ public sealed class LocalSamplesReimportTests(PostgresFixture postgres)
             var created = (await JsonOf(firstConfirm)).GetProperty("created").GetInt32();
             Assert.True(created == parsed.Lines.Count, "the first confirm did not create every line");
 
-            var second = await UploadAsync(c, account, bytes, uploadName);
-            Assert.True(second.StatusCode == HttpStatusCode.OK, "the second preview of a sample failed");
-            var secondBody = await JsonOf(second);
-            Assert.True(secondBody.GetProperty("newCount").GetInt32() == 0, "the second preview of a sample has new lines");
+            // 1) Identical bytes: only the file-hash gate is exercised (AlreadyImported, confirm refused with 409).
+            var same = await UploadAsync(c, account, bytes, uploadName);
+            Assert.True(same.StatusCode == HttpStatusCode.OK, "the identical-bytes preview of a sample failed");
+            var sameBody = await JsonOf(same);
+            Assert.True(Codes(sameBody).Contains("AlreadyImported"), "identical bytes were not flagged as already imported");
+            var sameConfirm = await ConfirmAsync(c, sameBody.GetProperty("batchId").GetGuid());
+            Assert.True(sameConfirm.StatusCode == HttpStatusCode.Conflict, "identical bytes were not refused at confirm");
+            Assert.True(await ErrorOf(sameConfirm) == "already_imported", "identical bytes were refused for another reason");
 
-            // Same bytes = same file hash: the confirm is refused (409 already_imported) and nothing is written; any
-            // other outcome must be a 200 that creates nothing.
-            var secondConfirm = await ConfirmAsync(c, secondBody.GetProperty("batchId").GetGuid());
-            if (secondConfirm.StatusCode == HttpStatusCode.Conflict)
-                Assert.True(await ErrorOf(secondConfirm) == "already_imported", "the second confirm of a sample failed");
-            else
-            {
-                Assert.True(secondConfirm.StatusCode == HttpStatusCode.OK, "the second confirm of a sample failed");
-                Assert.True((await JsonOf(secondConfirm)).GetProperty("created").GetInt32() == 0, "re-importing a sample created lines");
-            }
+            // 2) Re-export (same content, different bytes): the hash gate does not apply, so every line must be found
+            // by its (key, ordinal) identity and the confirm must create nothing.
+            var reExport = LocalSamples.ReExport(bytes, isXlsx);
+            Assert.True(!reExport.AsSpan().SequenceEqual(bytes), "the re-export has the same bytes");
+            Assert.True(SameLines(parsed, LocalSamples.Read(reExport)), "the re-export does not read as the same lines");
+
+            var again = await UploadAsync(c, account, reExport, uploadName);
+            Assert.True(again.StatusCode == HttpStatusCode.OK, "the re-export preview of a sample failed");
+            var againBody = await JsonOf(again);
+            Assert.True(!Codes(againBody).Contains("AlreadyImported"), "the re-export was caught by the file hash");
+            Assert.True(againBody.GetProperty("newCount").GetInt32() == 0, "the re-export preview has new lines");
+            var lines = againBody.GetProperty("lines").EnumerateArray().ToList();
+            Assert.True(lines.Count == parsed.Lines.Count, "the re-export preview has another line count");
+            Assert.True(lines.All(l => l.GetProperty("existing").GetBoolean()), "a re-export line is not marked existing");
+
+            var againConfirm = await ConfirmAsync(c, againBody.GetProperty("batchId").GetGuid());
+            Assert.True(againConfirm.StatusCode == HttpStatusCode.OK, "the re-export confirm of a sample failed");
+            Assert.True((await JsonOf(againConfirm)).GetProperty("created").GetInt32() == 0, "re-importing a re-export created lines");
 
             var stored = await CountTransactionsAsync(f, c);
             Assert.True(stored == parsed.Lines.Count, "re-importing a sample changed the stored lines");
         }
     }
+
+    private static HashSet<string?> Codes(JsonElement preview) =>
+        preview.GetProperty("warnings").EnumerateArray().Select(w => w.GetProperty("code").GetString()).ToHashSet();
+
+    private static bool SameLines(ParsedStatement a, ParsedStatement b) =>
+        a.Source == b.Source && a.Lines.SequenceEqual(b.Lines);
 
     private static async Task<int> CountTransactionsAsync(ApiFactory f, AuthedClient c)
     {
