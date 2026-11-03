@@ -122,7 +122,7 @@ public sealed class ImportPreviewTests(PostgresFixture postgres)
         Assert.Equal("Compra no debito - Padaria Ficticia", lines[0].GetProperty("description").GetString());
         Assert.Equal("Normal", lines[0].GetProperty("state").GetString());
         Assert.False(lines[0].GetProperty("existing").GetBoolean());
-        Assert.Equal("PendingClassification", lines[1].GetProperty("state").GetString());
+        Assert.Equal("Normal", lines[1].GetProperty("state").GetString());
         Assert.Equal("PendingClassification", lines[2].GetProperty("state").GetString());
 
         var batchId = p.GetProperty("batchId").GetGuid();

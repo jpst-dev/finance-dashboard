@@ -11,8 +11,6 @@ public static partial class NubankRules
     [
         "pagamento de fatura",
         "pagamento recebido",
-        "transferencia enviada",
-        "transferencia recebida",
         "pix no credito",
     ];
 

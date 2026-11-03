@@ -288,7 +288,7 @@ public sealed class ImportOverridesTests(PostgresFixture postgres)
 
         await using var db = PersistenceTestSupport.Create(f.ConnectionString, c.UserId);
         var lines = await db.Transactions.Where(t => t.AccountId == acc).OrderBy(t => t.Date).ToListAsync();
-        Assert.Equal([TransactionState.Normal, TransactionState.PendingClassification, TransactionState.PendingClassification],
+        Assert.Equal([TransactionState.Normal, TransactionState.Normal, TransactionState.PendingClassification],
             lines.Select(t => t.State));
         Assert.All(await db.Transactions.ToListAsync(), t => Assert.Null(t.CategoryId));
     }

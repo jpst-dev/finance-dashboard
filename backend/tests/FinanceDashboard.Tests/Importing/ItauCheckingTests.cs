@@ -63,9 +63,7 @@ public sealed class ItauCheckingTests(PostgresFixture postgres)
 
     [Theory]
     [InlineData("FATURA PAGA ITAU UNICLASS")]
-    [InlineData("PIX TRANSF JOAO FICTICIO")]
     [InlineData("PIX CARTAO FICTICIO")]
-    [InlineData("PAG BOLETO LOJA FICTICIA")]
     [InlineData("CREDITO LIBERAD CONTRATO")]
     [InlineData("EST CRED ALGO")]
     [InlineData("CREDITO CONSIGNADO X")]
@@ -84,6 +82,8 @@ public sealed class ItauCheckingTests(PostgresFixture postgres)
 
     [Theory]
     [InlineData("PIX QRS PADARIA FICTICIA")]
+    [InlineData("PIX TRANSF JOAO FICTICIO")]
+    [InlineData("PAG BOLETO LOJA FICTICIA")]
     [InlineData("REND PAGO APLIC AUT")]
     [InlineData("REMUNERACAO SALARIO FICTICIO")]
     public void Known_normal_prefixes_are_normal_without_unknown_count(string memo)
@@ -158,7 +158,7 @@ public sealed class ItauCheckingTests(PostgresFixture postgres)
             var lines = await db.Transactions.OrderBy(t => t.Amount).ToListAsync();
             Assert.Equal(64, lines[0].SourceKey?.Length);
             Assert.Equal(TransactionState.Normal, lines[0].State);
-            Assert.Equal(TransactionState.PendingClassification, lines[1].State);
+            Assert.Equal(TransactionState.Normal, lines[1].State);
         }
 
         var wrong = await CreateAccountAsync(c, externalId: "99999");

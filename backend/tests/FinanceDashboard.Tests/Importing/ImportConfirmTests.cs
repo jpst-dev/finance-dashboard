@@ -56,7 +56,7 @@ public sealed class ImportConfirmTests(PostgresFixture postgres)
 
             Assert.Equal(Fit2, lines[1].SourceKey);
             Assert.Equal(250m, lines[1].Amount);
-            Assert.Equal(TransactionState.PendingClassification, lines[1].State);
+            Assert.Equal(TransactionState.Normal, lines[1].State);
             Assert.Equal("FULANO FICTICIO", lines[1].CounterpartyName);
             Assert.Equal("***.123.456-**", lines[1].CounterpartyDocument);
 
