@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\FinanceDashboard.Api\FinanceDashboard.Api.csproj" />
+    <ProjectReference Include="..\..\src\FinanceDashboard.Domain\FinanceDashboard.Domain.csproj" />
   </ItemGroup>
 
 </Project>

@@ -3,4 +3,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceDashboard.Domain\FinanceDashboard.Domain.csproj" />
+  </ItemGroup>
 </Project>
