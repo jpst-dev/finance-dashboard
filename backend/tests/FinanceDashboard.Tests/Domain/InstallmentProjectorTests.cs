@@ -25,16 +25,33 @@ public class InstallmentProjectorTests
         Assert.Equal(700m, p.TotalCommitted);
         Assert.Equal(new DateOnly(2027, 4, 10), p.Groups.Single().EndsOn);
         Assert.Equal(7, p.Groups.Single().Remaining);
+        Assert.Equal(3, p.Groups.Single().InstallmentNumber); // grupo guarda o N da linha-base
+        Assert.Equal(Enumerable.Range(4, 7), p.Months.Select(m => m.Items.Single().InstallmentNumber));
+        Assert.All(p.Months.SelectMany(m => m.Items), i => Assert.Equal(10, i.InstallmentTotal));
     }
 
     [Fact]
     public void Project_uses_AddMonths_from_base_without_drifting_day_31()
     {
         var p = InstallmentProjector.Project([Line(new DateOnly(2026, 1, 31), 1, 4)], new DateOnly(2026, 1, 5));
-        Assert.Equal(3, p.Months.Count);
-        Assert.Equal(new DateOnly(2026, 1, 1), p.Months[0].Month);
-        // 3 parcelas restantes: 31/01, 28/02, 31/03 (nunca 28/03).
+        // 3 parcelas restantes: 31/01 (2/4), 28/02 (3/4), 31/03 (4/4); nunca 28/03.
+        Assert.Equal([new DateOnly(2026, 1, 1), new DateOnly(2026, 2, 1), new DateOnly(2026, 3, 1)],
+            p.Months.Select(m => m.Month));
+        Assert.Equal([2, 3, 4], p.Months.Select(m => m.Items.Single().InstallmentNumber));
         Assert.Equal(new DateOnly(2026, 3, 31), p.Groups.Single().EndsOn);
+
+        // Hoje em março: a parcela de fevereiro (28/02) fica no passado; a de março cai em 31/03.
+        var q = InstallmentProjector.Project([Line(new DateOnly(2026, 1, 31), 1, 4)], new DateOnly(2026, 3, 1));
+        Assert.Equal(new DateOnly(2026, 3, 1), q.Months.Single().Month);
+        Assert.Equal(new DateOnly(2026, 3, 31), q.Groups.Single().EndsOn);
+    }
+
+    [Fact]
+    public void Project_february_installment_falls_on_28_when_it_is_the_last()
+    {
+        var p = InstallmentProjector.Project([Line(new DateOnly(2026, 1, 31), 1, 3)], new DateOnly(2026, 1, 5));
+        Assert.Equal(new DateOnly(2026, 2, 28), p.Groups.Single().EndsOn);
+        Assert.Equal(new DateOnly(2026, 2, 1), p.Months[^1].Month);
     }
 
     [Fact]
@@ -77,6 +94,9 @@ public class InstallmentProjectorTests
         Assert.Equal(13, p.Months.Sum(m => m.Items.Count));
         Assert.Equal(2, p.Groups.Count);
         Assert.Equal([5, 8], p.Groups.Select(g => g.Remaining).OrderBy(x => x));
+        // 2/10 projeta 8 meses (out..mai) e 5/10 projeta 5 (out..fev): 200 nos 5 primeiros, depois só a cauda do 2/10.
+        Assert.Equal([200m, 200m, 200m, 200m, 200m, 100m, 100m, 100m], p.Months.Select(m => m.Total));
+        Assert.Equal([8, 9, 10], p.Months.Skip(5).Select(m => m.Items.Single().InstallmentNumber));
     }
 
     [Fact]
@@ -138,6 +158,50 @@ public class InstallmentProjectorTests
     }
 
     [Fact]
+    public void Project_cut_boundary_current_month_counts_previous_month_does_not()
+    {
+        // base 10/09, 1/4: parcelas 10/09, 10/10, 10/11 => hoje 31/10 => out e nov; set fica de fora.
+        var p = InstallmentProjector.Project([Line(new DateOnly(2026, 9, 10), 1, 4)], new DateOnly(2026, 10, 31));
+        Assert.Equal([new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1)], p.Months.Select(m => m.Month));
+        Assert.Equal(2, p.Groups.Single().Remaining);
+        // Parcela de 10/10 conta mesmo com hoje = 31/10 (mesmo mês); no dia 1/11 ela sai.
+        var q = InstallmentProjector.Project([Line(new DateOnly(2026, 9, 10), 1, 4)], new DateOnly(2026, 11, 1));
+        Assert.Equal([new DateOnly(2026, 11, 1)], q.Months.Select(m => m.Month));
+    }
+
+    [Fact]
+    public void Project_fully_past_group_disappears_but_account_keeps_base()
+    {
+        var p = InstallmentProjector.Project([Line(new DateOnly(2026, 3, 10), 1, 3)], Today);
+        Assert.Empty(p.Groups);
+        Assert.Empty(p.Months);
+        Assert.Equal(0m, p.TotalCommitted);
+        Assert.Equal(new DateOnly(2026, 3, 10), p.Accounts.Single().BasedOn);
+    }
+
+    [Fact]
+    public void Project_different_cards_are_different_purchases()
+    {
+        var p = InstallmentProjector.Project([Line(Oct10, 3, 5, card: "1111"), Line(Oct10, 3, 5, card: "2222")], Today);
+        Assert.Equal(2, p.Groups.Count);
+        Assert.All(p.Groups, g => Assert.Equal(1, g.Multiplicity));
+        Assert.Equal(["1111", "2222"], p.Groups.Select(g => g.CardSuffix));
+    }
+
+    [Theory]
+    [InlineData(6, 5)]  // N > T
+    [InlineData(1, 1)]  // T < 2
+    [InlineData(0, 5)]  // N < 1
+    [InlineData(-1, 5)]
+    public void Project_ignores_invalid_installment_lines(int n, int t)
+    {
+        var p = InstallmentProjector.Project([Line(Oct10, n, t)], Today);
+        Assert.Empty(p.Accounts);
+        Assert.Empty(p.Months);
+        Assert.Empty(p.Groups);
+    }
+
+    [Fact]
     public void Project_empty_input_gives_empty_projection()
     {
         var p = InstallmentProjector.Project([], Today);
@@ -157,7 +221,7 @@ public class InstallmentProjectorTests
         var lines = new List<InstallmentLine>
         {
             Line(Oct10, 3, 10), Line(Oct10, 3, 10), Line(Oct10, 2, 10, desc: "ZETA"), Line(Oct10, 5, 10, desc: "ZETA"),
-            Line(Oct10, 1, 6, amount: -20m, desc: "ALFA", card: "9999"), Line(Oct10, 1, 6, amount: -20m, desc: "ALFA", card: "1111"),
+            Line(Oct10, 1, 6, amount: -20m, desc: "ALFA", card: "9999"), Line(Oct10, 1, 6, amount: -20m, desc: "ALFA", card: "1111"), // cartões distintos = grupos distintos
             Line(new DateOnly(2026, 9, 10), 4, 8, desc: "ANTIGA"),
             Line(new DateOnly(2026, 11, 3), 1, 3, account: AccB, accountName: "Cartao B", desc: "BETA"),
         };

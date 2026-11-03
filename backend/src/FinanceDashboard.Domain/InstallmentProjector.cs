@@ -21,7 +21,12 @@ public static class InstallmentProjector
 {
     public const int MaxInstallments = 36;
 
-    private sealed record Projected(InstallmentLine Line, decimal Amount, DateOnly Date);
+    private sealed record Projected(InstallmentLine Line, int Index, decimal Amount, DateOnly Date)
+    {
+        public int Number => Line.Number + Index;
+    }
+
+    private sealed record Bucket(InstallmentLine Line, List<Projected> Items);
 
     public static InstallmentProjection Project(IReadOnlyList<InstallmentLine> lines, DateOnly today)
     {
@@ -40,8 +45,7 @@ public static class InstallmentProjector
 
         // Every installment is computed from the base date, never chained (day 31 must not drift to 28).
         var baseLines = valid.Where(l => l.StatementDate == bases[l.AccountId].Base).ToList();
-        var projected = new List<List<Projected>>();
-        var all = new List<Projected>();
+        var buckets = new List<Bucket>();
         foreach (var l in baseLines)
         {
             var list = new List<Projected>();
@@ -50,13 +54,12 @@ public static class InstallmentProjector
             {
                 var date = l.StatementDate.AddMonths(i - 1);
                 if (date < cut) continue;
-                list.Add(new Projected(l, Math.Abs(l.Amount), date));
+                list.Add(new Projected(l, i, Math.Abs(l.Amount), date));
             }
-            projected.Add(list);
-            all.AddRange(list);
+            buckets.Add(new Bucket(l, list));
         }
 
-        var months = all
+        var months = buckets.SelectMany(b => b.Items)
             .GroupBy(p => new DateOnly(p.Date.Year, p.Date.Month, 1))
             .OrderBy(g => g.Key)
             .Select(g =>
@@ -65,31 +68,30 @@ public static class InstallmentProjector
                     .OrderBy(p => p.Line.AccountName, StringComparer.Ordinal).ThenBy(p => p.Line.AccountId)
                     .ThenBy(p => p.Line.Description, StringComparer.Ordinal)
                     .ThenBy(p => p.Line.CardSuffix ?? "", StringComparer.Ordinal)
-                    .ThenBy(p => p.Line.Number).ThenBy(p => p.Line.Total).ThenBy(p => p.Amount)
+                    .ThenBy(p => p.Number).ThenBy(p => p.Line.Total).ThenBy(p => p.Amount)
                     .Select(p => new InstallmentItem(p.Line.AccountId, p.Line.Description, p.Line.CardSuffix,
-                        p.Line.Number, p.Line.Total, p.Amount))
+                        p.Number, p.Line.Total, p.Amount))
                     .ToList();
                 return new InstallmentMonth(g.Key, items.Sum(i => i.Amount), items);
             })
             .ToList();
 
-        var groups = baseLines.Select((l, idx) => (Line: l, Idx: idx))
-            .GroupBy(x => (x.Line.AccountId, x.Line.NormalizedDescription, x.Line.Number, x.Line.Total, Amount: Math.Abs(x.Line.Amount)))
+        var groups = buckets
+            .GroupBy(b => (b.Line.AccountId, b.Line.NormalizedDescription, b.Line.CardSuffix, b.Line.Number, b.Line.Total, Amount: Math.Abs(b.Line.Amount)))
             .Select(g =>
             {
-                var members = g.Select(x => x.Line).ToList();
-                var remaining = projected[g.First().Idx].Count;
+                var members = g.Select(b => b.Line).ToList();
+                var remaining = g.First().Items.Count;
                 if (remaining == 0) return null;
-                var first = members
-                    .OrderBy(l => l.Description, StringComparer.Ordinal)
-                    .ThenBy(l => l.CardSuffix ?? "", StringComparer.Ordinal).First();
-                var ends = g.SelectMany(x => projected[x.Idx]).Max(p => p.Date);
-                return new InstallmentGroupView(g.Key.AccountId, first.AccountName, first.CardSuffix, first.Description,
+                var first = members.OrderBy(l => l.Description, StringComparer.Ordinal).First();
+                var ends = g.SelectMany(b => b.Items).Max(p => p.Date);
+                return new InstallmentGroupView(g.Key.AccountId, first.AccountName, g.Key.CardSuffix, first.Description,
                     g.Key.Number, g.Key.Total, remaining, g.Key.Amount, members.Count, ends,
                     g.Key.Amount * members.Count * remaining);
             })
             .Where(v => v is not null).Select(v => v!)
             .OrderBy(v => v.EndsOn).ThenBy(v => v.Description, StringComparer.Ordinal)
+            .ThenBy(v => v.CardSuffix ?? "", StringComparer.Ordinal)
             .ThenBy(v => v.AccountName, StringComparer.Ordinal).ThenBy(v => v.AccountId)
             .ThenBy(v => v.InstallmentNumber).ThenBy(v => v.InstallmentTotal).ThenBy(v => v.Amount)
             .ToList();
