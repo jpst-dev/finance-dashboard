@@ -3,53 +3,60 @@
 Continua a S3 (spec pai `2026-11-02-finance-v2-backend-design.md`: "Grupo de parcelas" e "quanto já está comprometido nos próximos meses"). Escopo escolhido pelo Claude em modo ausente (ver `docs/away-log.md`): **só parcelas**. Recorrências, juros do Pix parcelado e aplicação/resgate ficam para depois.
 
 ## Intenção e por quê
-O app mostra o que sobra no mês, mas não o que já está amarrado nos meses seguintes por compras parceladas no cartão. O Itaú já entrega "Parcela N de T" por linha; com isso dá para projetar as parcelas que ainda vão cair e mostrar quanto está comprometido por mês.
+O app mostra o que sobra no mês, mas não o que já está amarrado nos meses seguintes por compras parceladas no cartão. O Itaú entrega "Parcela N de T" por linha; com isso dá para projetar as parcelas que ainda vão cair e mostrar quanto está comprometido por mês.
 
 ## Objetivos
-1. Agrupar as linhas parceladas do cartão em **grupos de parcelas** e projetar as parcelas futuras de cada grupo.
-2. Endpoint que devolve o **comprometido por mês** e a lista de grupos ativos.
-3. Página **Parcelas** (comprometido por mês + grupos) e um cartão "Comprometido nos próximos meses" na Visão geral.
+1. Projetar as parcelas restantes das compras parceladas do cartão Itaú, a partir da **fatura mais recente importada de cada conta**.
+2. Endpoint com o comprometido por mês e os grupos ativos.
+3. Página **Parcelas** e um cartão "Comprometido nos próximos meses" na Visão geral.
 4. Demo estático com exemplo, gerado pelo servidor real.
 
 ## Não-objetivos
-- Entidade `InstallmentGroup` persistida, lançamentos "previstos" no banco, tabela nova, migração. Tudo é **derivado** das linhas importadas a cada consulta (volume pessoal pequeno).
-- Parcelas do Nubank (o OFX do cartão não traz parcelamento), Pix parcelado e juros, recorrências/assinaturas, renegociação, antecipação de parcelas, edição manual de grupos.
-- Entrar no resumo mensal, nos saldos ou nas categorias: a projeção é só uma visão; nada futuro vira lançamento.
+- Entidade persistida, lançamentos "previstos" no banco, tabela nova, migração. **Decisão que substitui o spec pai** (que previa grupos persistidos e previstos que viram realizados): tudo é derivado das linhas importadas a cada consulta; vira ADR.
+- Parcelas do Nubank (o OFX do cartão não traz parcelamento), recorrências/assinaturas, juros do Pix parcelado, renegociação, antecipação, edição manual de grupos.
+- Entrar no resumo mensal, saldos ou categorias: a projeção é só uma visão; nada futuro vira lançamento.
 
-## Modelo (derivado)
-- Linha parcelada = linha importada, visível, de conta `CreditCard`, com `InstallmentNumber` e `InstallmentTotal` não nulos (`1 ≤ N ≤ T`, `T ≥ 2`), valor positivo (cobrança).
-- **Chave do grupo**: `(AccountId, CardSuffix, descrição normalizada sem o sufixo de parcela, InstallmentTotal)`, com `NameKeys.Normalize` sobre `OriginalDescription`. O valor da parcela não entra na chave (a última parcela pode variar centavos).
-- **Mês da fatura da linha** = mês de `StatementDate` (vencimento da fatura); se nulo, mês de `Date`.
-- **Multiplicidade**: duas compras idênticas (mesma chave) na mesma fatura contam como `k` linhas; a projeção usa `k` da fatura mais recente do grupo.
-- **Grupo ativo**: o grupo tem linha na **fatura mais recente importada da conta do cartão** (mesmo mês de fatura que o máximo entre as linhas da conta). Um grupo que sumiu da fatura mais recente (quitado, estornado, antecipado) não é projetado.
-- **Parcelas restantes**: da parcela `N+1` até `T`, onde `N` é o maior número observado na fatura mais recente do grupo. A parcela `N+i` cai no mês da fatura mais recente + `i` meses, no mesmo dia do vencimento (limitado ao último dia do mês). Valor = valor da linha mais recente do grupo × `k`. A última parcela usa o mesmo valor (diferença de centavos fica registrada como limitação).
-- Horizonte máximo 36 meses a partir do mês da fatura mais recente.
+## Fatos do código que o cálculo respeita
+- No app **cobrança é valor negativo** (o leitor da fatura do Itaú inverte o sinal; pagamento e estorno ficam positivos). A parcela é uma linha com `Amount < 0`.
+- Em linhas de fatura do Itaú, `StatementDate` é o **vencimento da fatura** (igual para todas as linhas dela) e `Date` das parcelas N>1 é o vencimento menos 1 mês (`ItauRules.InvoiceLineDate`); o resumo mensal agrupa por `Date`.
+- A fatura do Itaú só contém parcelas já cobradas (nunca as futuras).
+
+## Modelo (derivado, por linha)
+- **Linha parcelada** = linha `Imported`, visível, de conta `CreditCard`, `StatementDate` não nulo, `Amount < 0`, `InstallmentNumber` e `InstallmentTotal` não nulos com `T ≥ 2` e `1 ≤ N ≤ T`. Linhas manuais não contam. Pendentes e neutras contam (o estado não importa).
+- **Fatura-base da conta** = o maior `StatementDate` entre as linhas **importadas** da conta (`BasedOn`). Só entram na projeção as linhas parceladas da fatura-base (`StatementDate == BasedOn`): uma compra que sumiu da fatura mais recente (quitada, estornada, antecipada) não é projetada. O vencimento é por conta; mais de um vencimento por conta usa o maior (limitação).
+- **Projeção por linha** (sem agrupar para calcular): para cada linha da fatura-base, as parcelas `N+1 … T`. A parcela `N+i` cai em `BasedOn.AddMonths(i - 1)` (sempre calculado a partir do vencimento-base, nunca em cadeia) e **é mostrada no mês dessa data, o mesmo mês em que ela vai aparecer no resumo mensal quando for importada**. Valor = módulo do valor atual da linha (respeita edição do usuário). Horizonte: até 36 parcelas contadas a partir da data-base.
+- **"Hoje"**: só entram em `months`, `totalCommitted` e nos grupos as parcelas com data ≥ primeiro dia do mês corrente (`TimeProvider`, fuso America/Sao_Paulo). Parcelas de uma fatura-base antiga que já ficaram no passado não contam; a API devolve `BasedOn` por conta para a tela avisar quando a base está desatualizada.
+- **Grupo para exibição**: linhas da fatura-base com mesma (conta, descrição normalizada com `NameKeys.Normalize`, `N`, `T`, valor) viram um grupo com `multiplicity = k`. Grupo com 0 parcelas restantes dentro da regra de "hoje" não aparece.
+- `totalCommitted` = soma dos `months[].total` (dentro do horizonte); `remainingTotal` do grupo = soma das parcelas restantes do grupo dentro do horizonte e da regra de "hoje". As duas somas fecham entre si.
+- Estorno de compra parcelada não cancela o grupo (o estorno tem sinal positivo e é ignorado); limitação documentada. Pix parcelado e parcelamento de fatura que tragam "Parcela N de T" entram como qualquer outra parcela.
 
 ## Cálculo (puro, no Domain)
-`InstallmentProjector.Project(IReadOnlyList<InstallmentLine> lines) -> InstallmentProjection` onde `InstallmentLine(Guid AccountId, string? CardSuffix, string NormalizedDescription, int Number, int Total, decimal Amount, DateOnly Date, DateOnly? StatementDate)`. Retorna `Groups` (`InstallmentGroupView(AccountId, CardSuffix, Description, Number, Total, Remaining, Amount, Multiplicity, EndsOn, RemainingTotal)`) e `Months` (`InstallmentMonth(Month: DateOnly primeiro dia, Total, Items)`), `TotalCommitted`. Determinístico e independente da ordem de entrada.
+`InstallmentProjector.Project(IReadOnlyList<InstallmentLine> lines, DateOnly today) -> InstallmentProjection`, onde `InstallmentLine(Guid AccountId, string AccountName, string? CardSuffix, string Description, string NormalizedDescription, int Number, int Total, decimal Amount, DateOnly StatementDate)` (a camada de aplicação já filtrou conforme "Linha parcelada"). Retorna `Accounts` (`AccountBase(AccountId, AccountName, BasedOn)`), `Groups` (`InstallmentGroupView(AccountId, AccountName, CardSuffix, Description, InstallmentNumber, InstallmentTotal, Remaining, Amount, Multiplicity, EndsOn, RemainingTotal)`), `Months` (`InstallmentMonth(Month: DateOnly primeiro dia, Total, Items)` com `InstallmentItem(AccountId, Description, CardSuffix, InstallmentNumber, InstallmentTotal, Amount)`) e `TotalCommitted`. Determinístico e independente da ordem de entrada; ordenação: meses crescentes; itens por conta, descrição, cartão; grupos por `EndsOn`, depois descrição.
 
 ## API
-- `GET /api/installments` → `{ totalCommitted, months: [{ month: "YYYY-MM", total, items: [{ description, cardSuffix, accountId, number, total, amount }] }], groups: [{ accountId, accountName, cardSuffix, description, number, total, remaining, amount, multiplicity, endsOn, remainingTotal }] }`; todos os campos obrigatórios (decimais como número, sufixo de cartão nulo permitido).
-- Autenticado, só dados do usuário (query filters); sem escrita.
-- A descrição devolvida é a `OriginalDescription` da linha mais recente do grupo (texto de terceiros: nunca como HTML no front).
+- `GET /api/installments` → `{ totalCommitted, accounts: [{ accountId, accountName, basedOn }], months: [{ month: "YYYY-MM", total, items: [{ accountId, description, cardSuffix, installmentNumber, installmentTotal, amount }] }], groups: [{ accountId, accountName, cardSuffix, description, installmentNumber, installmentTotal, remaining, amount, multiplicity, endsOn, remainingTotal }] }`.
+- **Dinheiro como string decimal** (convenção do projeto: conversor de decimais e padrão OpenAPI); `amount` e `total` em módulo (positivos); inteiros precisam entrar em `IntFields` no front; todos os campos obrigatórios (`cardSuffix` anulável).
+- Autenticado, só dados do usuário (query filters); contas arquivadas **incluídas** (a dívida continua); linhas ocultas/excluídas ignoradas. A descrição é a descrição exibida no app (`Description`, que o usuário pode ter renomeado).
+- Sem escrita.
 
 ## Front
-- Página **Parcelas** (`/installments`, título `real.titles.installments`, item de menu): gráfico/tabela do comprometido por mês e lista de grupos (descrição, cartão, "N de T", restantes, valor, termina em). Estado vazio explicado ("Importe uma fatura do Itaú com compras parceladas").
-- **Visão geral**: cartão "Comprometido nos próximos meses" com o total dos próximos 3 meses e link para a página; some se não há parcelas.
-- Textos de terceiros sempre como texto; plurais corretos ("1 parcela restante" / "N parcelas restantes").
+- Página **Parcelas** (`/installments`, `real.titles.installments`, `real.nav.installments`, item de menu): barras do comprometido por mês (`chartMoneyOptions`/`toPlot`) e lista de grupos (descrição, conta/cartão, "N de T", restantes, valor, termina em). Aviso por conta quando `basedOn` é anterior ao mês passado ("baseado na fatura de MM/AAAA; importe a mais recente"). Estado vazio explicado. Valores via `Money.vue`, respeitando "esconder valores". Texto de terceiros sempre como texto.
+- **Visão geral**: cartão "Comprometido nos próximos meses" com o total do mês corrente + 2 seguintes e link para a página; fica fora do MonthPicker; some se `totalCommitted` for 0; store próprio com loading/erro.
+- Plurais (nenhuma | 1 | N) em pt-BR e en-US ("1 parcela restante" / "N parcelas restantes").
 
 ## Demo
-`DemoSeed` já tem a parcela 3/3 de "Loja Exemplo"; ganha 2 grupos de exemplo com parcelas restantes (fatura mais recente com `N<T`), gerados pelo servidor real; `fixtures/installments.json`; o adaptador estático lista; sem escrita.
+`DemoSeed` ganha linhas de fatura Itaú com `StatementDate` (o demo atual não preenche) e 2 compras parceladas com parcelas restantes na fatura-base, geradas pelo servidor real e fixas sob o relógio 2026-10-15; atenção ao `CardSuffix` consistente entre as parcelas, ao total declarado da fatura e às asserções do seed. `fixtures/installments.json`, `fixtures.ts`, `staticApi.installments`, interface em `http.ts`, `fixtures.test.ts` e `e2e-demo.test.ts` cobertos. Sem escrita.
 
 ## Decisões minhas (Rulings)
-- Derivar em vez de persistir grupos: sem migração, sem estado para ficar incoerente; custo: recalcula a cada consulta (ok para volume pessoal).
-- Só grupos presentes na fatura mais recente: evita projetar compra já quitada/estornada; custo: se o usuário não importar a fatura mais recente de um cartão, os grupos dele somem da projeção até importar.
-- Multiplicidade `k` por fatura mais recente: cobre compras idênticas; custo: duas compras idênticas com parcelas em momentos diferentes seriam confundidas (raro).
-- Valor igual em todas as parcelas restantes: a última pode diferir centavos.
-- Sem Nubank: o OFX não informa parcelas; extrair "N/T" da descrição fica para quando houver amostra.
+- Derivar em vez de persistir: sem migração e sem estado que possa ficar incoerente; custo: recalcula a cada consulta e substitui o desenho do spec pai (ADR).
+- Mês de exibição = mês em que a parcela cai no resumo (não o do vencimento): evita a "comprometido em dezembro, aparece em novembro". Custo: quem pensa pelo vencimento da fatura vê o mês anterior ao vencimento.
+- Projetar por linha da fatura-base: elimina a multiplicidade e a identidade de grupo entre faturas; custo: sem histórico de grupos.
+- "Hoje" corta parcelas passadas; custo: com a fatura-base antiga o comprometido some até importar a mais recente (a tela avisa).
+- Estorno de compra parcelada não cancela; Pix parcelado entra se trouxer N/T; um vencimento por conta.
+- Contas arquivadas incluídas.
 
 ## Testes
-Domínio: projeção básica (3/10 ⇒ 7 restantes, meses corretos, dia do vencimento limitado ao fim do mês), grupo quitado (N=T) não projeta, grupo ausente da fatura mais recente não projeta, multiplicidade, duas contas/cartões separados, ordem de entrada irrelevante (`[Theory]` com seed), descrição normalizada e sufixo de parcela removido, horizonte de 36 meses. API: resposta, isolamento por usuário, 401, linhas ocultas/excluídas ignoradas, conta arquivada. Front: página, estado vazio, plural, XSS, cartão da Visão geral. Demo: fixtures e e2e sem chamada à API.
+Domínio: 3/10 ⇒ 7 restantes com meses corretos e `AddMonths` a partir da base (31 ⇒ 28/29 sem arrastar), parcela N=T não projeta, grupo fora da fatura-base não projeta, sinal (apenas `Amount < 0` entra), "hoje" corta o passado, multiplicidade k, contas separadas, vencimentos diferentes por conta, horizonte de 36, ordem de entrada irrelevante (`[Theory]` com seed), soma dos meses = `totalCommitted` e dos grupos. API: resposta, strings decimais, isolamento por usuário, 401, linhas manuais/ocultas ignoradas, conta arquivada incluída, relógio fixo. Front: página, aviso de base antiga, estado vazio, plural, XSS, cartão da Visão geral, valores escondidos. Demo: fixtures e e2e sem chamada à API.
 
 ## O que fica para o construtor
-Nomes exatos de arquivos/componentes, estilo do gráfico (reutilizar `charts`), textos i18n e como remover o sufixo "N/T" da descrição normalizada (o Itaú traz o parcelamento em coluna própria; só a descrição precisa ser comparável entre faturas).
+Nomes de arquivos/componentes, estilo do gráfico, textos i18n, o filtro SQL das linhas parceladas e a ADR (curta, `docs/adr/0010-parcelas-derivadas.md`).
