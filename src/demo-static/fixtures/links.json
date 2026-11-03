@@ -4,6 +4,22 @@
       "id": "0000001e-0000-4000-8000-000000000001",
       "kind": "InvoicePayment",
       "state": "Confirmed",
+      "origin": "User",
+      "out": {
+        "transactionId": "00000007-0000-4000-8000-000000000054",
+        "accountId": "0000000a-0000-4000-8000-000000000001",
+        "date": "2026-10-02",
+        "description": "Pagamento de fatura de outro cartão (exemplo)",
+        "amount": "-1180.25"
+      },
+      "in": null,
+      "external": true,
+      "createdAt": "2026-10-15T12:00:00+00:00"
+    },
+    {
+      "id": "0000001e-0000-4000-8000-000000000002",
+      "kind": "InvoicePayment",
+      "state": "Confirmed",
       "origin": "Auto",
       "out": {
         "transactionId": "00000007-0000-4000-8000-00000000004a",
@@ -23,7 +39,23 @@
       "createdAt": "2026-10-15T12:00:00+00:00"
     },
     {
-      "id": "0000001e-0000-4000-8000-000000000002",
+      "id": "0000001e-0000-4000-8000-000000000003",
+      "kind": "OwnTransfer",
+      "state": "Confirmed",
+      "origin": "User",
+      "out": {
+        "transactionId": "00000007-0000-4000-8000-000000000052",
+        "accountId": "0000000a-0000-4000-8000-000000000001",
+        "date": "2026-10-09",
+        "description": "Pix para Conta Reserva (exemplo)",
+        "amount": "-220.00"
+      },
+      "in": null,
+      "external": true,
+      "createdAt": "2026-10-15T12:00:00+00:00"
+    },
+    {
+      "id": "0000001e-0000-4000-8000-000000000004",
       "kind": "OwnTransfer",
       "state": "Confirmed",
       "origin": "Auto",
@@ -43,11 +75,33 @@
       },
       "external": false,
       "createdAt": "2026-10-15T12:00:00+00:00"
+    },
+    {
+      "id": "0000001e-0000-4000-8000-000000000005",
+      "kind": "PixCredit",
+      "state": "Confirmed",
+      "origin": "Auto",
+      "out": {
+        "transactionId": "00000007-0000-4000-8000-000000000051",
+        "accountId": "0000000a-0000-4000-8000-000000000001",
+        "date": "2026-10-07",
+        "description": "Pix no crédito (exemplo)",
+        "amount": "-640.00"
+      },
+      "in": {
+        "transactionId": "00000007-0000-4000-8000-000000000050",
+        "accountId": "0000000a-0000-4000-8000-000000000001",
+        "date": "2026-10-07",
+        "description": "Crédito liberado via Pix (exemplo)",
+        "amount": "640.00"
+      },
+      "external": false,
+      "createdAt": "2026-10-15T12:00:00+00:00"
     }
   ],
   "suggested": [
     {
-      "id": "0000001e-0000-4000-8000-000000000003",
+      "id": "0000001e-0000-4000-8000-000000000006",
       "kind": "OwnTransfer",
       "state": "Suggested",
       "origin": "Auto",
@@ -66,6 +120,22 @@
         "amount": "180.00"
       },
       "external": false,
+      "createdAt": "2026-10-15T12:00:00+00:00"
+    },
+    {
+      "id": "0000001e-0000-4000-8000-000000000007",
+      "kind": "OwnTransfer",
+      "state": "Suggested",
+      "origin": "Auto",
+      "out": null,
+      "in": {
+        "transactionId": "00000007-0000-4000-8000-000000000053",
+        "accountId": "0000000a-0000-4000-8000-000000000004",
+        "date": "2026-10-09",
+        "description": "Pix recebido de Conta Reserva Exemplo",
+        "amount": "95.00"
+      },
+      "external": true,
       "createdAt": "2026-10-15T12:00:00+00:00"
     }
   ]

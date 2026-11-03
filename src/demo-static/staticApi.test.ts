@@ -174,6 +174,22 @@ describe("createStaticApi", () => {
     expect((await a.links.list({ state: "Confirmed" })).items).toEqual(f.links.confirmed);
   });
 
+  it("links_list_filters_and_paginates_one_sided_links", async () => {
+    const a = api();
+    const oneSided = (l: { out: unknown; in: unknown }) => l.out === null || l.in === null;
+    const confirmed = await a.links.list({ state: "Confirmed", size: 1, page: 1 });
+    const all = f.links.confirmed;
+    expect(all.some(oneSided)).toBe(true);
+    const seen = [];
+    for (let page = 1; page <= all.length; page++) seen.push(...(await a.links.list({ state: "Confirmed", size: 1, page })).items);
+    expect(seen).toEqual(all);
+    expect(seen.filter(oneSided).length).toBe(all.filter(oneSided).length);
+    expect(confirmed.total).toBe(all.length);
+    const suggested = (await a.links.list({ state: "Suggested" })).items;
+    expect(suggested.filter(oneSided)).toHaveLength(1);
+    expect(suggested.filter(oneSided)[0].external).toBe(true);
+  });
+
   it("pending_queue_hides_lines_on_a_confirmed_link_but_keeps_suggested", async () => {
     const linked = f.transactions.filter((t) => t.link?.state === "Confirmed");
     const suggested = f.transactions.filter((t) => t.link?.state === "Suggested");

@@ -82,19 +82,42 @@ describe("fixtures do demo", () => {
 
   it("links_cover_each_kind_and_a_suggestion", () => {
     const kinds = f.links.confirmed.map((l) => l.kind).sort();
-    expect(kinds).toEqual(["InvoicePayment", "OwnTransfer"]);
-    expect(f.links.suggested.length).toBeGreaterThanOrEqual(1);
+    expect(kinds).toEqual(["InvoicePayment", "InvoicePayment", "OwnTransfer", "OwnTransfer", "PixCredit"]);
+    expect(f.links.suggested.length).toBeGreaterThanOrEqual(2);
     expect(f.links.suggested.every((l) => l.kind === "OwnTransfer")).toBe(true);
     expect(f.links.confirmed.every((l) => l.state === "Confirmed")).toBe(true);
     expect(f.links.suggested.every((l) => l.state === "Suggested")).toBe(true);
-    // O selo de cada linha aponta para o mesmo vínculo da lista.
+    // O selo de cada linha aponta para o mesmo vínculo da lista (contraparte nula nos vínculos de lado vazio).
     const byId = new Map([...f.links.confirmed, ...f.links.suggested].map((l) => [l.id, l]));
     for (const l of byId.values()) {
       for (const [end, other] of [[l.out, l.in], [l.in, l.out]] as const) {
-        const t = f.transactions.find((x) => x.id === end!.transactionId)!;
-        expect(t.link, end!.transactionId).toMatchObject({ id: l.id, kind: l.kind, state: l.state, counterpartTransactionId: other!.transactionId });
+        if (!end) continue;
+        const t = f.transactions.find((x) => x.id === end.transactionId)!;
+        expect(t.link, end.transactionId).toMatchObject({ id: l.id, kind: l.kind, state: l.state, counterpartTransactionId: other?.transactionId ?? null });
       }
     }
+  });
+
+  it("links_include_one_sided_examples", () => {
+    const oneSided = (l: { out: unknown; in: unknown }) => l.out === null || l.in === null;
+    const confirmed = f.links.confirmed.filter(oneSided);
+    expect(confirmed.map((l) => l.kind).sort()).toEqual(["InvoicePayment", "OwnTransfer"]);
+    expect(confirmed.every((l) => l.external)).toBe(true);
+    const suggested = f.links.suggested.filter(oneSided);
+    expect(suggested).toHaveLength(1);
+    expect(suggested[0].external).toBe(true);
+    expect(f.links.confirmed.filter((l) => !oneSided(l)).every((l) => !l.external)).toBe(true);
+  });
+
+  it("transactions_carry_pairing_and_unlinked_pix_and_boleto_stay_normal", () => {
+    const pairings = new Set(f.transactions.map((t) => t.pairing).filter(Boolean));
+    expect([...pairings].sort()).toEqual(["InvoicePayment", "OwnTransfer", "PixCredit"]);
+    for (const t of f.transactions) expect(t, t.id).toHaveProperty("pairing");
+    const boleto = f.transactions.find((t) => t.description === "Boleto Condomínio Exemplo")!;
+    expect([boleto.state, boleto.link, boleto.pairing]).toEqual(["Normal", null, null]);
+    // Pix de terceiro: Normal como no importador real, ainda elegível ao "é meu".
+    const third = f.transactions.find((t) => t.description === "Pix para Fornecedor Fictício")!;
+    expect([third.state, third.link, third.pairing]).toEqual(["Normal", null, "OwnTransfer"]);
   });
 
   it("preview_batch_exists_in_preview_state", () => {
