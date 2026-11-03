@@ -221,7 +221,7 @@ describe("demo estático: interface real somente leitura", () => {
       expect(q("[data-test=error]")!.textContent, "pending").toBe(expected);
       expect(qa("[data-test=pending-row]"), "pending rows").toHaveLength(PENDING.length);
       expect(bodyText()).toContain(PENDING[0].description);
-      expect(q("[data-testid=pending-badge]")!.textContent).toMatch(new RegExp(`^\s*${PENDING.length}(?!\d)`));
+      expect(q("[data-testid=pending-badge]")!.textContent).toMatch(new RegExp(String.raw`^\s*${PENDING.length}(?!\d)`));
 
       await visit(router, "/transactions");
       await click(q("[data-test=new-tx]"));
