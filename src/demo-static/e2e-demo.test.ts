@@ -6,7 +6,7 @@ import i18n from "../real/i18n";
 import { getApi, setApi } from "../real/api/context";
 import { setRouter } from "../real/routerRef";
 import { setAppConfig } from "../real/appConfig";
-import { createDemoApp, DEMO_BUNDLE_MARKER } from "./boot";
+import { bootDemo, createDemoApp, DEMO_BUNDLE_MARKER } from "./boot";
 import { DEMO_FIXTURES as f } from "./fixtures";
 
 // Gráficos dependem de canvas (inexistente no jsdom); o resto da interface é real.
@@ -26,7 +26,7 @@ vi.mock("vue-chartjs", async () => {
 
 const PT_READ_ONLY = "Demonstração somente leitura: alterações não são salvas.";
 const EN_READ_ONLY = "Read-only demo: changes are not saved.";
-const MONEY_LIKE = /\d[.,]\d{2}(?!\d)/;
+const MONEY_LIKE = /\d[.,]\d{2}/; // sem lookahead: textContent concatena nós sem separador ("75,4013/10")
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 let xhrOpenSpy: ReturnType<typeof vi.spyOn>;
@@ -78,6 +78,33 @@ function expectNoMoney() {
   for (const h of haystacks) expect(h).not.toMatch(MONEY_LIKE);
 }
 
+/** Envia um arquivo "extrato.ofx" cuja leitura lança; devolve os espiões de leitura (nenhum deve ser chamado). */
+async function uploadExample() {
+    const file = new File(["conteudo"], "extrato.ofx");
+    const boom = () => {
+      throw new Error("leitura proibida");
+    };
+    // jsdom nem sempre define estes métodos no File: instala espiões que lançam, existam ou não.
+    const fileReads = ["arrayBuffer", "text", "stream", "slice"].map((name) => {
+      const spy = vi.fn(boom);
+      Object.defineProperty(file, name, { value: spy, configurable: true });
+      return spy;
+    });
+    const reads = [
+      ...fileReads,
+      vi.spyOn(FileReader.prototype, "readAsArrayBuffer").mockImplementation(boom),
+      vi.spyOn(FileReader.prototype, "readAsText").mockImplementation(boom),
+      vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(boom),
+    ];
+
+    await setValue(q("[data-test=account]"), CHECKING.id);
+    const input = q<HTMLInputElement>("input[type=file]")!;
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    await setValue(input, "", "change");
+    await submit(q("[data-test=upload-form]"));
+  return reads;
+}
+
 const PENDING = f.transactions.filter((t) => t.state === "PendingClassification");
 const CHECKING = f.accounts.find((a) => a.type === "Checking")!;
 const PREVIEW = f.importDetails[f.meta.previewBatchId];
@@ -105,8 +132,7 @@ afterEach(() => {
     mounted?.host.remove();
     mounted = null;
     vi.unstubAllGlobals();
-    xhrOpenSpy.mockRestore();
-    xhrSendSpy.mockRestore();
+    vi.restoreAllMocks();
     vi.useRealTimers();
     setApi(null);
     setRouter(null);
@@ -172,28 +198,7 @@ describe("demo estático: interface real somente leitura", () => {
     const { router } = await boot();
     await visit(router, "/import");
 
-    const file = new File(["conteudo"], "extrato.ofx");
-    const boom = () => {
-      throw new Error("leitura proibida");
-    };
-    // jsdom nem sempre define estes métodos no File: instala espiões que lançam, existam ou não.
-    const fileReads = ["arrayBuffer", "text", "stream", "slice"].map((name) => {
-      const spy = vi.fn(boom);
-      Object.defineProperty(file, name, { value: spy, configurable: true });
-      return spy;
-    });
-    const reads = [
-      ...fileReads,
-      vi.spyOn(FileReader.prototype, "readAsArrayBuffer").mockImplementation(boom),
-      vi.spyOn(FileReader.prototype, "readAsText").mockImplementation(boom),
-      vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(boom),
-    ];
-
-    await setValue(q("[data-test=account]"), CHECKING.id);
-    const input = q<HTMLInputElement>("input[type=file]")!;
-    Object.defineProperty(input, "files", { value: [file], configurable: true });
-    await setValue(input, "", "change");
-    await submit(q("[data-test=upload-form]"));
+    const reads = await uploadExample();
 
     expect(q("[role=tablist]")).not.toBeNull();
     const text = bodyText();
@@ -203,9 +208,6 @@ describe("demo estático: interface real somente leitura", () => {
     await click(q("[data-test=confirm]"));
     expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);
     for (const r of reads) expect(r).not.toHaveBeenCalled();
-    vi.mocked(FileReader.prototype.readAsText).mockRestore();
-    vi.mocked(FileReader.prototype.readAsArrayBuffer).mockRestore();
-    vi.mocked(FileReader.prototype.readAsDataURL).mockRestore();
   });
 
   it("mutation_shows_translated_read_only_message", async () => {
@@ -217,6 +219,9 @@ describe("demo estático: interface real somente leitura", () => {
       const option = Array.from(sel.options).find((o) => o.value !== "")!;
       await setValue(sel, option.value);
       expect(q("[data-test=error]")!.textContent, "pending").toBe(expected);
+      expect(qa("[data-test=pending-row]"), "pending rows").toHaveLength(PENDING.length);
+      expect(bodyText()).toContain(PENDING[0].description);
+      expect(q("[data-testid=pending-badge]")!.textContent).toMatch(new RegExp(`^\s*${PENDING.length}(?!\d)`));
 
       await visit(router, "/transactions");
       await click(q("[data-test=new-tx]"));
@@ -224,6 +229,9 @@ describe("demo estático: interface real somente leitura", () => {
       await setValue(q("#tx-description"), "Teste somente leitura", "input");
       await submit(q("[data-test=tx-form]"));
       expect(q("[data-test=error]")!.textContent, "create").toBe(expected);
+      expect(qa("[data-test=tx-row]"), "tx rows").toHaveLength(Math.min(50, f.transactions.length));
+      expect(bodyText()).toContain(f.transactions[0].description);
+      expect(bodyText()).not.toContain("Teste somente leitura");
     }
 
     await tryMutations(PT_READ_ONLY);
@@ -237,11 +245,48 @@ describe("demo estático: interface real somente leitura", () => {
 
   it("hide_values_masks_every_page", async () => {
     const { router } = await boot();
+    const anchors: [string, string][] = [
+      ["/", f.accounts[0].name],
+      ["/transactions", f.transactions[0].description],
+      ["/pending", PENDING[0].description],
+      ["/accounts", f.accounts[0].name],
+    ];
+    // controle positivo: com valores visíveis há dinheiro nas páginas com valores
+    for (const path of ["/", "/transactions", "/pending", "/accounts"]) {
+      await visit(router, path);
+      expect(bodyText(), `${path} visível`).toMatch(MONEY_LIKE);
+    }
     await click(q("[data-testid=toggle-values]"));
     expect(localStorage.getItem("fd.hideValues")).toBe("1");
-    for (const path of ["/", "/transactions", "/pending", "/accounts", "/import"]) {
+    for (const [path, anchor] of anchors) {
       await visit(router, path);
+      expect(bodyText(), `${path} carregada`).toContain(anchor);
       expectNoMoney();
+    }
+    await visit(router, "/import");
+    await uploadExample();
+    expect(q("[role=tablist]")).not.toBeNull();
+    for (const l of PREVIEW.lines) expect(bodyText()).toContain(l.description);
+    expectNoMoney();
+  });
+});
+
+describe("bootDemo", () => {
+  it("shows_fallback_and_rethrows_when_boot_fails", async () => {
+    const host = document.createElement("div");
+    host.id = "app";
+    document.body.appendChild(host);
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // força falha no fim de createDemoApp
+      vi.spyOn(document.documentElement, "setAttribute").mockImplementation(() => {
+        throw new Error("falha de boot");
+      });
+      await expect(bootDemo()).rejects.toThrow("falha de boot");
+      expect(host.textContent).toBe("Demo indisponível");
+      expect(err).toHaveBeenCalled();
+    } finally {
+      host.remove();
     }
   });
 });

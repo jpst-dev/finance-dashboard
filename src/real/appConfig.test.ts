@@ -50,4 +50,9 @@ describe("appConfig", () => {
     expect(app.runWithContext(() => inject(APP_CONFIG_KEY))).toBe(getAppConfig());
     expect(app.runWithContext(() => inject(APP_CONFIG_KEY))).toEqual(expected);
   });
+  it("undefined_keys_yield_defaults", () => {
+    setAppConfig({ readOnly: true, hideLogout: true, fixedToday: "2026-10-15" });
+    setAppConfig({ readOnly: undefined, hideLogout: undefined });
+    expect(getAppConfig()).toEqual({ readOnly: false, hideLogout: false, fixedToday: null });
+  });
 });

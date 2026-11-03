@@ -10,7 +10,7 @@ import { useSessionStore } from "../real/stores/session";
 import { DEMO_FIXTURES } from "./fixtures";
 import { createStaticApi } from "./staticApi";
 
-// Marcador exclusivo do bundle do demo estático (verificado por scripts/check-bundles.mjs).
+// Marcador exclusivo do bundle do demo estático (a verificação em scripts/check-bundles.mjs é ligada na Task 5).
 export const DEMO_BUNDLE_MARKER = "data-finance-demo-mode";
 
 export const DEMO_CONFIG: AppConfig = {
@@ -41,6 +41,13 @@ export async function createDemoApp(history?: RouterHistory): Promise<{ app: App
 }
 
 export async function bootDemo(): Promise<void> {
-  const { app } = await createDemoApp();
-  app.mount("#app");
+  try {
+    const { app } = await createDemoApp();
+    app.mount("#app");
+  } catch (e) {
+    console.error(e);
+    const el = document.getElementById("app");
+    if (el) el.textContent = "Demo indisponível";
+    throw e;
+  }
 }
