@@ -216,6 +216,53 @@ public sealed class XlsxSafetyTests
         Assert.Equal("xlsx_unsafe_content", KindOf(f.Build()));
     }
 
+    [Theory]
+    [InlineData("xl/worksheets/sheet9.dat", "utf-8")]
+    [InlineData("xl/worksheets/sheet9.dat", "utf-16")]
+    [InlineData("xl/media/x.xml", "utf-8")]
+    [InlineData("xl/media/image3.png", "utf-16BE")]
+    [InlineData("customXml/item1.bin", "utf-8")]
+    public void Doctype_in_any_entry_regardless_of_name_is_unsafe(string name, string encoding)
+    {
+        // Packaging reaches parts by relationship + content type, not by extension or folder.
+        var f = Valid()
+            .Entry(name, WithDoctype("<worksheet/>", encoding))
+            .ContentType(name, "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml");
+        Assert.Equal("xlsx_unsafe_content", KindOf(f.Build()));
+    }
+
+    [Theory]
+    [InlineData("application/vnd.openxmlformats-officedocument.spreadsheetml.connections+xml")]
+    [InlineData("application/vnd.openxmlformats-officedocument.spreadsheetml.externalLink+xml")]
+    [InlineData("application/vnd.ms-office.activeX+xml")]
+    [InlineData("application/vnd.openxmlformats-officedocument.oleObject")]
+    [InlineData("application/vnd.openxmlformats-officedocument.package")]
+    public void Renamed_part_with_forbidden_content_type_is_unsafe(string type) =>
+        Assert.Equal("xlsx_unsafe_content", KindOf(Valid().Entry("xl/c.xml", Xml()).ContentType("xl/c.xml", type).Build()));
+
+    [Theory]
+    [InlineData("package")]
+    [InlineData("oleObject")]
+    [InlineData("externalLink")]
+    [InlineData("connections")]
+    [InlineData("control")]
+    public void Relationship_to_forbidden_part_type_is_unsafe(string relType) =>
+        Assert.Equal("xlsx_unsafe_content", KindOf(Valid()
+            .Relationship("xl/_rels/workbook.xml.rels", "c.xml", external: false,
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/" + relType)
+            .Build()));
+
+    [Fact]
+    public void Raw_writer_control_case_passes() => XlsxSafety.Validate(XlsxTestFile.Tampered(XlsxTestFile.ZipTamper.None));
+
+    [Theory]
+    [InlineData(XlsxTestFile.ZipTamper.LocalCompressedSizeMismatch)]
+    [InlineData(XlsxTestFile.ZipTamper.Method9)]
+    [InlineData(XlsxTestFile.ZipTamper.EncryptionFlag)]
+    [InlineData(XlsxTestFile.ZipTamper.Zip64Size)]
+    public void Tampered_zip_headers_are_not_xlsx(XlsxTestFile.ZipTamper tamper) =>
+        Assert.Equal("not_xlsx", KindOf(XlsxTestFile.Tampered(tamper)));
+
     [Fact]
     public void Media_is_never_parsed_as_xml()
     {

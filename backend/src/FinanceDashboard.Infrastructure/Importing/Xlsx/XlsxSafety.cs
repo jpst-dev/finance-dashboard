@@ -16,8 +16,9 @@ namespace FinanceDashboard.Infrastructure.Importing.Xlsx;
 /// That central-directory view must agree with <see cref="ZipArchive"/>'s (count and compressed sizes), so the
 /// parts validated here are the parts later readers get. Control parts (<c>[Content_Types].xml</c>,
 /// <c>xl/workbook.xml</c>, every <c>*.rels</c>) are parsed with <see cref="XmlReader"/> (DTD prohibited, no
-/// resolver); other XML parts are only scanned for <c>&lt;!DOCTYPE</c> (and their prolog checked), and
-/// <c>xl/media/*</c> is only counted.
+/// resolver); every entry, whatever its name (media included), is byte-scanned for <c>&lt;!DOCTYPE</c>; other
+/// <c>.xml</c> parts outside <c>xl/media/</c> and <c>xl/drawings/</c> also have their prolog checked. Media and
+/// drawings are never parsed.
 /// </remarks>
 public static class XlsxSafety
 {
@@ -42,7 +43,19 @@ public static class XlsxSafety
     private static readonly string[] ForbiddenPrefixes =
         ["xl/externalLinks/", "xl/embeddings/", "xl/activeX/", "xl/macrosheets/"];
 
-    private static readonly string[] ForbiddenContentTypes = ["macroEnabled", "vbaProject", "macrosheet"];
+    /// <summary>Substrings of forbidden content types (a renamed part keeps its content type).</summary>
+    private static readonly string[] ForbiddenContentTypes =
+    [
+        "macroEnabled", "vbaProject", "macrosheet", "externalLink", "connections+xml", "activeX", "oleObject",
+        "officedocument.package",
+    ];
+
+    /// <summary>Last segment of forbidden relationship <c>Type</c> URIs (a renamed part keeps its relationship type).</summary>
+    private static readonly HashSet<string> ForbiddenRelationshipTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "package", "oleObject", "externalLink", "externalLinkPath", "connections", "control", "activeXControlBinary",
+        "vbaProject", "attachedToolbars",
+    };
 
     private static readonly XmlReaderSettings ControlPartSettings = new()
     {
@@ -120,6 +133,7 @@ public static class XlsxSafety
             if (pos + 46 > cdEnd || U32(c, pos) != 0x02014b50) throw Fail(NotXlsx);
             var flags = U16(c, pos + 8);
             var method = U16(c, pos + 10);
+            var crc = U32(c, pos + 16);
             long compressed = U32(c, pos + 20);
             long declared = U32(c, pos + 24);
             var nameLength = U16(c, pos + 28);
@@ -133,6 +147,14 @@ public static class XlsxSafety
             if (pos > cdEnd) throw Fail(NotXlsx);
 
             if (localOffset + 30 > c.Length || U32(c, localOffset) != 0x04034b50) throw Fail(NotXlsx);
+            // Local and central headers must agree (sizes/CRC are zero in the local header only when a data
+            // descriptor follows the data, flag bit 3).
+            var localFlags = U16(c, localOffset + 6);
+            if (U16(c, localOffset + 8) != method || (localFlags & 1) != 0) throw Fail(NotXlsx);
+            if ((localFlags & 8) == 0 &&
+                (U32(c, localOffset + 14) != crc ||
+                 U32(c, localOffset + 18) != compressed || U32(c, localOffset + 22) != declared))
+                throw Fail(NotXlsx);
             var dataStart = localOffset + 30 + U16(c, localOffset + 26) + U16(c, localOffset + 28);
             if (dataStart + compressed > c.Length) throw Fail(NotXlsx);
             list.Add(new RawEntry(method, compressed, dataStart));
@@ -222,21 +244,22 @@ public static class XlsxSafety
     {
         for (var i = 0; i < entries.Count; i++)
         {
+            // Every entry is byte-scanned for <!DOCTYPE, whatever its name or folder: packaging reaches parts by
+            // relationship + content type, not by extension. Scanning bytes is not parsing, so media stays unparsed.
             var name = entries[i].FullName.Replace('\\', '/');
-            if (name.StartsWith("xl/media/", StringComparison.OrdinalIgnoreCase)) continue; // counted only
-
+            var isMedia = name.StartsWith("xl/media/", StringComparison.OrdinalIgnoreCase);
+            var isDrawing = name.StartsWith("xl/drawings/", StringComparison.OrdinalIgnoreCase);
             var isRels = name.EndsWith(".rels", StringComparison.OrdinalIgnoreCase);
-            if (!isRels && !name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)) continue;
+            var isXml = name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase);
             var isContentTypes = name.Equals("[Content_Types].xml", StringComparison.OrdinalIgnoreCase);
             var isControl = isRels || isContentTypes || name.Equals("xl/workbook.xml", StringComparison.OrdinalIgnoreCase);
-            var isDrawing = name.StartsWith("xl/drawings/", StringComparison.OrdinalIgnoreCase);
             if (isControl && sizes[i] > MaxControlPartBytes) throw Fail(Limits);
 
             using var scan = new DoctypeScanStream(entries[i].Open());
             try
             {
                 if (isControl) InspectControlPart(scan, isRels, isContentTypes);
-                else if (!isDrawing) CheckProlog(scan); // drawings: byte scan only, never parsed
+                else if (isXml && !isMedia && !isDrawing) CheckProlog(scan); // media/drawings: byte scan only
                 scan.Drain(sink);
             }
             catch (XmlException)
@@ -263,6 +286,9 @@ public static class XlsxSafety
             {
                 var mode = reader.GetAttribute("TargetMode");
                 if (mode is not null && mode.Trim().Equals("External", StringComparison.OrdinalIgnoreCase))
+                    throw Fail(Unsafe);
+                var relType = reader.GetAttribute("Type");
+                if (relType is not null && ForbiddenRelationshipTypes.Contains(relType.Trim()[(relType.Trim().LastIndexOf('/') + 1)..]))
                     throw Fail(Unsafe);
             }
         }

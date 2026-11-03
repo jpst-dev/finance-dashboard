@@ -51,7 +51,7 @@ public sealed class XlsxTestFile
     private readonly HashSet<int> _blankBefore = new();
     private readonly List<(string Name, byte[] Data)> _entries = new();
     private readonly List<(string PartName, string Type)> _contentTypes = new();
-    private readonly List<(string RelsPart, string Target, bool External)> _relationships = new();
+    private readonly List<(string RelsPart, string Target, bool External, string Type)> _relationships = new();
 
     private XlsxTestFile(string due, string total)
     {
@@ -125,9 +125,13 @@ public sealed class XlsxTestFile
     /// Adds a hyperlink relationship to <paramref name="relsPart"/> (e.g. <c>xl/_rels/workbook.xml.rels</c>);
     /// the part is created when the builder does not generate it.
     /// </summary>
-    public XlsxTestFile Relationship(string relsPart, string target, bool external)
+    public XlsxTestFile Relationship(string relsPart, string target, bool external) =>
+        Relationship(relsPart, target, external, RelTypeBase + "hyperlink");
+
+    /// <summary>Same as the 3-argument overload, with an explicit relationship <c>Type</c> URI.</summary>
+    public XlsxTestFile Relationship(string relsPart, string target, bool external, string type)
     {
-        _relationships.Add((relsPart, target, external));
+        _relationships.Add((relsPart, target, external, type));
         return this;
     }
 
@@ -176,6 +180,37 @@ public sealed class XlsxTestFile
         }
         var raw = parts.Select(p => RawEntry.Deflated(p.Name, p.Data)).ToList();
         raw.Add(new RawEntry("xl/media/image2.bin", 8, compressed.ToArray(), Crc32.Compute(new byte[declared]), declared));
+        return WriteRawZip(raw);
+    }
+
+    public enum ZipTamper
+    {
+        /// <summary>None: the raw writer's output for a valid invoice (control case).</summary>
+        None,
+        /// <summary>Local header of <c>xl/workbook.xml</c> declares a compressed size different from the central one.</summary>
+        LocalCompressedSizeMismatch,
+        /// <summary><c>xl/workbook.xml</c> declares compression method 9 (Deflate64) in both headers.</summary>
+        Method9,
+        /// <summary><c>xl/workbook.xml</c> has the zip encryption flag (bit 0) set in both headers.</summary>
+        EncryptionFlag,
+        /// <summary><c>xl/workbook.xml</c> declares <c>0xFFFFFFFF</c> uncompressed size (Zip64 marker).</summary>
+        Zip64Size,
+    }
+
+    /// <summary>Valid invoice written byte by byte by the raw writer, with one header-level tampering.</summary>
+    public static byte[] Tampered(ZipTamper tamper)
+    {
+        var raw = ReadEntries(SampleInvoice().Build()).Select(p => RawEntry.Deflated(p.Name, p.Data)).ToList();
+        var i = raw.FindIndex(e => e.Name == "xl/workbook.xml");
+        raw[i] = tamper switch
+        {
+            ZipTamper.None => raw[i],
+            ZipTamper.LocalCompressedSizeMismatch => raw[i] with { LocalCompressedSize = (uint)raw[i].Data.Length + 1 },
+            ZipTamper.Method9 => raw[i] with { Method = 9 },
+            ZipTamper.EncryptionFlag => raw[i] with { Flags = 1 },
+            ZipTamper.Zip64Size => raw[i] with { DeclaredSize = uint.MaxValue },
+            _ => throw new ArgumentOutOfRangeException(nameof(tamper)),
+        };
         return WriteRawZip(raw);
     }
 
@@ -276,10 +311,10 @@ public sealed class XlsxTestFile
                 [new Rel("rId1", RelTypeBase + "image", "../media/image1.png", false)];
         }
         var extraId = 0;
-        foreach (var (part, target, external) in _relationships)
+        foreach (var (part, target, external, type) in _relationships)
         {
             if (!rels.TryGetValue(part, out var list)) rels[part] = list = new List<Rel>();
-            list.Add(new Rel("rIdExtra" + ++extraId, RelTypeBase + "hyperlink", target, external));
+            list.Add(new Rel("rIdExtra" + ++extraId, type, target, external));
         }
 
         var overrides = new List<(string PartName, string Type)>
@@ -574,6 +609,11 @@ public sealed class XlsxTestFile
 
     private sealed record RawEntry(string Name, ushort Method, byte[] Data, uint Crc, uint DeclaredSize)
     {
+        public ushort Flags { get; init; }
+
+        /// <summary>When set, the local header declares this compressed size instead of the real one.</summary>
+        public uint? LocalCompressedSize { get; init; }
+
         public static RawEntry Deflated(string name, byte[] plain)
         {
             var ms = new MemoryStream();
@@ -592,9 +632,9 @@ public sealed class XlsxTestFile
             offsets.Add((uint)ms.Position);
             var name = Encoding.ASCII.GetBytes(e.Name);
             w.Write(0x04034b50u);
-            w.Write((ushort)20); w.Write((ushort)0); w.Write(e.Method);
+            w.Write((ushort)20); w.Write(e.Flags); w.Write(e.Method);
             w.Write((ushort)0); w.Write((ushort)0x21);
-            w.Write(e.Crc); w.Write((uint)e.Data.Length); w.Write(e.DeclaredSize);
+            w.Write(e.Crc); w.Write(e.LocalCompressedSize ?? (uint)e.Data.Length); w.Write(e.DeclaredSize);
             w.Write((ushort)name.Length); w.Write((ushort)0);
             w.Write(name); w.Write(e.Data);
         }
@@ -604,7 +644,7 @@ public sealed class XlsxTestFile
             var e = entries[i];
             var name = Encoding.ASCII.GetBytes(e.Name);
             w.Write(0x02014b50u);
-            w.Write((ushort)20); w.Write((ushort)20); w.Write((ushort)0); w.Write(e.Method);
+            w.Write((ushort)20); w.Write((ushort)20); w.Write(e.Flags); w.Write(e.Method);
             w.Write((ushort)0); w.Write((ushort)0x21);
             w.Write(e.Crc); w.Write((uint)e.Data.Length); w.Write(e.DeclaredSize);
             w.Write((ushort)name.Length); w.Write((ushort)0); w.Write((ushort)0);
