@@ -103,6 +103,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
             e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32);
+            // Nullable in the domain (open links come with S3(b)); the column stays NOT NULL until its migration.
+            e.Property(x => x.OutTransactionId).IsRequired();
+            e.Property(x => x.InTransactionId).IsRequired();
             e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.OutTransactionId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.InTransactionId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.OutTransactionId, x.InTransactionId }).IsUnique();

@@ -599,7 +599,7 @@ export interface components {
             overridable: boolean;
         };
         /** @enum {string} */
-        LinkKind: "InvoicePayment" | "OwnTransfer";
+        LinkKind: "InvoicePayment" | "OwnTransfer" | "PixCredit";
         LinkLine: {
             /** Format: uuid */
             transactionId: string;

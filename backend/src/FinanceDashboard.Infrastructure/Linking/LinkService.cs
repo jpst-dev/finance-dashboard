@@ -52,12 +52,16 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
         foreach (var r in rows)
         {
             if (PairingRules.RoleOf(r.Source, r.OriginalDescription, r.Amount) is { } role)
-                candidates.Add(new PairingCandidate(r.Id, r.AccountId, r.Source, role, r.Date, r.Amount));
+                // TEMPORARY (S3(b) Task 1): real counterpart name keys arrive with Task 4. A shared constant keeps
+                // the S3(a) auto-confirm behavior of own transfers until then.
+                candidates.Add(new PairingCandidate(r.Id, r.AccountId, r.Source, role, r.Date, r.Amount,
+                    role == PairingRole.Transfer ? "TRANSFERENCIA-PROPRIA" : null));
         }
 
         var rejected = (await db.Links.AsNoTracking().Where(l => l.State == LinkState.Rejected)
                 .Select(l => new { l.OutTransactionId, l.InTransactionId }).ToListAsync(ct))
-            .Select(l => (l.OutTransactionId, l.InTransactionId)).ToHashSet();
+            .Where(l => l.OutTransactionId.HasValue && l.InTransactionId.HasValue)
+            .Select(l => (l.OutTransactionId!.Value, l.InTransactionId!.Value)).ToHashSet();
 
         // Lines on a Confirmed link, either column (the indexes only cover each column on its own).
         var confirmedLines = await ConfirmedLinesAsync(ct);
@@ -151,8 +155,8 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
         var set = new HashSet<Guid>();
         foreach (var e in ends)
         {
-            set.Add(e.OutTransactionId);
-            set.Add(e.InTransactionId);
+            if (e.OutTransactionId is { } o) set.Add(o);
+            if (e.InTransactionId is { } i) set.Add(i);
         }
 
         return set;

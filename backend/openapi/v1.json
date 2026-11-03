@@ -2015,7 +2015,8 @@
       "LinkKind": {
         "enum": [
           "InvoicePayment",
-          "OwnTransfer"
+          "OwnTransfer",
+          "PixCredit"
         ],
         "type": "string"
       },

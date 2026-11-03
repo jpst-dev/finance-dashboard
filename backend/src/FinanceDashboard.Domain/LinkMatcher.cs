@@ -1,8 +1,8 @@
 namespace FinanceDashboard.Domain;
 
-public enum PairingRole { InvoiceAccountSide, InvoiceCardSide, Transfer }
+public enum PairingRole { InvoiceAccountSide, InvoiceCardSide, Transfer, PixCreditCredit, PixCreditDebit }
 
-public record PairingCandidate(Guid Id, Guid AccountId, ImportSource Source, PairingRole Role, DateOnly Date, decimal Amount);
+public record PairingCandidate(Guid Id, Guid AccountId, ImportSource Source, PairingRole Role, DateOnly Date, decimal Amount, string? NameKey = null);
 
 public record ProposedLink(Guid OutId, Guid InId, LinkKind Kind, bool AutoConfirm);
 
@@ -10,6 +10,7 @@ public static class LinkMatcher
 {
     public const int WindowDays = 3;
     public const int AutoTransferDays = 1;
+    public const int PixCreditWindowDays = 1;
 
     public static IReadOnlyList<ProposedLink> Match(
         IReadOnlyList<PairingCandidate> candidates,
@@ -22,9 +23,11 @@ public static class LinkMatcher
         foreach (var o in outs)
             foreach (var i in ins)
             {
-                if (o.Id == i.Id || o.AccountId == i.AccountId) continue;
+                if (o.Id == i.Id) continue;
+                var isPix = o.Role == PairingRole.PixCreditDebit && i.Role == PairingRole.PixCreditCredit;
+                if (isPix != (o.AccountId == i.AccountId)) continue;
                 if (o.Amount != -i.Amount) continue;
-                if (Math.Abs(o.Date.DayNumber - i.Date.DayNumber) > WindowDays) continue;
+                if (Math.Abs(o.Date.DayNumber - i.Date.DayNumber) > (isPix ? PixCreditWindowDays : WindowDays)) continue;
                 if (rejected.Contains((o.Id, i.Id))) continue;
                 var kind = KindOf(o, i);
                 if (kind is null) continue;
@@ -52,7 +55,8 @@ public static class LinkMatcher
             {
                 var single = edgesPerRoot[Find(p.Out.Id)] == 1;
                 var auto = single && !(p.Kind == LinkKind.OwnTransfer
-                    && Math.Abs(p.Out.Date.DayNumber - p.In.Date.DayNumber) > AutoTransferDays);
+                    && (Math.Abs(p.Out.Date.DayNumber - p.In.Date.DayNumber) > AutoTransferDays
+                        || !NameKeys.Coincide(p.Out.NameKey, p.In.NameKey)));
                 return (p, link: new ProposedLink(p.Out.Id, p.In.Id, p.Kind, auto));
             })
             .OrderBy(x => x.p.Out.Date).ThenBy(x => x.p.Out.Id).ThenBy(x => x.p.In.Id)
@@ -62,6 +66,8 @@ public static class LinkMatcher
 
     static LinkKind? KindOf(PairingCandidate o, PairingCandidate i)
     {
+        if (o.Role == PairingRole.PixCreditDebit && i.Role == PairingRole.PixCreditCredit)
+            return o.Source == ImportSource.ItauChecking && i.Source == ImportSource.ItauChecking ? LinkKind.PixCredit : null;
         if (o.Role == PairingRole.Transfer && i.Role == PairingRole.Transfer)
             return IsChecking(o.Source) && IsChecking(i.Source) ? LinkKind.OwnTransfer : null;
 

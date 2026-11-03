@@ -219,16 +219,19 @@ public static class TransactionEndpoints
 
         var rows = await db.Links.AsNoTracking()
             .Where(l => (l.State == LinkState.Confirmed || l.State == LinkState.Suggested)
-                && (ids.Contains(l.OutTransactionId) || ids.Contains(l.InTransactionId)))
+                && l.OutTransactionId != null && l.InTransactionId != null
+                && (ids.Contains(l.OutTransactionId.Value) || ids.Contains(l.InTransactionId.Value)))
             .OrderBy(l => l.State == LinkState.Confirmed ? 0 : 1).ThenBy(l => l.CreatedAt).ThenBy(l => l.Id)
             .ToListAsync();
         var wanted = ids.ToHashSet();
         foreach (var l in rows)
         {
-            if (wanted.Contains(l.OutTransactionId))
-                result.TryAdd(l.OutTransactionId, new TransactionLink(l.Id, l.Kind, l.State, l.InTransactionId));
-            if (wanted.Contains(l.InTransactionId))
-                result.TryAdd(l.InTransactionId, new TransactionLink(l.Id, l.Kind, l.State, l.OutTransactionId));
+            var outId = l.OutTransactionId!.Value;
+            var inId = l.InTransactionId!.Value;
+            if (wanted.Contains(outId))
+                result.TryAdd(outId, new TransactionLink(l.Id, l.Kind, l.State, inId));
+            if (wanted.Contains(inId))
+                result.TryAdd(inId, new TransactionLink(l.Id, l.Kind, l.State, outId));
         }
 
         return result;
