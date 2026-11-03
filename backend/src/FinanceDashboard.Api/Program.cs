@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FinanceDashboard.Api.Auth;
 using FinanceDashboard.Api.Health;
 using FinanceDashboard.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ builder.Logging.ClearProviders();
 builder.Logging.AddJsonConsole();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAuth();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database")
     .AddCheck<TimeZoneHealthCheck>("timezone");
@@ -21,6 +23,13 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
     scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
 }
 
+app.UseRouting();
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseAntiforgery();
+
+app.MapAuth();
 app.MapHealthChecks("/api/health", new() { Predicate = _ => false });
 app.MapHealthChecks("/api/health/ready", new()
 {
