@@ -204,6 +204,7 @@ export const useTransactionsStore = defineStore("fd-transactions", () => {
     }
     const f = filters.value.state;
     if (f && saved.state !== f) {
+      if (items.value.length === 1 && page.value > 1) page.value -= 1; // saiu o último item da página
       items.value = items.value.filter((x) => x.id !== id);
     } else {
       const j = items.value.findIndex((x) => x.id === id);

@@ -31,6 +31,8 @@ export const useAccountsStore = defineStore("fd-accounts", () => {
   const archived = computed(() => items.value.filter((a) => a.isArchived));
 
   async function run<T>(fn: () => Promise<T>): Promise<T | null> {
+    // Reentrância (ex.: Enter repetido durante um PUT em andamento): ignora a segunda chamada.
+    if (busy.value) return null;
     busy.value = true;
     error.value = null;
     try {

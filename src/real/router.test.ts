@@ -1,15 +1,24 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { nextTick } from "vue";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory } from "vue-router";
 import { createRealRouter } from "./router";
 import { useSessionStore } from "./stores/session";
 import { safeNext } from "./safeNext";
 import { setApi } from "./api/context";
+import { setRouter } from "./routerRef";
+import i18n from "./i18n";
 import { fakeApi } from "./testing";
 
 beforeEach(() => {
   setActivePinia(createPinia());
   document.title = "";
+});
+
+afterEach(() => {
+  setApi(null);
+  setRouter(null);
+  i18n.global.locale.value = "pt-BR";
 });
 
 describe("router guard", () => {
@@ -37,6 +46,22 @@ describe("router guard", () => {
     const router = createRealRouter(createMemoryHistory());
     await router.push("/accounts");
     expect(document.title).toBe("Contas · Finance Dashboard");
+  });
+
+  it("document_title_follows_locale_changes", async () => {
+    setApi(fakeApi({ me: async () => ({ email: "user@example.test" }) }));
+    await useSessionStore().bootstrap();
+    const router = createRealRouter(createMemoryHistory());
+    await router.push("/accounts");
+    expect(document.title).toBe("Contas · Finance Dashboard");
+    i18n.global.locale.value = "en-US";
+    await nextTick();
+    expect(document.title).toBe("Accounts · Finance Dashboard");
+  });
+
+  it("safeNext_rejects_overlong_values", () => {
+    expect(safeNext("/" + "a".repeat(2047))).toHaveLength(2048);
+    expect(safeNext("/" + "a".repeat(2048))).toBe("/");
   });
 
   it("next_param_rejects_external_urls", () => {

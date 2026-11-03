@@ -20,7 +20,8 @@ const label = computed(() => props.hiddenLabel ?? String(i18n.global.t("real.mon
 const text = computed(() => {
   const p = parts.value;
   if (!p) return props.value;
-  if (!props.signed) return (p.negative ? "-" : "") + p.text;
+  // U+2212 nos dois modos (assinado ou não), para o sinal ficar igual em toda a interface.
+  if (!props.signed) return (p.negative ? "−" : "") + p.text;
   // Sinal também em texto, não só em cor.
   return (p.zero ? "" : p.negative ? "−" : "+") + p.text;
 });
@@ -33,7 +34,7 @@ const tone = computed(() => {
 </script>
 
 <template>
-  <span v-if="visibility.hidden" class="money" role="text" :aria-label="label">{{ MASK }}</span>
+  <span v-if="visibility.hidden" class="money" role="img" :aria-label="label">{{ MASK }}</span>
   <span v-else class="money" :class="tone">{{ text }}</span>
 </template>
 

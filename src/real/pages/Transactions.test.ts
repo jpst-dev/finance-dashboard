@@ -9,6 +9,7 @@ import { useValuesVisibility } from "../money/visibility";
 import { acc } from "../testing";
 import { fakeTxApi, tx } from "../testingTx";
 import Transactions from "./Transactions.vue";
+import TransactionForm from "../components/TransactionForm.vue";
 
 const cats: Category[] = [
   { id: "c1", name: "Mercado", kind: "Expense" } as Category,
@@ -99,6 +100,31 @@ describe("Transactions page", () => {
     await w.find("[data-test=tx-form]").trigger("submit");
     await flushPromises();
     expect((transactions.create.mock.calls[1] as unknown[])[0]).toMatchObject({ amount: "-3.50" });
+  });
+
+  it("row_actions_have_row_context_in_aria_label", async () => {
+    const { w } = await setup({ items: [tx({ description: "Padaria Exemplo" })] });
+    expect(w.find("[data-test=tx-edit]").attributes("aria-label")).toBe("Editar: Padaria Exemplo");
+    expect(w.find("[data-test=tx-delete]").attributes("aria-label")).toBe("Apagar: Padaria Exemplo");
+  });
+
+  it("edit_mode_account_label_does_not_point_at_a_paragraph", async () => {
+    const { w } = await setup();
+    await w.find("[data-test=tx-edit]").trigger("click");
+    expect(w.find("label[for=tx-account]").exists()).toBe(false);
+    expect(w.find("[data-test=tx-account-fixed]").attributes("aria-labelledby")).toBe("tx-account-label");
+  });
+
+  it("form_account_follows_accounts_loaded_after_open", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setApi({ categories: { list: async () => cats } } as unknown as ApiClient);
+    const form = mount(TransactionForm, { props: { accounts: [], busy: false }, global: { plugins: [pinia, i18n] } });
+    await form.setProps({ accounts: [acc({ id: "a9", name: "Conta Tardia" })] });
+    await form.find("#tx-description").setValue("Algo");
+    await form.find("#tx-amount").setValue("5");
+    await form.find("[data-test=tx-form]").trigger("submit");
+    expect(form.emitted("submit")![0][0]).toMatchObject({ accountId: "a9" });
   });
 
   it("credit_card_hint_is_shown", async () => {

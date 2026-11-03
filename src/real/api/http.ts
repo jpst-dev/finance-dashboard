@@ -173,13 +173,17 @@ export function createHttpApi(opts: HttpApiOptions = {}): ApiClient {
     auth: {
       async me() {
         try {
-          return await request<CurrentUser>("/api/auth/me", { notifyUnauthorized: false });
+          const me = await request<Partial<CurrentUser> | undefined>("/api/auth/me", { notifyUnauthorized: false });
+          // Sessão sem e-mail utilizável não é uma sessão válida: erro de resposta, não "anônimo".
+          if (typeof me?.email !== "string" || !me.email) throw new ApiError(500, "invalid_response");
+          return { email: me.email };
         } catch (e) {
           if (e instanceof ApiError && e.status === 401) return null;
           throw e;
         }
       },
       async login(email, password) {
+        // Um 400 sem corpo é repetido uma vez pelo request() (suposto antiforgery): na prática gasta 2 tentativas do rate limit.
         const body: LoginBody = { email, password };
         try {
           await request<void>("/api/auth/login", { method: "POST", json: body, notifyUnauthorized: false });

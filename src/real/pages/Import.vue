@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import ImportHistory from "../components/ImportHistory.vue";
 import ImportPreview from "../components/ImportPreview.vue";
@@ -13,11 +13,14 @@ const store = useImportsStore();
 const accounts = useAccountsStore();
 const categories = useCategoriesStore();
 
+// Evita piscar "Nenhuma conta ativa" antes de as contas chegarem.
+const accountsReady = ref(accounts.loaded);
+
 onMounted(() => {
   store.result = null;
   store.error = null;
   store.notice = null;
-  void accounts.load();
+  void accounts.load().finally(() => (accountsReady.value = true));
   void categories.load();
   void store.loadHistory();
 });
@@ -54,6 +57,7 @@ const btn = "rounded px-3 py-1.5 focus-visible:outline focus-visible:outline-2 f
         </button>
       </div>
     </div>
+    <p v-else-if="!store.preview && !accountsReady" class="mt-4 text-gray-400" data-test="accounts-loading">{{ t("real.accounts.loading") }}</p>
     <ImportUpload v-else-if="!store.preview" />
     <ImportPreview v-else />
 

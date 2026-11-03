@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import i18n from "../i18n";
@@ -52,6 +52,18 @@ describe("Accounts page", () => {
     expect(body.amount).toBe("1234.50");
     expect(body.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(accounts.list).toHaveBeenCalledTimes(2); // recarregou saldos
+  });
+
+  it("checkpoint_form_default_date_is_local_today", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date(2026, 0, 5, 23, 59));
+      const { w } = await setup();
+      await w.find("[data-test=register-balance]").trigger("click");
+      expect((w.find("input[id^=cp-date-]").element as HTMLInputElement).value).toBe("2026-01-05");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("api_errors_are_shown_translated_without_leaking_values", async () => {

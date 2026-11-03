@@ -172,6 +172,38 @@ describe("createHttpApi", () => {
     expect(e3.status).toBe(404);
   });
 
+  it("Concurrent_antiforgery_400s_share_one_csrf_refetch", async () => {
+    const { fetch, calls } = fakeFetch({
+      [`DELETE /api/transactions/${TX_ID}`]: [{ status: 400 }, { status: 400 }, { status: 204 }],
+    });
+    const api = createHttpApi({ fetch });
+    await Promise.all([api.transactions.remove(TX_ID), api.transactions.remove(TX_ID)]);
+    expect(csrfCalls(calls)).toHaveLength(2); // o inicial + UM refetch compartilhado
+    const deletes = calls.filter((c) => c.method === "DELETE");
+    expect(deletes).toHaveLength(4);
+    expect(deletes.slice(2).map((c) => c.headers.get("X-XSRF-TOKEN"))).toEqual(["t2", "t2"]);
+  });
+
+  it("Bad_request_with_error_body_is_not_retried", async () => {
+    const { fetch, calls } = fakeFetch({ [`DELETE /api/transactions/${TX_ID}`]: { status: 400, body: { error: "invalid" } } });
+    const api = createHttpApi({ fetch });
+    const e = await api.transactions.remove(TX_ID).catch((x) => x);
+    expect(e).toBeInstanceOf(ApiError);
+    expect(e.code).toBe("invalid");
+    expect(calls.filter((c) => c.method === "DELETE")).toHaveLength(1);
+    expect(csrfCalls(calls)).toHaveLength(1);
+  });
+
+  it("Me_without_usable_email_is_an_invalid_response", async () => {
+    const { fetch } = fakeFetch({ "GET /api/auth/me": [{ status: 200, body: { email: null } }, { status: 200, body: {} }] });
+    const api = createHttpApi({ fetch });
+    for (let i = 0; i < 2; i++) {
+      const e = await api.auth.me().catch((x) => x);
+      expect(e).toBeInstanceOf(ApiError);
+      expect(e.code).toBe("invalid_response");
+    }
+  });
+
   it("Me_returns_null_on_401", async () => {
     const { fetch } = fakeFetch({
       "GET /api/auth/me": [{ status: 401 }, { status: 200, body: { email: "pessoa@example.test" } }],

@@ -30,7 +30,8 @@
       "submitting": "Signing in…",
       "errorInvalid": "Incorrect e-mail or password.",
       "errorRateLimit": "Too many attempts. Wait a moment and try again.",
-      "errorNetwork": "Could not sign in. Check your connection and try again."
+      "errorNetwork": "Could not sign in. Check your connection and try again.",
+      "serverUnreachable": "Could not reach the server. You can still try to sign in."
     },
     "shell": {
       "skip": "Skip to content",
@@ -38,6 +39,7 @@
       "hideValues": "Hide values",
       "showValues": "Show values",
       "language": "Language",
+      "lang": { "pt-BR": "Português", "en-US": "English" },
       "logout": "Sign out",
       "logoutFailed": "Could not sign out. Your session may still be active; try again."
     },
@@ -187,7 +189,8 @@
         "undoTitle": "Undo this import?",
         "undoBody": "Every transaction created by this import and the balance it recorded will be removed, including the ones you edited or deleted.",
         "edited": "Transactions you edited that will also be removed: {n}.",
-        "editedUnknown": "Could not tell how many transactions you edited; they will also be removed.",
+        "editedFailed": "Could not check how many transactions you edited. Try again before undoing.",
+        "editedRetry": "Try again",
         "crossBatch": "Note: lines that another batch skipped because they already existed will also be removed, since this import created them.",
         "undoYes": "Yes, undo",
         "undoNo": "Back",
@@ -227,6 +230,8 @@
       "editTitle": "Edit transaction",
       "edit": "Edit",
       "delete": "Delete",
+      "editRow": "Edit: {description}",
+      "deleteRow": "Delete: {description}",
       "deleteYes": "Yes, delete",
       "save": "Save",
       "cancel": "Cancel",

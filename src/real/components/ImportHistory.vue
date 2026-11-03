@@ -14,6 +14,7 @@ const pending = ref<{ id: string; edited: number | null | undefined } | null>(nu
 let trigger: HTMLElement | null = null;
 const yesBtn = ref<HTMLButtonElement | null>(null);
 const titleEl = ref<HTMLElement | null>(null);
+const dialogEl = ref<HTMLElement | null>(null);
 const status = ref("");
 
 const accountName = (id: string) => accounts.items.find((a) => a.id === id)?.name ?? "—";
@@ -33,12 +34,27 @@ async function openUndo(b: ImportBatch, e: Event) {
   trigger = e.currentTarget as HTMLElement;
   status.value = "";
   pending.value = { id: b.batchId, edited: undefined };
-  const n = await store.editedCount(b.batchId);
-  if (pending.value?.id !== b.batchId) return;
-  pending.value = { id: b.batchId, edited: n };
-  // Foco vai para a ação só depois que o aviso com editedCount está na tela.
+  // O foco entra no diálogo já ao abrir: Escape funciona mesmo enquanto o editedCount carrega.
   await nextTick();
-  yesBtn.value?.focus();
+  dialogEl.value?.focus();
+  await loadEdited(b.batchId);
+}
+
+async function loadEdited(id: string) {
+  const n = await store.editedCount(id);
+  if (pending.value?.id !== id) return;
+  pending.value = { id, edited: n };
+  // Com o aviso do editedCount na tela, o foco vai para a ação; em falha, para o diálogo (que tem "Tentar novamente").
+  await nextTick();
+  if (n === null) dialogEl.value?.focus();
+  else yesBtn.value?.focus();
+}
+
+async function retryEdited() {
+  const p = pending.value;
+  if (!p) return;
+  pending.value = { id: p.id, edited: undefined };
+  await loadEdited(p.id);
 }
 
 async function close() {
@@ -108,6 +124,8 @@ async function doUndo() {
     <div
       v-if="pending"
       id="import-undo-dialog"
+      ref="dialogEl"
+      tabindex="-1"
       role="alertdialog"
       aria-modal="false"
       aria-labelledby="import-undo-title"
@@ -119,7 +137,17 @@ async function doUndo() {
       <div id="import-undo-body" class="mt-1 space-y-1 text-sm">
         <p>{{ t("real.import.history.undoBody") }}</p>
         <p v-if="pending.edited === undefined" class="text-gray-400">{{ t("real.import.history.loading") }}</p>
-        <p v-else-if="pending.edited === null">{{ t("real.import.history.editedUnknown") }}</p>
+        <div v-else-if="pending.edited === null" class="flex flex-wrap items-center gap-2" data-test="edited-error">
+          <p class="text-red-400">{{ t("real.import.history.editedFailed") }}</p>
+          <button
+            type="button"
+            class="rounded border border-gray-600 px-3 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+            data-test="edited-retry"
+            @click="retryEdited"
+          >
+            {{ t("real.import.history.editedRetry") }}
+          </button>
+        </div>
         <p v-else data-test="edited-count">{{ t("real.import.history.edited", { n: pending.edited }) }}</p>
         <p class="text-amber-300">{{ t("real.import.history.crossBatch") }}</p>
       </div>
@@ -128,7 +156,7 @@ async function doUndo() {
           ref="yesBtn"
           type="button"
           class="rounded bg-red-700 px-3 py-1 text-white disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300"
-          :disabled="store.undoing || pending.edited === undefined"
+          :disabled="store.undoing || typeof pending.edited !== 'number'"
           data-test="undo-yes"
           @click="doUndo"
         >

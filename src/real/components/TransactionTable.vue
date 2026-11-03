@@ -46,8 +46,8 @@ const btn =
             </span>
           </td>
           <td class="whitespace-nowrap">
-            <button type="button" :class="btn" data-test="tx-edit" @click="emit('edit', tx)">{{ t("real.transactions.edit") }}</button>
-            <button type="button" :class="[btn, 'ml-1']" data-test="tx-delete" @click="emit('remove', tx)">{{ t("real.transactions.delete") }}</button>
+            <button type="button" :class="btn" data-test="tx-edit" :aria-label="t('real.transactions.editRow', { description: tx.description })" @click="emit('edit', tx)">{{ t("real.transactions.edit") }}</button>
+            <button type="button" :class="[btn, 'ml-1']" data-test="tx-delete" :aria-label="t('real.transactions.deleteRow', { description: tx.description })" @click="emit('remove', tx)">{{ t("real.transactions.delete") }}</button>
           </td>
         </tr>
       </tbody>

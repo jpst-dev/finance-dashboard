@@ -130,8 +130,7 @@ describe("Import page", () => {
     await flushPromises();
     const res = w.find("[data-test=result]");
     expect(res.attributes("aria-live")).toBe("polite");
-    expect(res.text()).toContain("3");
-    expect(res.text()).toContain("1");
+    expect(res.text()).toContain("3 lançamentos criados, 1 pulados (já existiam).");
     expect(w.find("a[href='/transactions']").exists()).toBe(true);
     expect(w.find("a[href='/pending']").exists()).toBe(true);
   });
@@ -171,6 +170,34 @@ describe("Import page", () => {
     await flushPromises();
     expect(w.find("[role=alertdialog]").exists()).toBe(false);
     expect(imports.undo).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(w.find("[data-test=undo]").element);
+  });
+
+  it("undo_dialog_keeps_yes_disabled_and_offers_retry_when_editedCount_fails", async () => {
+    const { w, imports } = await setup({ history: [batch({ batchId: "h1" })] });
+    imports.get.mockRejectedValueOnce(new ApiError(0, "network"));
+    await w.find("[data-test=undo]").trigger("click");
+    await flushPromises();
+    expect(w.find("[data-test=undo-yes]").attributes("disabled")).toBeDefined();
+    expect(w.find("[data-test=edited-error]").text()).toContain("Não foi possível verificar");
+    imports.get.mockResolvedValueOnce(preview({ batchId: "h1", state: "Confirmed", editedCount: 2, expiresAt: null }));
+    await w.find("[data-test=edited-retry]").trigger("click");
+    await flushPromises();
+    expect(w.find("[data-test=edited-error]").exists()).toBe(false);
+    expect(w.find("[data-test=edited-count]").text()).toContain("2");
+    expect(w.find("[data-test=undo-yes]").attributes("disabled")).toBeUndefined();
+  });
+
+  it("undo_dialog_escape_works_while_editedCount_is_loading", async () => {
+    const { w, imports } = await setup({ history: [batch({ batchId: "h1" })] });
+    imports.get.mockImplementationOnce(() => new Promise(() => undefined));
+    (w.find("[data-test=undo]").element as HTMLElement).focus();
+    await w.find("[data-test=undo]").trigger("click");
+    await flushPromises();
+    expect(document.activeElement).toBe(w.find("[role=alertdialog]").element);
+    document.activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await flushPromises();
+    expect(w.find("[role=alertdialog]").exists()).toBe(false);
     expect(document.activeElement).toBe(w.find("[data-test=undo]").element);
   });
 

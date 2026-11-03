@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import i18n from "../i18n";
 import Money from "./Money.vue";
 import { useValuesVisibility, MASK } from "./visibility";
 
@@ -36,6 +37,35 @@ describe("Money", () => {
     expect(zero.text()).toBe("R$0.00");
     expect(zero.classes()).toContain("money-zero");
     expect(make({ value: "1.00", signed: true, locale: "en-US" }).w.classes()).toContain("money-positive");
+  });
+  it("unsigned_negative_uses_minus_sign_u2212", () => {
+    expect(make({ value: "-5.00", locale: "en-US" }).w.text()).toBe("−R$5.00");
+  });
+  it("hidden_uses_img_role_with_label", async () => {
+    const { w, store } = make({ value: "1.00", locale: "en-US" });
+    store.toggle();
+    await w.vm.$nextTick();
+    expect(w.attributes("role")).toBe("img");
+    expect(w.attributes("aria-label")).toBeTruthy();
+  });
+  it("toggling_back_to_visible_shows_value_again", async () => {
+    const { w, store } = make({ value: "1234.56", locale: "en-US" });
+    store.toggle();
+    await w.vm.$nextTick();
+    expect(w.text()).toBe(MASK);
+    store.toggle();
+    await w.vm.$nextTick();
+    expect(w.text()).toBe("R$1,234.56");
+    expect(w.attributes("role")).toBeUndefined();
+  });
+  it("locale_change_rerenders_value", async () => {
+    i18n.global.locale.value = "en-US";
+    const { w } = make({ value: "1234.56" });
+    expect(w.text()).toBe("R$1,234.56");
+    i18n.global.locale.value = "pt-BR";
+    await w.vm.$nextTick();
+    expect(w.text()).toMatch(/^R\$.1\.234,56$/);
+    i18n.global.locale.value = "pt-BR";
   });
   it("unsigned_has_no_semantic_class", () => {
     const { w } = make({ value: "1.00", locale: "en-US" });

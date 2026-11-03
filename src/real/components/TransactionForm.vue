@@ -32,6 +32,14 @@ const categoryId = ref<string | null>(tx?.categoryId ?? null);
 const state = ref<TransactionState>(tx?.state ?? "Normal");
 const errorKey = ref<string | null>(null);
 
+// As contas podem carregar depois que o formulário abriu: segue a lista enquanto a escolha não existir nela.
+watch(
+  () => props.accounts,
+  (accs) => {
+    if (!editing.value && !accs.some((a) => a.id === accountId.value)) accountId.value = accs[0]?.id ?? "";
+  },
+);
+
 // Digitar "-" no início equivale a escolher Despesa.
 watch(amountText, (v) => {
   if (v.trim().startsWith("-")) kind.value = "expense";
@@ -92,11 +100,16 @@ const field =
   <form data-test="tx-form" class="mt-3 grid gap-3 rounded border border-gray-700 p-3" novalidate @submit.prevent="onSubmit">
     <h2 class="font-medium">{{ editing ? t("real.transactions.editTitle") : t("real.transactions.newTitle") }}</h2>
     <div>
-      <label for="tx-account" class="mb-1 block text-sm">{{ t("real.transactions.account") }}</label>
-      <p v-if="editing" id="tx-account" data-test="tx-account-fixed">{{ accountName }}</p>
-      <select v-else id="tx-account" v-model="accountId" :class="field">
-        <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
-      </select>
+      <template v-if="editing">
+        <span id="tx-account-label" class="mb-1 block text-sm">{{ t("real.transactions.account") }}</span>
+        <p aria-labelledby="tx-account-label" data-test="tx-account-fixed">{{ accountName }}</p>
+      </template>
+      <template v-else>
+        <label for="tx-account" class="mb-1 block text-sm">{{ t("real.transactions.account") }}</label>
+        <select id="tx-account" v-model="accountId" :class="field">
+          <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
+        </select>
+      </template>
       <p v-if="isCard" class="mt-1 text-xs text-gray-400" data-test="card-hint">{{ t("real.transactions.cardHint") }}</p>
     </div>
     <div>

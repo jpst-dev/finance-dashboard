@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory } from "vue-router";
 import i18n from "../i18n";
 import { createRealRouter } from "../router";
 import { setApi } from "../api/context";
+import { setRouter } from "../routerRef";
 import { ApiError } from "../api/errors";
 import { useSessionStore } from "../stores/session";
 import { fakeApi } from "../testing";
@@ -47,6 +48,11 @@ beforeEach(() => {
   localStorage.clear();
 });
 
+afterEach(() => {
+  setApi(null);
+  setRouter(null);
+});
+
 describe("Login", () => {
   it("has_labelled_fields", async () => {
     const { w } = await setup();
@@ -82,10 +88,29 @@ describe("Login", () => {
   });
 
   it("success_ignores_external_next", async () => {
-    const { w, router } = await setup(sessionAfterLogin(), "/login?next=//evil.com");
+    const { w, router } = await setup(sessionAfterLogin(), "/login?next=/\transactions"); // rota interna real, mas com "\\": deve ser rejeitada
     await fillAndSubmit(w);
     await flushPromises();
     expect(router.currentRoute.value.path).toBe("/");
+  });
+
+  it("bootstrap_failure_shows_server_unreachable_notice_and_still_allows_login", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const api = fakeApi({
+      me: vi.fn(async () => {
+        throw new ApiError(0, "network");
+      }),
+    });
+    setApi(api);
+    await useSessionStore().bootstrap();
+    const router = createRealRouter(createMemoryHistory());
+    await router.push("/login");
+    await router.isReady();
+    const w = mount(RealApp, { global: { plugins: [pinia, router, i18n] } });
+    expect(w.find("[data-testid=bootstrap-error]").text()).toContain("Não foi possível falar com o servidor");
+    expect(w.find("button[type=submit]").attributes("disabled")).toBeUndefined();
+    expect(w.find("#login-email").exists()).toBe(true);
   });
 
   it("401_shows_generic_error_and_clears_password", async () => {
@@ -133,6 +158,47 @@ describe("AppShell", () => {
     expect(w.find("nav[aria-label]").exists()).toBe(true);
     expect(w.find("main").exists()).toBe(true);
     expect(w.find("[data-testid=user-email]").text()).toBe("user@example.test");
+  });
+
+  it("values_toggle_label_is_fixed_and_language_buttons_are_labelled", async () => {
+    const { w } = await setup({ me }, "/", true);
+    const btn = w.find("[data-testid=toggle-values]");
+    expect(btn.text()).toContain("Esconder valores");
+    await btn.trigger("click");
+    expect(btn.text()).toContain("Esconder valores");
+    expect(btn.text()).not.toContain("Mostrar");
+    const langs = w.findAll("[role=group] button").slice(0, 2);
+    expect(langs.map((b) => b.attributes("aria-label"))).toEqual(["Português", "English"]);
+    expect(langs.map((b) => b.attributes("lang"))).toEqual(["pt-BR", "en-US"]);
+  });
+
+  it("logout_button_disabled_while_pending_and_alert_clears_on_navigation", async () => {
+    let release!: () => void;
+    let fail = true;
+    const { w, router } = await setup(
+      {
+        me,
+        logout: () =>
+          fail
+            ? Promise.reject(new ApiError(500))
+            : new Promise<void>((r) => (release = r)),
+      },
+      "/",
+      true,
+    );
+    const btn = w.find("[data-testid=logout]");
+    await btn.trigger("click");
+    await flushPromises();
+    expect(w.find("aside [role=alert]").exists()).toBe(true);
+    await router.push("/accounts");
+    await flushPromises();
+    expect(w.find("aside [role=alert]").exists()).toBe(false);
+    fail = false;
+    await btn.trigger("click");
+    await flushPromises();
+    expect(btn.attributes("disabled")).toBeDefined();
+    release();
+    await flushPromises();
   });
 
   it("language_toggle_switches_and_persists_locale", async () => {

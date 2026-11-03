@@ -102,6 +102,17 @@ describe("transactions store", () => {
     expect(s.error).toBe("server");
   });
 
+  it("classify_last_pending_item_of_page_2_steps_back_one_page", async () => {
+    const api = fakeTxApi([tx({ id: "t1", state: "PendingClassification", categoryId: null })]);
+    const s = useTransactionsStore();
+    await s.setFilters({ state: "PendingClassification" });
+    await s.setPage(2);
+    expect(s.page).toBe(2);
+    expect(await s.classify("t1", { state: "Normal", categoryId: "c1" })).toBe(true);
+    expect(api.list.mock.calls.some((c) => (c[0] as { page?: number; state?: string }).page === 1 && (c[0] as { state?: string }).state === "PendingClassification")).toBe(true);
+    expect(s.page).toBe(1);
+  });
+
   it("classify_rolls_back_on_error", async () => {
     const api = fakeTxApi([tx({ id: "p1", state: "PendingClassification", categoryId: null })]);
     const s = useTransactionsStore();

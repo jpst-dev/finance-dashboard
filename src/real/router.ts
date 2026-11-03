@@ -1,3 +1,4 @@
+import { watch } from "vue";
 import { createRouter, createWebHistory, type RouterHistory } from "vue-router";
 import i18n from "./i18n";
 import { setRouter } from "./routerRef";
@@ -33,11 +34,18 @@ export function createRealRouter(history: RouterHistory = createWebHistory()) {
     return true;
   });
 
-  // Título só com texto traduzido; nunca valores.
-  router.afterEach((to) => {
-    const key = typeof to.name === "string" ? `real.titles.${to.name}` : "real.app.title";
+  // Título só com texto traduzido; nunca valores. Atualiza também ao trocar o idioma.
+  function updateTitle() {
+    const name = router.currentRoute.value.name;
+    const key = typeof name === "string" ? `real.titles.${name}` : "real.app.title";
     document.title = `${i18n.global.t(key)} · ${i18n.global.t("real.app.title")}`;
+  }
+  router.afterEach(() => {
+    // Uma navegação bem-sucedida descarta o aviso de logout que falhou.
+    useSessionStore().error = null;
+    updateTitle();
   });
+  watch(i18n.global.locale, updateTitle);
 
   setRouter(router);
   return router;

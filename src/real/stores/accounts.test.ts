@@ -69,6 +69,29 @@ describe("accounts store", () => {
     expect(s.error).toBe("invalid");
   });
 
+  it("rename_and_archive_preserve_institution_and_external_identifier", async () => {
+    const { accounts } = fakeAccountsApi([acc({ institution: "Banco Exemplo", externalIdentifier: "ext-1" })]);
+    const s = useAccountsStore();
+    await s.load();
+    await s.rename("a1", "Novo Nome");
+    expect(accounts.update).toHaveBeenLastCalledWith("a1", expect.objectContaining({ name: "Novo Nome", institution: "Banco Exemplo", externalIdentifier: "ext-1" }));
+    await s.setArchived("a1", true);
+    expect(accounts.update).toHaveBeenLastCalledWith("a1", expect.objectContaining({ institution: "Banco Exemplo", externalIdentifier: "ext-1", isArchived: true }));
+  });
+
+  it("run_ignores_reentrant_calls_while_busy", async () => {
+    const { accounts } = fakeAccountsApi([acc()]);
+    const s = useAccountsStore();
+    await s.load();
+    let release!: () => void;
+    accounts.update.mockImplementationOnce(() => new Promise((r) => (release = () => r(acc({ name: "B" })))));
+    const first = s.rename("a1", "B");
+    expect(await s.rename("a1", "C")).toBeNull();
+    release();
+    await first;
+    expect(accounts.update).toHaveBeenCalledTimes(1);
+  });
+
   it("add_checkpoint_sends_strings_and_reloads_balances", async () => {
     const { accounts } = fakeAccountsApi([acc()]);
     const s = useAccountsStore();

@@ -17,7 +17,8 @@ const loc = () => String(locale.value);
 
 const PALETTE = ["#3b82f6", "#f59e0b", "#10b981", "#a855f7", "#f43f5e", "#14b8a6", "#eab308", "#6366f1", "#84cc16", "#ec4899"];
 
-// Só despesas (total negativo, decidido pelo sinal da string; sem aritmética).
+// Só despesas: total negativo, decidido pelo sinal da string (sem aritmética). Uma categoria de despesa com saldo
+// líquido positivo (ex.: estorno) é excluída DE PROPÓSITO do gráfico: não existe fatia negativa.
 const rows = computed(() =>
   props.summary.byCategory
     .filter((c) => {

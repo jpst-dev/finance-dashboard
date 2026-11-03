@@ -62,6 +62,7 @@ async function submit() {
           class="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         />
       </div>
+      <p v-if="session.bootstrapError" role="status" data-testid="bootstrap-error" class="text-sm text-amber-400">{{ t("real.login.serverUnreachable") }}</p>
       <p v-if="errorKey" role="alert" class="text-sm text-red-400">{{ t(errorKey) }}</p>
       <button
         type="submit"

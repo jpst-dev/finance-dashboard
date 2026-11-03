@@ -30,7 +30,8 @@
       "submitting": "Entrando…",
       "errorInvalid": "E-mail ou senha incorretos.",
       "errorRateLimit": "Muitas tentativas. Aguarde um pouco e tente novamente.",
-      "errorNetwork": "Não foi possível entrar. Verifique a conexão e tente novamente."
+      "errorNetwork": "Não foi possível entrar. Verifique a conexão e tente novamente.",
+      "serverUnreachable": "Não foi possível falar com o servidor. Você ainda pode tentar entrar."
     },
     "shell": {
       "skip": "Pular para o conteúdo",
@@ -38,6 +39,7 @@
       "hideValues": "Esconder valores",
       "showValues": "Mostrar valores",
       "language": "Idioma",
+      "lang": { "pt-BR": "Português", "en-US": "English" },
       "logout": "Sair",
       "logoutFailed": "Não foi possível sair. Sua sessão pode continuar ativa; tente novamente."
     },
@@ -187,7 +189,8 @@
         "undoTitle": "Desfazer esta importação?",
         "undoBody": "Todos os lançamentos criados por esta importação e o saldo registrado por ela serão removidos, inclusive os que você editou ou apagou.",
         "edited": "Lançamentos editados por você que também serão removidos: {n}.",
-        "editedUnknown": "Não foi possível saber quantos lançamentos você editou; eles também serão removidos.",
+        "editedFailed": "Não foi possível verificar quantos lançamentos você editou. Tente novamente antes de desfazer.",
+        "editedRetry": "Tentar novamente",
         "crossBatch": "Atenção: linhas que outro lote deixou de importar por já existirem também serão removidas, porque foram criadas por esta importação.",
         "undoYes": "Sim, desfazer",
         "undoNo": "Voltar",
@@ -227,6 +230,8 @@
       "editTitle": "Editar lançamento",
       "edit": "Editar",
       "delete": "Apagar",
+      "editRow": "Editar: {description}",
+      "deleteRow": "Apagar: {description}",
       "deleteYes": "Sim, apagar",
       "save": "Salvar",
       "cancel": "Cancelar",

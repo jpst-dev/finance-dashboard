@@ -28,7 +28,8 @@ export type AccountUpdate = S["UpdateAccountRequest"];
 export type Category = S["CategoryResponse"];
 
 export type Checkpoint = S["CheckpointResponse"];
-export type NewCheckpoint = { date: string; amount: string };
+/** Derivado do esquema gerado; o OpenAPI marca os campos como anuláveis, mas o cliente sempre os envia preenchidos. */
+export type NewCheckpoint = { [K in keyof S["CreateCheckpointRequest"]]-?: NonNullable<S["CreateCheckpointRequest"][K]> };
 
 export type Transaction = S["TransactionResponse"];
 export type NewTransaction = S["CreateTransactionRequest"];
@@ -59,6 +60,7 @@ export type ConfirmResult = IntFields<S["ConfirmResult"], "created" | "skipped">
 export type BlockingWarnings = S["BlockingWarningsResponse"];
 
 // Auth: o OpenAPI não descreve estes corpos (objetos anônimos em backend/src/FinanceDashboard.Api/Auth/AuthEndpoints.cs).
+/** `me()` só devolve este objeto com e-mail não vazio; resposta sem e-mail é tratada como resposta inválida. */
 export type CurrentUser = { email: string };
 export type CsrfTokenResponse = { token: string };
 export type LoginBody = S["LoginRequest"];

@@ -69,7 +69,7 @@ const focus = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo
           @click="visibility.toggle()"
         >
           <span aria-hidden="true">{{ visibility.hidden ? "◉" : "○" }}</span>
-          {{ visibility.hidden ? t("real.shell.showValues") : t("real.shell.hideValues") }}
+          {{ t("real.shell.hideValues") }}
         </button>
         <div class="flex rounded-lg border border-gray-700 p-0.5 text-xs" role="group" :aria-label="t('real.shell.language')">
           <button
@@ -79,6 +79,8 @@ const focus = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo
             class="flex-1 rounded-md py-1.5 transition"
             :class="[focus, locale === lang.code ? 'bg-gray-700 text-gray-50' : 'text-gray-400 hover:text-gray-50']"
             :aria-pressed="locale === lang.code"
+            :aria-label="t(`real.shell.lang.${lang.code}`)"
+            :lang="lang.code"
             @click="setLocale(lang.code)"
           >
             {{ lang.label }}
@@ -89,6 +91,7 @@ const focus = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo
           data-testid="logout"
           class="w-full rounded-lg border border-gray-700 px-3 py-2 text-sm hover:bg-gray-800"
           :class="focus"
+          :disabled="session.loggingOut"
           @click="session.logout()"
         >
           {{ t("real.shell.logout") }}

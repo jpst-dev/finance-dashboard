@@ -31,6 +31,7 @@ function startRename(a: Account) {
   renameText.value = a.name;
 }
 async function saveRename(a: Account) {
+  if (store.busy) return;
   if (validName(renameText.value) === null) {
     store.error = "invalid_name";
     return;

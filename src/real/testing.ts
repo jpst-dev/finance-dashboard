@@ -31,8 +31,19 @@ export function fakeAccountsApi(list: Account[] = [acc()], cats: Category[] = []
   const accounts = {
     list: vi.fn(async () => list),
     create: vi.fn(async (b: { name: string | null }) => acc({ id: "new", name: b.name ?? "" })),
-    update: vi.fn(async (id: string, b: { name: string | null; isArchived: boolean | null }) =>
-      acc({ id, name: b.name ?? "", isArchived: b.isArchived ?? false }),
+    update: vi.fn(
+      async (
+        id: string,
+        b: { name: string | null; isArchived: boolean | null; type?: Account["type"] | null; institution?: string | null; externalIdentifier?: string | null },
+      ) =>
+        acc({
+          id,
+          name: b.name ?? "",
+          isArchived: b.isArchived ?? false,
+          ...(b.type ? { type: b.type } : {}),
+          institution: b.institution ?? "",
+          externalIdentifier: b.externalIdentifier ?? null,
+        }),
     ),
     checkpoints: vi.fn(async () => []),
     addCheckpoint: vi.fn(async (_id: string, b: { date: string; amount: string }) => ({
