@@ -177,13 +177,80 @@ describe("imports store", () => {
     expect(store.historyError).toBe("already_undone");
   });
 
-  it("cancel_drops_preview_on_server_and_locally", async () => {
+  it("cancel_when_get_reports_Preview_calls_undo_once", async () => {
     const { store, imports } = await setup();
     await store.upload("a1", ofx());
     store.setOverride("p1", { state: "Normal" });
+    imports.get.mockResolvedValueOnce(preview({ batchId: "b1", state: "Preview" }));
     await store.cancel();
+    expect(imports.get).toHaveBeenCalledWith("b1");
+    expect(imports.undo).toHaveBeenCalledTimes(1);
     expect(imports.undo).toHaveBeenCalledWith("b1");
     expect(store.preview).toBeNull();
     expect(store.overrides.size).toBe(0);
+  });
+
+  it("cancel_when_get_reports_Confirmed_never_calls_undo", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    imports.get.mockResolvedValueOnce(preview({ batchId: "b1", state: "Confirmed" }));
+    await store.cancel();
+    expect(imports.undo).not.toHaveBeenCalled();
+    expect(store.preview).toBeNull();
+    expect(store.notice).toBe("not_preview");
+    expect(imports.list).toHaveBeenCalled();
+  });
+
+  it("cancel_when_get_fails_with_network_never_calls_undo", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    imports.get.mockRejectedValueOnce(new ApiError(0, "network"));
+    await store.cancel();
+    expect(imports.undo).not.toHaveBeenCalled();
+    expect(store.preview).toBeNull();
+    expect(store.error).toBe("network");
+  });
+
+  it("cancel_when_get_404_drops_locally_without_undo", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    imports.get.mockRejectedValueOnce(new ApiError(404));
+    await store.cancel();
+    expect(imports.undo).not.toHaveBeenCalled();
+    expect(store.preview).toBeNull();
+    expect(store.error).toBeNull();
+  });
+
+  it("confirm_already_confirmed_drops_preview_and_cancel_or_reset_never_undo", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    imports.confirm.mockRejectedValueOnce(new ApiError(409, "already_confirmed"));
+    expect(await store.confirm(false)).toBe(false);
+    expect(store.preview).toBeNull();
+    expect(store.error).toBe("already_confirmed");
+    expect(imports.list).toHaveBeenCalled();
+    await store.cancel();
+    store.reset();
+    expect(imports.undo).not.toHaveBeenCalled();
+  });
+
+  it("confirm_network_error_rechecks_batch_and_drops_confirmed_preview", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    imports.confirm.mockRejectedValueOnce(new ApiError(0, "network"));
+    imports.get.mockResolvedValueOnce(preview({ batchId: "b1", state: "Confirmed" }));
+    await store.confirm(false);
+    expect(store.error).toBe("network");
+    expect(store.preview).toBeNull();
+    await store.cancel();
+    expect(imports.undo).not.toHaveBeenCalled();
+  });
+
+  it("already_imported_preview_is_flagged", async () => {
+    const { store } = await setup({
+      preview: preview({ newCount: 0, warnings: [{ code: "AlreadyImported", severity: "warning", message: "x" }] }),
+    });
+    await store.upload("a1", ofx());
+    expect(store.alreadyImported).toBe(true);
   });
 });

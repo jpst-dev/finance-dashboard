@@ -149,6 +149,10 @@
       "confirming": "Confirmando…",
       "cancel": "Cancelar",
       "resend": "Enviar de novo",
+      "alreadyImportedHelp": "Arquivo já importado: nada será criado. As linhas abaixo são só informativas; cancele esta prévia.",
+      "notices": {
+        "not_preview": "Esta prévia não estava mais aberta (já foi confirmada ou desfeita), então nada foi desfeito. Veja o histórico abaixo; para desfazer uma importação confirmada, use o botão Desfazer dela."
+      },
       "resultTitle": "Importação concluída",
       "result": "{created} lançamentos criados, {skipped} pulados (já existiam).",
       "goTransactions": "Ver lançamentos",

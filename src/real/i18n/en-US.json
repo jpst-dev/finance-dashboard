@@ -149,6 +149,10 @@
       "confirming": "Confirming…",
       "cancel": "Cancel",
       "resend": "Upload again",
+      "alreadyImportedHelp": "File already imported: nothing will be created. The lines below are for information only; cancel this preview.",
+      "notices": {
+        "not_preview": "This preview was no longer open (it was already confirmed or undone), so nothing was undone. See the history below; to undo a confirmed import, use its Undo button."
+      },
       "resultTitle": "Import complete",
       "result": "{created} transactions created, {skipped} skipped (already existed).",
       "goTransactions": "See transactions",

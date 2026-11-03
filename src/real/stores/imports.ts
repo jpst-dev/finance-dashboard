@@ -74,6 +74,9 @@ export function importErrorCode(e: unknown, ctx: "upload" | "confirm" | "undo"):
   return errorCodeOf(e);
 }
 
+/** Erros de confirm que significam que o lote não pode mais ser confirmado. */
+const TERMINAL_CONFIRM_CODES = ["already_confirmed", "already_undone", "already_imported", "account_archived"];
+
 const IMPORTABLE: Account["type"][] = ["Checking", "CreditCard"];
 
 export const useImportsStore = defineStore("fd-imports", () => {
@@ -87,6 +90,8 @@ export const useImportsStore = defineStore("fd-imports", () => {
   /** O servidor pediu confirmação de avisos bloqueantes (409 blocking_warnings) mesmo sem eles na prévia. */
   const serverAck = ref(false);
   const busy = ref(false);
+  /** Aviso informativo (não erro) da importação; a tela traduz com `real.import.notices.<code>`. */
+  const notice = ref<string | null>(null);
   /** Conta da última tentativa de envio (mantida ao voltar para o envio). */
   const lastAccountId = ref<string | null>(null);
 
@@ -106,6 +111,8 @@ export const useImportsStore = defineStore("fd-imports", () => {
   const warnings = computed(() => preview.value?.warnings ?? []);
   const hasBlocking = computed(() => warnings.value.some((w) => w.severity === "blocking"));
   const ackRequired = computed(() => hasBlocking.value || serverAck.value);
+  /** Arquivo já importado (aviso AlreadyImported): o servidor zera newCount e o confirm seria recusado. */
+  const alreadyImported = computed(() => warnings.value.some((w) => w.code === "AlreadyImported"));
 
   /** Linha NOVA da prévia atual com esse sourceKey (as existentes nunca recebem override). */
   function newLine(sourceKey: string): ImportLine | undefined {
@@ -150,6 +157,7 @@ export const useImportsStore = defineStore("fd-imports", () => {
   async function upload(accountId: string, file: File | ArrayLike<File> | null): Promise<boolean> {
     if (busy.value) return false;
     error.value = null;
+    notice.value = null;
     result.value = null;
     lastAccountId.value = accountId || null;
     const files: ArrayLike<File> | null = file instanceof File ? [file] : file;
@@ -197,32 +205,71 @@ export const useImportsStore = defineStore("fd-imports", () => {
       error.value = code;
       if (code === "preview_expired") expired.value = true;
       if (code === "blocking_warnings") serverAck.value = true;
+      if (TERMINAL_CONFIRM_CODES.includes(code)) {
+        // O lote não está mais (ou nunca estará) em prévia: descartar só localmente, NUNCA chamar undo
+        // (undo de lote confirmado apagaria os lançamentos dele).
+        clearPreview();
+        busy.value = false;
+        await loadHistory();
+      } else if (code === "network") {
+        // A requisição pode ter chegado: confere o estado real do lote.
+        busy.value = false;
+        await recheck(p.batchId);
+      }
       return false;
     } finally {
       busy.value = false;
     }
   }
 
-  /** Descarta a prévia: o servidor também a remove (undo de lote em Preview); falha lá não impede o descarte local. */
+  /** Confere o lote no servidor; se não está mais em prévia, descarta localmente e recarrega o histórico. */
+  async function recheck(id: string): Promise<void> {
+    try {
+      const cur = await getApi().imports.get(id);
+      if (cur.state === "Preview") return;
+    } catch {
+      return; // estado desconhecido: cancel() confere de novo antes de qualquer undo
+    }
+    if (preview.value?.batchId === id) clearPreview();
+    await Promise.all([loadHistory(), useTransactionsStore().loadPendingCount()]);
+  }
+
+  /**
+   * Descarta a prévia. Só chama undo (que remove um lote em Preview) depois de confirmar com GET que o lote AINDA
+   * está em prévia: undo de um lote já confirmado o desfaria sem a confirmação/aviso do histórico.
+   * GET 404: descarta localmente. Outra falha no GET: descarta localmente, não chama undo e mostra o erro.
+   */
   async function cancel(): Promise<void> {
     const p = preview.value;
     if (busy.value || !p) return;
     busy.value = true;
+    error.value = null;
+    notice.value = null;
+    let state: ImportPreview["state"] | null = null;
     try {
-      await getApi().imports.undo(p.batchId);
+      state = (await getApi().imports.get(p.batchId)).state;
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 404)) error.value = importErrorCode(e, "undo");
+    }
+    try {
+      if (state === "Preview") await getApi().imports.undo(p.batchId);
     } catch {
       /* a prévia expira sozinha em 24 h */
     } finally {
       busy.value = false;
     }
     clearPreview();
-    error.value = null;
+    if (state !== null && state !== "Preview") {
+      notice.value = "not_preview";
+      await loadHistory();
+    }
   }
 
   /** Volta ao passo de envio (ex.: prévia expirada), mantendo a conta escolhida. */
   function backToUpload(): void {
     clearPreview();
     error.value = null;
+    notice.value = null;
   }
 
   async function loadHistory(): Promise<void> {
@@ -268,12 +315,13 @@ export const useImportsStore = defineStore("fd-imports", () => {
     clearPreview();
     result.value = null;
     error.value = null;
+    notice.value = null;
   }
 
   return {
-    preview, overrides, result, error, expired, busy, lastAccountId,
+    preview, overrides, result, error, notice, expired, busy, lastAccountId,
     history, historyLoading, historyError, undoing,
-    importableAccounts, newLines, pendingLines, existingLines, warnings, hasBlocking, ackRequired,
+    importableAccounts, newLines, pendingLines, existingLines, warnings, hasBlocking, ackRequired, alreadyImported,
     setOverride, clearOverride, confirmBody, upload, confirm, cancel, backToUpload,
     loadHistory, editedCount, undo, reset,
   };

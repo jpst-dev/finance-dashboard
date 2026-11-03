@@ -16,6 +16,7 @@ const categories = useCategoriesStore();
 onMounted(() => {
   store.result = null;
   store.error = null;
+  store.notice = null;
   void accounts.load();
   void categories.load();
   void store.loadHistory();
@@ -37,6 +38,10 @@ const btn = "rounded px-3 py-1.5 focus-visible:outline focus-visible:outline-2 f
         {{ t("real.import.resend") }}
       </button>
     </div>
+
+    <p v-if="store.notice" class="mt-3 text-sm text-amber-300" role="status" aria-live="polite" data-test="notice">
+      {{ t(`real.import.notices.${store.notice}`) }}
+    </p>
 
     <div v-if="store.result" class="mt-4 rounded border border-emerald-700 p-3" role="status" aria-live="polite" data-test="result">
       <h2 class="font-semibold">{{ t("real.import.resultTitle") }}</h2>

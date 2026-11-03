@@ -15,12 +15,18 @@ const active = ref<TabKey>("new");
 const tabEls = ref<HTMLElement[]>([]);
 const ack = ref(false);
 
-const counts = computed<Record<TabKey, number>>(() => ({
-  new: store.newLines.length,
-  pending: store.pendingLines.length,
-  existing: store.existingLines.length,
-  warnings: store.warnings.length,
-}));
+const done = computed(() => store.alreadyImported);
+const counts = computed<Record<TabKey, number>>(() =>
+  // Arquivo já importado: contagens do servidor (nada novo), não as calculadas a partir das linhas.
+  done.value
+    ? { new: store.preview?.newCount ?? 0, pending: 0, existing: store.preview?.existingCount ?? 0, warnings: store.warnings.length }
+    : {
+        new: store.newLines.length,
+        pending: store.pendingLines.length,
+        existing: store.existingLines.length,
+        warnings: store.warnings.length,
+      },
+);
 
 function select(k: TabKey, focus = false) {
   active.value = k;
@@ -71,7 +77,9 @@ function onCategory(l: ImportLine, v: string | null) {
 }
 
 const newCount = computed(() => store.preview?.newCount ?? 0);
-const canConfirm = computed(() => !store.busy && !store.expired && (!store.ackRequired || ack.value));
+const canConfirm = computed(
+  () => !done.value && !store.busy && !store.expired && (!store.ackRequired || ack.value),
+);
 
 async function confirm() {
   if (!canConfirm.value) return;
@@ -120,9 +128,10 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
     </div>
 
     <div id="imp-panel-new" role="tabpanel" aria-labelledby="imp-tab-new" tabindex="0" :hidden="active !== 'new'" class="py-3" data-test="new-lines">
-      <p class="text-sm text-gray-400">{{ t("real.import.newHelp") }}</p>
+      <p v-if="done" class="text-sm text-amber-300" data-test="already-imported">{{ t("real.import.alreadyImportedHelp") }}</p>
+      <p v-else class="text-sm text-gray-400">{{ t("real.import.newHelp") }}</p>
       <p v-if="store.newLines.length === 0" class="mt-2 text-gray-400">{{ t("real.import.noLines") }}</p>
-      <ul v-else class="mt-2 divide-y divide-gray-800">
+      <ul v-else class="mt-2 divide-y divide-gray-800" :class="{ 'opacity-60': done }">
         <li v-for="(l, idx) in store.newLines" :key="`${l.sourceKey}-${idx}`" class="flex flex-wrap justify-between gap-2 py-1.5">
           <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}</span>
           <Money :value="l.amount" signed />
@@ -131,15 +140,16 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
     </div>
 
     <div id="imp-panel-pending" role="tabpanel" aria-labelledby="imp-tab-pending" tabindex="0" :hidden="active !== 'pending'" class="py-3">
-      <p class="text-sm text-gray-300">{{ t("real.import.pendingHelp") }}</p>
+      <p v-if="done" class="text-sm text-amber-300">{{ t("real.import.alreadyImportedHelp") }}</p>
+      <p v-else class="text-sm text-gray-300">{{ t("real.import.pendingHelp") }}</p>
       <p v-if="store.pendingLines.length === 0" class="mt-2 text-gray-400">{{ t("real.import.noLines") }}</p>
-      <ul v-else class="mt-2 space-y-2">
+      <ul v-else class="mt-2 space-y-2" :class="{ 'opacity-60': done }">
         <li v-for="(l, idx) in store.pendingLines" :key="`${l.sourceKey}-${idx}`" class="rounded border border-gray-700 p-2" data-test="pending-line">
           <div class="flex flex-wrap justify-between gap-2">
             <span><span class="text-xs text-gray-400">{{ fmtDate(l.date) }}</span> {{ l.description }}</span>
             <Money :value="l.amount" signed />
           </div>
-          <div class="mt-2 flex flex-wrap items-end gap-3">
+          <div v-if="!done" class="mt-2 flex flex-wrap items-end gap-3">
             <div>
               <label :for="`imp-st-${idx}`" class="mb-1 block text-sm">{{ t("real.import.state") }}</label>
               <select :id="`imp-st-${idx}`" :class="field" :value="stateOf(l)" data-test="line-state" @change="onState(l, $event)">
@@ -185,7 +195,7 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
     </div>
 
     <div class="mt-3 flex flex-wrap items-center gap-3">
-      <label v-if="store.ackRequired" class="flex items-center gap-2 text-sm text-amber-300">
+      <label v-if="store.ackRequired && !done" class="flex items-center gap-2 text-sm text-amber-300">
         <input v-model="ack" type="checkbox" :class="focusRing" data-test="ack" />
         {{ t("real.import.ack") }}
       </label>

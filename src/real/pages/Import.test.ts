@@ -183,4 +183,15 @@ describe("Import page", () => {
     await flushPromises();
     expect(w.find("[data-test=history-error]").text()).toContain("desfeita");
   });
+
+  it("cancel_of_already_confirmed_batch_shows_notice_and_does_not_undo", async () => {
+    const { w, imports } = await setup();
+    await uploadFlow(w);
+    imports.get.mockResolvedValueOnce(preview({ batchId: "b1", state: "Confirmed", expiresAt: null }));
+    await w.find("[data-test=cancel]").trigger("click");
+    await flushPromises();
+    expect(imports.undo).not.toHaveBeenCalled();
+    expect(w.find("[role=tablist]").exists()).toBe(false);
+    expect(w.find("[data-test=notice]").text()).toContain("nada foi desfeito");
+  });
 });

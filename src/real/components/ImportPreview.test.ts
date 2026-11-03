@@ -142,4 +142,30 @@ describe("ImportPreview", () => {
     }
     useValuesVisibility().toggle();
   });
+
+  it("Already_imported_preview_disables_confirm_and_uses_server_counts", async () => {
+    const { w, imports } = await setup(
+      preview({
+        newCount: 0,
+        existingCount: 0,
+        warnings: [
+          { code: "AlreadyImported", severity: "warning", message: "x" },
+          { code: "FitidInOtherAccount", severity: "blocking", message: "y" },
+        ],
+      }),
+    );
+    const t = tabs(w).map((x) => x.text());
+    expect(t[0]).toMatch(/Novos\s*0/);
+    expect(t[1]).toMatch(/Pendentes\s*0/);
+    expect(t[2]).toMatch(/existentes\s*0/);
+    expect(w.find("[data-test=already-imported]").text()).toContain("nada será criado");
+    expect(w.text()).not.toContain("Lançamentos que serão criados");
+    expect(w.find("[data-test=ack]").exists()).toBe(false);
+    expect(w.find("[data-test=confirm]").attributes("disabled")).toBeDefined();
+    expect(w.find("[data-test=cancel]").attributes("disabled")).toBeUndefined();
+    await tabs(w)[1].trigger("click");
+    expect(w.find("[data-test=line-state]").exists()).toBe(false);
+    await w.find("[data-test=confirm]").trigger("click");
+    expect(imports.confirm).not.toHaveBeenCalled();
+  });
 });
