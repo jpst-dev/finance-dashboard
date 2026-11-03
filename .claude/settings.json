@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(npm test -- *)",
+      "Bash(npm run build)",
+      "Bash(npm run build:real)",
+      "Bash(npm run api:types)",
+      "Bash(node scripts/check-bundles.mjs)",
+      "Bash(dotnet build backend/FinanceDashboard.sln *)",
+      "Bash(dotnet test backend/FinanceDashboard.sln *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git pull origin main)",
+      "Bash(git push origin *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge *)",
+      "Bash(gitleaks detect *)",
+      "Bash(docker compose ps)",
+      "Bash(docker compose logs *)",
+      "Bash(docker compose up -d)",
+      "Bash(docker compose up -d --build *)",
+      "Bash(curl -s http://127.0.0.1:*)",
+      "Bash(curl -s -o /dev/null -w * http://127.0.0.1:*)"
+    ]
+  }
+}
