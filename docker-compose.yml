@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: finance
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d finance"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: Host=db;Database=finance;Username=postgres;Password=${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      Database__MigrateOnStartup: "true"
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:?defina SEED_USER_EMAIL no .env}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:?defina SEED_USER_PASSWORD no .env}
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:8080:80"
+
+volumes:
+  pgdata:

@@ -2,6 +2,7 @@ using System.Text.Json;
 using FinanceDashboard.Api.Auth;
 using FinanceDashboard.Api.Health;
 using FinanceDashboard.Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -10,6 +11,19 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Logging.ClearProviders();
 builder.Logging.AddJsonConsole();
+
+// nginx fronts the API: trust X-Forwarded-* only from private (Docker network) ranges,
+// so the login rate limiter keys on the real client IP.
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownIPNetworks.Clear();
+    o.KnownProxies.Clear();
+    foreach (var range in new[] { "172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16" })
+    {
+        o.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(range));
+    }
+});
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAuth();
@@ -56,6 +70,7 @@ if (app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 
 await SeedUser.EnsureAsync(app.Services, app.Configuration);
 
+app.UseForwardedHeaders();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
