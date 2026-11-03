@@ -7,16 +7,42 @@ const MONEY_KEYS = new Set(["amount", "balance", "total", "income", "expenses", 
 const MONEY_RE = /^-?[0-9]{1,16}(\.[0-9]{1,2})?$/;
 const TEXT_KEYS = new Set(["name", "institution", "description", "originalDescription", "counterpartyName", "categoryName"]);
 
-function walk(v: unknown, visit: (key: string, value: unknown) => void): void {
+function walk(v: unknown, visit: (key: string, value: unknown, path: string[]) => void, path: string[] = []): void {
   if (Array.isArray(v)) {
-    v.forEach((x) => walk(x, visit));
+    v.forEach((x) => walk(x, visit, path));
   } else if (v && typeof v === "object") {
     for (const [k, x] of Object.entries(v)) {
-      visit(k, x);
-      walk(x, visit);
+      visit(k, x, path);
+      walk(x, visit, [...path, k]);
     }
   }
 }
+
+/** Forma do campo de dinheiro pelo contexto (raiz e chaves ancestrais). */
+function moneyShape(key: string, path: string[]): string {
+  if (key === "total") return path[path.length - 1] === "pending" ? "pending.total" : path.includes("byCategory") ? "byCategory[].total" : "total";
+  if (key === "amount") {
+    if (path[0] === "transactions") return "transaction.amount";
+    if (path[0] === "checkpoints") return "checkpoint.amount";
+    if (path.includes("lines")) return "importLine.amount";
+    return "amount";
+  }
+  if (key === "balance") return path[0] === "accounts" ? "account.balance" : "balance";
+  return key; // declaredTotal, income, expenses, net
+}
+
+const REQUIRED_SHAPES = [
+  "declaredTotal",
+  "pending.total",
+  "byCategory[].total",
+  "income",
+  "expenses",
+  "net",
+  "transaction.amount",
+  "account.balance",
+  "checkpoint.amount",
+  "importLine.amount",
+];
 
 describe("fixtures do demo", () => {
   it("meta_is_the_reference_set", () => {
@@ -27,15 +53,15 @@ describe("fixtures do demo", () => {
   });
 
   it("every_money_field_is_a_contract_string", () => {
-    let seen = 0;
-    walk(f, (k, v) => {
+    const seen = new Map<string, number>();
+    walk(f, (k, v, path) => {
       if (!MONEY_KEYS.has(k)) return;
-      if (v === null) return; // declaredTotal etc. podem ser nulos no contrato
-      seen++;
-      expect(typeof v, k).toBe("string");
-      expect(v as string, k).toMatch(MONEY_RE);
+      const shape = moneyShape(k, path);
+      seen.set(shape, (seen.get(shape) ?? 0) + 1);
+      expect(typeof v, `${shape} em ${path.join(".")}`).toBe("string");
+      expect(v as string, `${shape} em ${path.join(".")}`).toMatch(MONEY_RE);
     });
-    expect(seen).toBeGreaterThan(50);
+    for (const shape of REQUIRED_SHAPES) expect(seen.get(shape) ?? 0, shape).toBeGreaterThan(0);
   });
 
   it("no_transaction_after_reference_date", () => {

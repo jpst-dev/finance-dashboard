@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
-import { defineComponent, h } from "vue";
-import { APP_CONFIG_KEY, getAppConfig, setAppConfig, useAppConfig } from "./appConfig";
+import { createApp, defineComponent, h, inject } from "vue";
+import { APP_CONFIG_KEY, getAppConfig, installAppConfig, setAppConfig, useAppConfig } from "./appConfig";
 
 afterEach(() => setAppConfig(null));
 
@@ -36,5 +36,18 @@ describe("appConfig", () => {
     const injected = { readOnly: true, hideLogout: true, fixedToday: "2026-10-15" };
     mount(Child, { global: { provide: { [APP_CONFIG_KEY as symbol]: injected } } });
     expect(seen).toBe(injected);
+  });
+  it("undefined_fixed_today_behaves_as_null", () => {
+    setAppConfig({ fixedToday: "2026-10-15" });
+    setAppConfig({ fixedToday: undefined });
+    expect(getAppConfig().fixedToday).toBeNull();
+  });
+  it("installAppConfig_sets_global_and_injected_value", () => {
+    const app = createApp({ render: () => h("div") });
+    installAppConfig(app, { readOnly: true, fixedToday: "2026-10-15" });
+    const expected = { readOnly: true, hideLogout: false, fixedToday: "2026-10-15" };
+    expect(getAppConfig()).toEqual(expected);
+    expect(app.runWithContext(() => inject(APP_CONFIG_KEY))).toBe(getAppConfig());
+    expect(app.runWithContext(() => inject(APP_CONFIG_KEY))).toEqual(expected);
   });
 });

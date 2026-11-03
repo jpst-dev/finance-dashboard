@@ -36,6 +36,45 @@ describe("createStaticApi", () => {
     const page = await a.transactions.list({ size: 5 });
     page.items[0].description = "mutado";
     expect((await a.transactions.list({ size: 5 })).items[0].description).toBe(f.transactions[0].description);
+
+    const me = await a.auth.me();
+    me!.email = "mutado@exemplo.invalid";
+    expect(await a.auth.me()).toEqual(f.meta.user);
+
+    const cpId = Object.keys(f.checkpoints).find((k) => f.checkpoints[k].length > 0)!;
+    const cps = await a.accounts.checkpoints(cpId);
+    cps[0].amount = "0.00";
+    cps.pop();
+    expect(await a.accounts.checkpoints(cpId)).toEqual(f.checkpoints[cpId]);
+
+    const sum = await a.summary.month("2026-10");
+    sum.income = "0.00";
+    sum.byCategory.length = 0;
+    sum.pending.count = 999;
+    expect(await a.summary.month("2026-10")).toEqual(f.summaries["2026-10"]);
+
+    const list = await a.imports.list();
+    list[0].state = "Undone";
+    list.pop();
+    expect(await a.imports.list()).toEqual(f.imports);
+
+    const id = f.meta.previewBatchId;
+    const got = await a.imports.get(id);
+    got.lines[0].description = "mutado";
+    got.lines.pop();
+    expect(await a.imports.get(id)).toEqual(f.importDetails[id]);
+
+    const prev = await a.imports.preview(ACC, new File(["x"], "x.ofx"));
+    prev.lines[0].description = "mutado";
+    prev.warnings.length = 0;
+    expect(await a.imports.preview(ACC, new File(["x"], "x.ofx"))).toEqual(f.importDetails[id]);
+  });
+
+  it.each(["constructor", "__proto__", "toString", "hasOwnProperty"])("inherited_key_%s_is_not_a_record", async (key) => {
+    const a = api();
+    expect(await status(a.accounts.checkpoints(key))).toBe(404);
+    expect(await status(a.imports.get(key))).toBe(404);
+    expect(await status(a.summary.month(key))).toBe(400);
   });
 
   it("transactions_filter_by_account_month_category_state_preserving_order", async () => {

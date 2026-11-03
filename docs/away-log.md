@@ -52,3 +52,4 @@ Regras em [away-mode.md](away-mode.md).
 - S1c/T2 fix 1: gerador com `Server.PreserveExecutionContext = true` (a cultura pt-BR do teste chega à serialização do servidor); `UPDATE_DEMO_FIXTURES` falha se `CI`/`GITHUB_ACTIONS` estiver definido.
 - S1c T3: `createStaticApi` usa `Object.prototype.hasOwnProperty` (lib ES2020 não tem `Object.hasOwn`); tsconfig inalterado (resolveJsonModule já ativo); `summary.month` com conta falha com `Error` simples (falha alta).
 - S1c T4: `createDemoApp` usa o `i18n` de `src/real/i18n` (já mescla legado+real), sem `mergeLocaleMessage`; o teste e2e do demo troca `[data-test=empty-state]` (só existe sem nenhum lançamento) por `summary-cards` + `category-empty` no mês vazio, pois a UI real não tem estado vazio por mês.
+- S1c T4 extra: `setAppConfig({ fixedToday: undefined })` vira `null` (`?? null`); teste do fixtures exige cada forma de dinheiro ao menos uma vez e sem isenção de nulos.

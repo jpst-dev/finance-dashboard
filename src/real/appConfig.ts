@@ -24,7 +24,7 @@ export function setAppConfig(c: Partial<AppConfig> | null): void {
     current = { ...DEFAULT_APP_CONFIG };
     return;
   }
-  const next: AppConfig = { ...DEFAULT_APP_CONFIG, ...c };
+  const next: AppConfig = { ...DEFAULT_APP_CONFIG, ...c, fixedToday: c.fixedToday ?? null };
   if (next.fixedToday !== null && !DATE_RE.test(next.fixedToday)) {
     throw new Error("fixedToday inválido: use YYYY-MM-DD.");
   }
