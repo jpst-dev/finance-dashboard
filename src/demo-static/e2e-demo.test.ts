@@ -105,7 +105,8 @@ async function uploadExample() {
   return reads;
 }
 
-const PENDING = f.transactions.filter((t) => t.state === "PendingClassification");
+// A fila de pendências não traz linhas já num vínculo confirmado.
+const PENDING = f.transactions.filter((t) => t.state === "PendingClassification" && t.link?.state !== "Confirmed");
 const CHECKING = f.accounts.find((a) => a.type === "Checking")!;
 const PREVIEW = f.importDetails[f.meta.previewBatchId];
 
@@ -180,6 +181,19 @@ describe("demo estático: interface real somente leitura", () => {
       expect(bodyText(), path).toContain(expected);
       expect(q("[data-testid=pending-badge]")!.textContent, path).toMatch(new RegExp(`^\\s*${PENDING.length}(?!\\d)`));
     }
+  });
+
+  it("pending_shows_suggestions_and_linked_sections_without_network", async () => {
+    const { router } = await boot();
+    await visit(router, "/pending");
+    expect(q("[data-test=suggestions]")).not.toBeNull();
+    expect(qa("[data-test=suggestion]")).toHaveLength(f.links.suggested.length);
+    expect(q("[data-test=linked-pairs]")).not.toBeNull();
+    expect(qa("[data-test=linked]")).toHaveLength(f.links.confirmed.length);
+    for (const l of [...f.links.suggested, ...f.links.confirmed]) expect(bodyText()).toContain(l.out.description);
+    // As ações são somente leitura (o afterEach confirma que nada foi à rede).
+    await click(q("[data-test=link-confirm]"));
+    expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);
   });
 
   it("month_without_movement_shows_empty_state_not_error", async () => {

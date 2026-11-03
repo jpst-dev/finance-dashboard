@@ -45,6 +45,7 @@ export function createStaticApi(f: DemoFixtures): ApiClient {
             (q.accountId === undefined || t.accountId === q.accountId) &&
             (q.categoryId === undefined || t.categoryId === q.categoryId) &&
             (q.state === undefined || t.state === q.state) &&
+            !(q.state === "PendingClassification" && t.link?.state === "Confirmed") &&
             (q.month === undefined || t.date.startsWith(q.month)),
         );
         const start = (page - 1) * size;
@@ -72,6 +73,27 @@ export function createStaticApi(f: DemoFixtures): ApiClient {
       },
       confirm: readOnly,
       undo: readOnly,
+    },
+    links: {
+      list: async (q) => {
+        const page = q.page ?? 1;
+        const size = Math.min(q.size ?? DEFAULT_SIZE, MAX_SIZE);
+        if (page < 1 || size < 1) throw new ApiError(400);
+        const all =
+          q.state === "Confirmed"
+            ? f.links.confirmed
+            : q.state === "Suggested"
+              ? f.links.suggested
+              : q.state === undefined
+                ? [...f.links.confirmed, ...f.links.suggested]
+                : []; // o demo não tem vínculos rejeitados
+        const start = (page - 1) * size;
+        return clone({ items: all.slice(start, start + size), page, size, total: all.length });
+      },
+      confirm: readOnly,
+      reject: readOnly,
+      undo: readOnly,
+      reconcile: readOnly,
     },
   };
 }

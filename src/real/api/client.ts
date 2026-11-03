@@ -10,10 +10,14 @@ import type {
   CurrentUser,
   ImportBatch,
   ImportPreview,
+  LinkPage,
+  LinkQuery,
+  LinkResponse,
   NewAccount,
   NewCheckpoint,
   NewTransaction,
   Page,
+  ReconcileResult,
   Summary,
   Transaction,
   TransactionQuery,
@@ -54,5 +58,12 @@ export interface ApiClient {
     get(id: string): Promise<ImportPreview>;
     confirm(id: string, b: ConfirmBody): Promise<ConfirmResult>;
     undo(id: string): Promise<void>;
+  };
+  links: {
+    list(q: LinkQuery): Promise<LinkPage>;
+    confirm(id: string): Promise<LinkResponse>;
+    reject(id: string): Promise<LinkResponse>;
+    undo(id: string): Promise<void>;
+    reconcile(): Promise<ReconcileResult>;
   };
 }

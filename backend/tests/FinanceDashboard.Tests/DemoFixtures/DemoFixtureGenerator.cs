@@ -72,7 +72,39 @@ public sealed class DemoFixtureGenerator
             foreach (var item in items) transactions.Add(item!.DeepClone());
             if (items.Count == 0 || transactions.Count >= body["total"]!.GetValue<int>()) break;
         }
-        Put("transactions.json", transactions);
+
+        // The server gives links random ids and, with equal timestamps, an arbitrary order: sort by what the seed fixes
+        // (kind, outgoing date and line id) and rename the ids, both in the lists and in each line's `link` badge.
+        var links = new JsonObject();
+        var linkIds = new Dictionary<string, string>();
+        foreach (var state in new[] { "Confirmed", "Suggested" })
+        {
+            var items = new List<JsonNode>();
+            for (var page = 1; ; page++)
+            {
+                var body = await Get($"/api/links?state={state}&page={page}&size={PageSize}");
+                var pageItems = body["items"]!.AsArray();
+                items.AddRange(pageItems.Select(i => i!.DeepClone()));
+                if (pageItems.Count == 0 || items.Count >= body["total"]!.GetValue<int>()) break;
+            }
+
+            links[state.ToLowerInvariant()] = new JsonArray(items
+                .OrderBy(i => i["kind"]!.GetValue<string>(), StringComparer.Ordinal)
+                .ThenBy(i => i["out"]!["date"]!.GetValue<string>(), StringComparer.Ordinal)
+                .ThenBy(i => i["out"]!["transactionId"]!.GetValue<string>(), StringComparer.Ordinal)
+                .Select(i =>
+                {
+                    var newId = DemoSeed.FixtureLinkId(linkIds.Count + 1).ToString();
+                    linkIds[i["id"]!.GetValue<string>()] = newId;
+                    i["id"] = newId;
+                    return i;
+                }).ToArray());
+        }
+
+        var transactionsJson = transactions.ToJsonString();
+        foreach (var (oldId, newId) in linkIds) transactionsJson = transactionsJson.Replace(oldId, newId, StringComparison.Ordinal);
+        Put("transactions.json", JsonNode.Parse(transactionsJson)!);
+        Put("links.json", links);
 
         var summaries = new JsonObject();
         foreach (var month in DemoSeed.Months) summaries[month] = DemoJson.SortByCategory(await Get($"/api/summary?month={month}"));

@@ -8,6 +8,7 @@ import type { ApiClient } from "../api";
 import type { Category, Transaction } from "../api/types";
 import { acc } from "../testing";
 import { useTransactionsStore } from "../stores/transactions";
+import { link } from "../testingLinks";
 import { tx } from "../testingTx";
 import Pending from "./Pending.vue";
 
@@ -33,14 +34,21 @@ async function setup(initial: Transaction[]) {
     create: vi.fn(),
     remove: vi.fn(),
   };
+  const linksList = vi.fn(async (q: { state?: string }) => ({
+    items: q.state === "Suggested" ? [link()] : [],
+    page: 1,
+    size: 50,
+    total: q.state === "Suggested" ? 1 : 0,
+  }));
   setApi({
     transactions,
     accounts: { list: async () => [acc({ id: "a1", name: "Conta Ativa" })] },
     categories: { list: async () => cats },
+    links: { list: linksList },
   } as unknown as ApiClient);
   const w = mount(Pending, { global: { plugins: [pinia, i18n] } });
   await flushPromises();
-  return { w, transactions };
+  return { w, transactions, linksList };
 }
 
 const pend = (id: string, over: Partial<Transaction> = {}) =>
@@ -52,6 +60,13 @@ beforeEach(() => {
 });
 
 describe("Pending page", () => {
+  it("shows_link_suggestions_above_the_list", async () => {
+    const { w } = await setup([pend("p1")]);
+    const html = w.html();
+    expect(w.find("[data-test=suggestion]").exists()).toBe(true);
+    expect(html.indexOf("data-test=\"suggestions\"")).toBeLessThan(html.indexOf("data-test=\"pending-row\""));
+  });
+
   it("lists_only_pending_state_query", async () => {
     const { transactions } = await setup([pend("p1")]);
     const calls = transactions.list.mock.calls.map((c) => c[0] as { state?: string });
@@ -70,6 +85,14 @@ describe("Pending page", () => {
     expect(body).toMatchObject({ state: "Normal", categoryId: null, amount: "-10.00", description: "Compra Exemplo", date: "2026-03-05" });
     expect(w.findAll("[data-test=pending-row]")).toHaveLength(1);
     expect(store.pendingCount).toBe(1);
+  });
+
+  it("reloads_link_suggestions_after_a_state_change", async () => {
+    const { w, linksList } = await setup([pend("p1")]);
+    const before = linksList.mock.calls.length;
+    await w.find("[data-test=state-select]").setValue("Normal");
+    await flushPromises();
+    expect(linksList.mock.calls.length).toBeGreaterThan(before);
   });
 
   it("empty_state_when_nothing_pending", async () => {

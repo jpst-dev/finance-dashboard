@@ -159,6 +159,30 @@ describe("createStaticApi", () => {
     expect(await status(a.imports.get("nao-existe"))).toBe(404);
   });
 
+  it("links_list_filters_by_state_and_paginates_copies", async () => {
+    const a = api();
+    const c = await a.links.list({ state: "Confirmed" });
+    expect(c).toEqual({ items: f.links.confirmed, page: 1, size: 50, total: f.links.confirmed.length });
+    const s = await a.links.list({ state: "Suggested", size: 1 });
+    expect(s.items).toEqual(f.links.suggested.slice(0, 1));
+    expect(s.total).toBe(f.links.suggested.length);
+    expect((await a.links.list({ state: "Rejected" })).total).toBe(0);
+    expect((await a.links.list({})).total).toBe(f.links.confirmed.length + f.links.suggested.length);
+    expect((await a.links.list({ state: "Confirmed", page: 99 })).items).toEqual([]);
+    expect(await status(a.links.list({ page: 0 }))).toBe(400);
+    c.items[0].out.description = "mutado";
+    expect((await a.links.list({ state: "Confirmed" })).items).toEqual(f.links.confirmed);
+  });
+
+  it("pending_queue_hides_lines_on_a_confirmed_link_but_keeps_suggested", async () => {
+    const linked = f.transactions.filter((t) => t.link?.state === "Confirmed");
+    const suggested = f.transactions.filter((t) => t.link?.state === "Suggested");
+    expect(linked.length).toBeGreaterThan(0);
+    const ids = new Set((await api().transactions.list({ state: "PendingClassification", size: 200 })).items.map((t) => t.id));
+    for (const t of linked) expect(ids.has(t.id)).toBe(false);
+    for (const t of suggested) expect(ids.has(t.id)).toBe(true);
+  });
+
   const mutations: [string, (a: ApiClient) => Promise<unknown>][] = [
     ["auth.login", (a) => a.auth.login("a@b.c", "x")],
     ["auth.logout", (a) => a.auth.logout()],
@@ -170,6 +194,10 @@ describe("createStaticApi", () => {
     ["transactions.remove", (a) => a.transactions.remove("id")],
     ["imports.confirm", (a) => a.imports.confirm("id", {} as never)],
     ["imports.undo", (a) => a.imports.undo("id")],
+    ["links.confirm", (a) => a.links.confirm("id")],
+    ["links.reject", (a) => a.links.reject("id")],
+    ["links.undo", (a) => a.links.undo("id")],
+    ["links.reconcile", (a) => a.links.reconcile()],
   ];
   it.each(mutations)("every_mutation_rejects_with_demo_read_only %s", async (_n, call) => {
     const e = await call(api()).then(

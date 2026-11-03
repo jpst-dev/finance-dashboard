@@ -2,6 +2,7 @@ using System.Text.Json;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure;
 using FinanceDashboard.Infrastructure.Importing;
+using FinanceDashboard.Infrastructure.Linking;
 using FinanceDashboard.Tests.Infrastructure;
 using FinanceDashboard.Tests.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -52,7 +53,7 @@ public sealed class ImportIdentityTests(PostgresFixture postgres)
     private async Task<ImportPreviewView> PreviewAsync(Guid accountId, ParsedStatement parsed)
     {
         await using var db = Db();
-        var outcome = await new ImportService(db, TimeProvider.System)
+        var outcome = await new ImportService(db, TimeProvider.System, new LinkService(db, TimeProvider.System))
             .CreatePreviewAsync(accountId, parsed, Guid.NewGuid().ToString("N"));
         Assert.Null(outcome.Error);
         return outcome.Preview!;
@@ -62,7 +63,7 @@ public sealed class ImportIdentityTests(PostgresFixture postgres)
         Guid batchId, IReadOnlyList<ImportLineOverride>? overrides = null, bool acknowledge = false)
     {
         await using var db = Db();
-        return await new ImportService(db, TimeProvider.System).ConfirmAsync(batchId, acknowledge, overrides);
+        return await new ImportService(db, TimeProvider.System, new LinkService(db, TimeProvider.System)).ConfirmAsync(batchId, acknowledge, overrides);
     }
 
     private async Task<List<Transaction>> TransactionsAsync(Guid accountId)
@@ -349,14 +350,14 @@ public sealed class ImportIdentityTests(PostgresFixture postgres)
             Assert.Equal(500.00m, batch.LedgerBalance);
             Assert.Equal(new DateOnly(2026, 10, 31), batch.LedgerBalanceDate);
 
-            var summary = Assert.Single(await new ImportService(db, TimeProvider.System).ListAsync());
+            var summary = Assert.Single(await new ImportService(db, TimeProvider.System, new LinkService(db, TimeProvider.System)).ListAsync());
             Assert.Equal(new ImportInvoiceView(new DateOnly(2026, 11, 10), 120.00m), summary.Invoice);
         }
 
         Assert.Null((await ConfirmAsync(preview.BatchId)).Error);
         await using (var db = Db())
         {
-            var view = await new ImportService(db, TimeProvider.System).GetAsync(preview.BatchId);
+            var view = await new ImportService(db, TimeProvider.System, new LinkService(db, TimeProvider.System)).GetAsync(preview.BatchId);
             Assert.Contains(ImportWarning.UnknownLineKinds(2), view!.Warnings);
             Assert.Equal(new ImportInvoiceView(new DateOnly(2026, 11, 10), 120.00m), view.Invoice);
         }

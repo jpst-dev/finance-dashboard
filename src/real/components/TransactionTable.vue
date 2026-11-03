@@ -44,6 +44,13 @@ const btn =
             >
               {{ t(`real.transactions.states.${tx.state}`) }}
             </span>
+            <span
+              v-if="tx.link?.state === 'Confirmed'"
+              class="ml-1 rounded bg-sky-900 px-2 py-0.5 text-xs text-sky-100"
+              data-test="tx-link"
+            >
+              {{ t(`real.transactions.linkBadge.${tx.link.kind}`) }}
+            </span>
           </td>
           <td class="whitespace-nowrap">
             <button type="button" :class="btn" data-test="tx-edit" :aria-label="t('real.transactions.editRow', { description: tx.description })" @click="emit('edit', tx)">{{ t("real.transactions.edit") }}</button>

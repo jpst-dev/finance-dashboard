@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using FinanceDashboard.Domain;
+using FinanceDashboard.Infrastructure.Linking;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -121,7 +122,7 @@ public sealed record PreviewOutcome(ImportPreviewView? Preview, PreviewError? Er
 /// </summary>
 public sealed record ImportLineOverride(string SourceKey, TransactionState? State = null, Guid? CategoryId = null, int Ordinal = 0);
 
-public sealed record ConfirmResult(Guid BatchId, int Created, int Skipped);
+public sealed record ConfirmResult(Guid BatchId, int Created, int Skipped, int Linked, int Suggested);
 
 public enum ConfirmError
 {
@@ -147,10 +148,10 @@ public sealed record ConfirmOutcome(ConfirmResult? Result, ConfirmError? Error, 
 public enum UndoError { NotFound, AlreadyUndone }
 
 /// <summary>
-/// Upload → preview (writes only the <see cref="ImportBatch"/> in state Preview), confirm (lines + checkpoint in one
-/// database transaction) and undo (removes what the batch created and frees its file hash).
+/// Upload → preview (writes only the <see cref="ImportBatch"/> in state Preview), confirm (lines + checkpoint + link
+/// reconciliation in one database transaction) and undo (removes what the batch created and frees its file hash).
 /// </summary>
-public sealed partial class ImportService(AppDbContext db, TimeProvider time)
+public sealed partial class ImportService(AppDbContext db, TimeProvider time, LinkService links)
 {
     public static readonly TimeSpan PreviewLifetime = TimeSpan.FromHours(24);
 
@@ -411,8 +412,12 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         await db.ImportBatches.Where(b => b.Id == batch.Id)
             .ExecuteUpdateAsync(s => s.SetProperty(b => b.NewCount, created).SetProperty(b => b.ExistingCount, skipped), ct);
         await db.SaveChangesAsync(ct);
+
+        // Same transaction: a reconcile failure rolls the whole confirm back. LinkService joins the ambient transaction
+        // and flushes the context itself; nothing else is pending here (the save above took the checkpoint).
+        var reconciled = await links.ReconcileAsync(ct);
         await tx.CommitAsync(ct);
-        return ConfirmOutcome.Ok(new ConfirmResult(batch.Id, created, skipped));
+        return ConfirmOutcome.Ok(new ConfirmResult(batch.Id, created, skipped, reconciled.Linked, reconciled.Suggested));
     }
 
     /// <summary>

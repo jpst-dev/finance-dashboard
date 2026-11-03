@@ -24,6 +24,7 @@ function moneyShape(key: string, path: string[]): string {
   if (key === "amount") {
     if (path[0] === "transactions") return "transaction.amount";
     if (path[0] === "checkpoints") return "checkpoint.amount";
+    if (path[0] === "links") return "link.amount";
     if (path.includes("lines")) return "importLine.amount";
     return "amount";
   }
@@ -42,6 +43,7 @@ const REQUIRED_SHAPES = [
   "account.balance",
   "checkpoint.amount",
   "importLine.amount",
+  "link.amount",
 ];
 
 describe("fixtures do demo", () => {
@@ -76,6 +78,23 @@ describe("fixtures do demo", () => {
       expect(v).not.toMatch(/\d{11,}/);
       expect(v).not.toMatch(/\S+@\S+/);
     });
+  });
+
+  it("links_cover_each_kind_and_a_suggestion", () => {
+    const kinds = f.links.confirmed.map((l) => l.kind).sort();
+    expect(kinds).toEqual(["InvoicePayment", "OwnTransfer"]);
+    expect(f.links.suggested.length).toBeGreaterThanOrEqual(1);
+    expect(f.links.suggested.every((l) => l.kind === "OwnTransfer")).toBe(true);
+    expect(f.links.confirmed.every((l) => l.state === "Confirmed")).toBe(true);
+    expect(f.links.suggested.every((l) => l.state === "Suggested")).toBe(true);
+    // O selo de cada linha aponta para o mesmo vínculo da lista.
+    const byId = new Map([...f.links.confirmed, ...f.links.suggested].map((l) => [l.id, l]));
+    for (const l of byId.values()) {
+      for (const [end, other] of [[l.out, l.in], [l.in, l.out]] as const) {
+        const t = f.transactions.find((x) => x.id === end.transactionId)!;
+        expect(t.link, end.transactionId).toMatchObject({ id: l.id, kind: l.kind, state: l.state, counterpartTransactionId: other.transactionId });
+      }
+    }
   });
 
   it("preview_batch_exists_in_preview_state", () => {

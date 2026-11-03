@@ -202,7 +202,7 @@ function createServer() {
           created++;
         }
         batches.set(id, { ...p, state: "Confirmed", expiresAt: null });
-        return { batchId: id, created, skipped: p.lines.length - created };
+        return { batchId: id, created, skipped: p.lines.length - created, linked: 0, suggested: 0 };
       },
       undo: async (id: string) => {
         const p = batches.get(id)!;

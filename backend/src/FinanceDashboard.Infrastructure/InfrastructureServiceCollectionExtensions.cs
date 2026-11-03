@@ -1,4 +1,5 @@
 using FinanceDashboard.Infrastructure.Importing;
+using FinanceDashboard.Infrastructure.Linking;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ public static class InfrastructureServiceCollectionExtensions
         s.AddDbContext<AppDbContext>(o => o.UseNpgsql(c.GetConnectionString("Default")));
         s.TryAddSingleton(TimeProvider.System);
         s.AddScoped<ImportService>();
+        s.AddScoped<LinkService>();
         return s;
     }
 }

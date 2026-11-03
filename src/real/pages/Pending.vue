@@ -2,29 +2,34 @@
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { TransactionState } from "../api/types";
+import LinkedPairs from "../components/LinkedPairs.vue";
+import LinkSuggestions from "../components/LinkSuggestions.vue";
 import CategorySelect from "../components/CategorySelect.vue";
 import Pagination from "../components/Pagination.vue";
 import Money from "../money/Money.vue";
 import { useAccountsStore } from "../stores/accounts";
 import { useCategoriesStore } from "../stores/categories";
+import { useLinksStore } from "../stores/links";
 import { useTransactionsStore } from "../stores/transactions";
 
 const { t } = useI18n();
 const store = useTransactionsStore();
 const accounts = useAccountsStore();
 const categories = useCategoriesStore();
+const links = useLinksStore();
 const status = ref("");
 
 onMounted(async () => {
   void accounts.load();
   void categories.load();
   void store.loadPendingCount();
+  void links.load();
   await store.resetFilters({ state: "PendingClassification" });
 });
 
 const accountName = (id: string) => accounts.items.find((a) => a.id === id)?.name ?? "—";
 const errorText = computed(() => {
-  const e = store.error ?? accounts.error ?? categories.error;
+  const e = store.error ?? accounts.error ?? categories.error ?? links.error;
   return e ? t(`real.errors.${e}`) : "";
 });
 function fmtDate(d: string): string {
@@ -32,7 +37,10 @@ function fmtDate(d: string): string {
 }
 async function setState(id: string, e: Event) {
   const state = (e.target as HTMLSelectElement).value as TransactionState;
-  if (await store.classify(id, { state })) status.value = t("real.pending.saved");
+  if (await store.classify(id, { state })) {
+    status.value = t("real.pending.saved");
+    void links.load(); // the server drops the line's links on a state change; avoid stale suggestions
+  }
 }
 async function setCategory(id: string, categoryId: string | null) {
   if (await store.classify(id, { categoryId })) status.value = t("real.pending.saved");
@@ -47,6 +55,9 @@ const field =
     <p class="mt-1 text-sm text-gray-400">{{ t("real.pending.help") }}</p>
     <p class="sr-only" role="status" aria-live="polite">{{ status }}</p>
     <p v-if="errorText" class="mt-2 text-sm text-red-400" role="alert" data-test="error">{{ errorText }}</p>
+
+    <LinkSuggestions />
+    <LinkedPairs />
 
     <p v-if="store.loading && store.items.length === 0" class="mt-4 text-gray-400">{{ t("real.transactions.loading") }}</p>
     <p v-else-if="!store.loading && store.items.length === 0 && !store.error" class="mt-4 text-gray-400" data-test="empty">

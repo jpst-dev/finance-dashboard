@@ -284,6 +284,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List links (newest first), optionally by state, paginated */
+        get: operations["ListLinks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/links/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pair pending lines again (idempotent) */
+        post: operations["ReconcileLinks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/links/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm a suggested link */
+        post: operations["ConfirmLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/links/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a suggested link (it will not be suggested again) */
+        post: operations["RejectLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/links/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Undo a confirmed link (kept as rejected so it is not paired again) */
+        delete: operations["UndoLink"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -379,6 +464,10 @@ export interface components {
             created: number | string;
             /** Format: int32 */
             skipped: number | string;
+            /** Format: int32 */
+            linked: number | string;
+            /** Format: int32 */
+            suggested: number | string;
         };
         CreateAccountRequest: {
             name: null | string;
@@ -509,6 +598,42 @@ export interface components {
             /** @default true */
             overridable: boolean;
         };
+        /** @enum {string} */
+        LinkKind: "InvoicePayment" | "OwnTransfer";
+        LinkLine: {
+            /** Format: uuid */
+            transactionId: string;
+            /** Format: uuid */
+            accountId: string;
+            /** Format: date */
+            date: string;
+            description: string;
+            amount: string;
+        };
+        /** @enum {string} */
+        LinkOrigin: "Auto" | "User";
+        LinkPage: {
+            items: components["schemas"]["LinkResponse"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            size: number | string;
+            /** Format: int32 */
+            total: number | string;
+        };
+        LinkResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["LinkKind"];
+            state: components["schemas"]["LinkState"];
+            origin: components["schemas"]["LinkOrigin"];
+            out: components["schemas"]["LinkLine"];
+            in: components["schemas"]["LinkLine"];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @enum {string} */
+        LinkState: "Suggested" | "Confirmed" | "Rejected";
         LoginRequest: {
             email: string;
             password: string;
@@ -518,6 +643,12 @@ export interface components {
             count: number | string;
             total: string;
         };
+        ReconcileResult: {
+            /** Format: int32 */
+            linked: number | string;
+            /** Format: int32 */
+            suggested: number | string;
+        };
         SummaryResponse: {
             month: string;
             income: string;
@@ -525,6 +656,14 @@ export interface components {
             net: string;
             byCategory: components["schemas"]["CategoryTotalResponse"][];
             pending: components["schemas"]["PendingSummary"];
+        };
+        TransactionLink: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["LinkKind"];
+            state: components["schemas"]["LinkState"];
+            /** Format: uuid */
+            counterpartTransactionId: string;
         };
         /** @enum {string} */
         TransactionOrigin: "Manual" | "Imported";
@@ -557,6 +696,7 @@ export interface components {
             origin: components["schemas"]["TransactionOrigin"];
             editedByUser: boolean;
             counterpartyName: null | string;
+            link?: null | components["schemas"]["TransactionLink"];
         };
         /** @enum {string} */
         TransactionState: "Normal" | "PendingClassification";
@@ -1555,6 +1695,198 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ImportErrorResponse"];
                 };
+            };
+        };
+    };
+    ListLinks: {
+        parameters: {
+            query?: {
+                state?: components["schemas"]["LinkState"];
+                page?: number | string;
+                size?: number | string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkPage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReconcileLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileResult"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConfirmLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RejectLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UndoLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

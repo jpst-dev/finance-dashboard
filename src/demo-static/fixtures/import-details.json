@@ -38,7 +38,7 @@
     ],
     "checkpoint": {
       "date": "2026-10-14",
-      "amount": "22042.73"
+      "amount": "21013.08"
     },
     "lines": [
       {
@@ -128,6 +128,57 @@
     ],
     "createdAt": "2026-10-15T11:00:00+00:00",
     "expiresAt": "2026-10-16T11:00:00+00:00",
+    "editedCount": 0,
+    "invoice": null
+  },
+  "0000001b-0000-4000-8000-000000000003": {
+    "batchId": "0000001b-0000-4000-8000-000000000003",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "source": "ItauChecking",
+    "state": "Confirmed",
+    "periodStart": "2026-10-01",
+    "periodEnd": "2026-10-12",
+    "newCount": 3,
+    "existingCount": 0,
+    "warnings": [],
+    "checkpoint": null,
+    "lines": [],
+    "createdAt": "2026-10-14T10:00:00+00:00",
+    "expiresAt": null,
+    "editedCount": 0,
+    "invoice": null
+  },
+  "0000001b-0000-4000-8000-000000000004": {
+    "batchId": "0000001b-0000-4000-8000-000000000004",
+    "accountId": "0000000a-0000-4000-8000-000000000002",
+    "source": "ItauCard",
+    "state": "Confirmed",
+    "periodStart": "2026-10-01",
+    "periodEnd": "2026-10-11",
+    "newCount": 1,
+    "existingCount": 0,
+    "warnings": [],
+    "checkpoint": null,
+    "lines": [],
+    "createdAt": "2026-10-14T10:00:00+00:00",
+    "expiresAt": null,
+    "editedCount": 0,
+    "invoice": null
+  },
+  "0000001b-0000-4000-8000-000000000005": {
+    "batchId": "0000001b-0000-4000-8000-000000000005",
+    "accountId": "0000000a-0000-4000-8000-000000000004",
+    "source": "NubankChecking",
+    "state": "Confirmed",
+    "periodStart": "2026-10-01",
+    "periodEnd": "2026-10-12",
+    "newCount": 2,
+    "existingCount": 0,
+    "warnings": [],
+    "checkpoint": null,
+    "lines": [],
+    "createdAt": "2026-10-14T10:00:00+00:00",
+    "expiresAt": null,
     "editedCount": 0,
     "invoice": null
   }

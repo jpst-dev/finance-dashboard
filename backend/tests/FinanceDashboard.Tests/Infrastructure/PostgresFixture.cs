@@ -5,7 +5,7 @@ namespace FinanceDashboard.Tests.Infrastructure;
 
 public sealed class PostgresFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
+    private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17.11-trixie").Build();
 
     public Task InitializeAsync() => _container.StartAsync();
 

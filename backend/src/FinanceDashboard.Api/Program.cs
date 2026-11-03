@@ -5,6 +5,7 @@ using FinanceDashboard.Api.Categories;
 using FinanceDashboard.Api.Json;
 using FinanceDashboard.Api.Health;
 using FinanceDashboard.Api.Imports;
+using FinanceDashboard.Api.Links;
 using FinanceDashboard.Api.Security;
 using FinanceDashboard.Api.Summary;
 using FinanceDashboard.Api.Transactions;
@@ -126,6 +127,7 @@ app.MapTransactions();
 app.MapCheckpoints();
 app.MapSummary();
 app.MapImports();
+app.MapLinks();
 
 // API docs for developers and reviewers: served in every environment, no authentication.
 app.MapOpenApi("/api/openapi/{documentName}.json");

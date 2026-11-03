@@ -37,7 +37,9 @@ public static class SummaryEndpoints
             return Results.NotFound();
         }
 
-        var query = db.Transactions.AsNoTracking().Visible().Where(t => t.Date >= start && t.Date < end);
+        // Pending lines already on a Confirmed link are not "to classify"; everything else counts as before.
+        var query = db.Transactions.AsNoTracking().Visible().Where(t => t.Date >= start && t.Date < end)
+            .ExcludingConfirmedPending(db);
         if (accountId is not null) query = query.Where(t => t.AccountId == accountId);
 
         var lines = await query

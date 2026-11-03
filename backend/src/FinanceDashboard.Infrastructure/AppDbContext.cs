@@ -12,9 +12,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<BalanceCheckpoint> Checkpoints => Set<BalanceCheckpoint>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
+    public DbSet<Link> Links => Set<Link>();
 
-    // Read per query by the global filters (EF parameterizes it).
-    private string? CurrentUserId => currentUser.UserId;
+    // Read per query by the global filters (EF parameterizes it); services read it for per-user locks.
+    public string? CurrentUserId => currentUser.UserId;
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -87,6 +88,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
             e.HasIndex(x => new { x.UserId, x.FileHash })
                 .IsUnique()
                 .HasFilter("\"State\" = 'Confirmed'");
+            e.HasQueryFilter(x => x.UserId == CurrentUserId);
+        });
+
+        b.Entity<Link>(e =>
+        {
+            // Invariant "at most one Confirmed link per line" is enforced per column by the two partial unique
+            // indexes below. The cross-column case (same line as Out in one Confirmed link and as In in another)
+            // is not coverable by a DB constraint: it is prevented by the sign rule (Out < 0, In > 0) and by
+            // LinkService, which must reject a Confirm when the line already appears in any Confirmed link on
+            // either side.
+            // FKs use Cascade (unlike the Restrict used by other entities) because undoing an import batch
+            // uses ExecuteDelete on Transactions, where EF's client-side cascade does not run.
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(32);
+            e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32);
+            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.OutTransactionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Transaction>().WithMany().HasForeignKey(x => x.InTransactionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.OutTransactionId, x.InTransactionId }).IsUnique();
+            e.HasIndex(x => x.OutTransactionId).IsUnique().HasFilter("\"State\" = 'Confirmed'");
+            e.HasIndex(x => x.InTransactionId).IsUnique().HasFilter("\"State\" = 'Confirmed'");
+            e.HasIndex(x => new { x.UserId, x.State });
             e.HasQueryFilter(x => x.UserId == CurrentUserId);
         });
     }

@@ -85,7 +85,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md), [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md), [ADR 0005 (identidade por conteúdo e leitores do Itaú)](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md) e [ADR 0006 (demo estático por adaptador e fixtures geradas)](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md), [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md), [ADR 0005 (identidade por conteúdo e leitores do Itaú)](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md) [ADR 0006 (demo estático por adaptador e fixtures geradas)](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md) e [ADR 0007 (vínculos e neutralidade derivada)](docs/adr/0007-vinculos-e-neutralidade-derivada.md).
 
 ### Rodando localmente
 
@@ -256,6 +256,17 @@ Regras:
 - **Desfazer**: igual ao Nubank. Linhas que você **excluiu** continuam ocupando a chave e não voltam ao reimportar.
 - **Erros de arquivo** (`422`, só com o código): `unsupported_bank`, `not_xlsx`, `encrypted_xlsx`, `xlsx_limits_exceeded`, `xlsx_unsafe_content` (macro, link externo, conteúdo embutido), `unsupported_layout` (layout desconhecido) e `invalid_cell` (a resposta traz só o código; a linha da planilha fica apenas no diagnóstico interno e nos testes, nunca na resposta nem nos logs). Fórmulas nunca são avaliadas.
 
+### Conciliação (S3a)
+
+Pagamentos de fatura e transferências entre contas próprias aparecem como duas linhas pendentes (uma em cada conta). A conciliação liga as duas pontas (valores opostos iguais, contas diferentes, até 3 dias de diferença) e roda sozinha na confirmação de cada importação.
+
+- **Vincula sozinho**: pares sem ambiguidade; pagamento de fatura só dentro do mesmo banco (conta e cartão do Nubank, ou do Itaú) e transferência entre contas correntes com no máximo 1 dia de diferença.
+- **Fica como sugestão ou pendente**: pares ambíguos, transferências com 2 ou 3 dias de diferença, fatura paga por outro banco e pagamentos parciais.
+- **Na tela Pendências**: confirme ou rejeite as sugestões; em Vinculados, desfaça um vínculo (ele não será sugerido de novo). Linhas vinculadas saem da fila e não mudam saldos nem receitas/despesas.
+- **Banco já existente**: depois de atualizar, a próxima importação (ou `POST /api/links/reconcile`) vincula as pendências mais antigas; não há botão na tela para isso.
+- **API** (`/api/links`): `GET /` (lista, filtro por estado), `POST /reconcile`, `POST /{id}/confirm`, `POST /{id}/reject` e `DELETE /{id}` (desfaz).
+- O demo público mostra vínculos de exemplo (somente leitura). Decisões em [ADR 0007](docs/adr/0007-vinculos-e-neutralidade-derivada.md).
+
 ### Desenvolvimento
 
 O `db` do Compose precisa estar rodando (`docker compose up -d db`; fica em `127.0.0.1:5432`). A API local usa a porta 5288 (perfil `http`) e o serviço `api` do Compose não publica porta no host, então não há conflito e não é preciso parar a stack. O Vite encaminha `/api` para `http://localhost:5288`.
@@ -323,7 +334,7 @@ Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos
 
 ### Roteiro
 
-Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. Próximas fatias: S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. S3(a) conciliação (pagamento de fatura e transferência entre contas próprias) entregue. Próximas fatias: S3(b) Pix parcelado e aplicação/resgate, S3(c) regras de categoria e recorrências, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
 
 ## 🤝 Contribuindo
 
