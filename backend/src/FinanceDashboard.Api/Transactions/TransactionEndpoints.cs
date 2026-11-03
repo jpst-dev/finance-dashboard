@@ -2,6 +2,7 @@ using FinanceDashboard.Api.Security;
 using FinanceDashboard.Api.Summary;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure;
+using FinanceDashboard.Infrastructure.Linking;
 using Microsoft.EntityFrameworkCore;
 
 namespace FinanceDashboard.Api.Transactions;
@@ -9,7 +10,10 @@ namespace FinanceDashboard.Api.Transactions;
 public sealed record TransactionResponse(
     Guid Id, Guid AccountId, DateOnly Date, DateOnly? PurchaseDate, DateOnly? StatementDate, decimal Amount,
     string Description, string OriginalDescription, Guid? CategoryId, TransactionState State,
-    TransactionOrigin Origin, bool EditedByUser, string? CounterpartyName);
+    TransactionOrigin Origin, bool EditedByUser, string? CounterpartyName, TransactionLink? Link = null);
+
+/// <summary>The Confirmed or Suggested link a line takes part in (a Confirmed one wins over suggestions).</summary>
+public sealed record TransactionLink(Guid Id, LinkKind Kind, LinkState State, Guid CounterpartTransactionId);
 
 public sealed record TransactionPage(IReadOnlyList<TransactionResponse> Items, int Page, int Size, int Total);
 
@@ -76,6 +80,7 @@ public static class TransactionEndpoints
         if (accountId is not null) query = query.Where(t => t.AccountId == accountId);
         if (categoryId is not null) query = query.Where(t => t.CategoryId == categoryId);
         if (state is not null) query = query.Where(t => t.State == state);
+        if (state == TransactionState.PendingClassification) query = query.WithoutConfirmedLink(db);
         if (month is not null)
         {
             if (!MonthRange.TryParse(month, out var start, out var end)) return Results.BadRequest();
@@ -89,6 +94,8 @@ public static class TransactionEndpoints
                 t.Id, t.AccountId, t.Date, t.PurchaseDate, t.StatementDate, t.Amount, t.NormalizedDescription,
                 t.OriginalDescription, t.CategoryId, t.State, t.Origin, t.EditedByUser, t.CounterpartyName))
             .ToListAsync();
+        var links = await LinksForAsync(db, items.Select(i => i.Id).ToList());
+        items = items.Select(i => links.TryGetValue(i.Id, out var l) ? i with { Link = l } : i).ToList();
         return Results.Ok(new TransactionPage(items, pageNo, pageSize, total));
     }
 
@@ -122,10 +129,11 @@ public static class TransactionEndpoints
         };
         db.Transactions.Add(transaction);
         await db.SaveChangesAsync();
-        return Results.Created($"/api/transactions/{transaction.Id}", ToResponse(transaction));
+        return Results.Created($"/api/transactions/{transaction.Id}", await ToResponseAsync(db, transaction));
     }
 
-    private static async Task<IResult> UpdateAsync(Guid id, UpdateTransactionRequest request, AppDbContext db)
+    private static async Task<IResult> UpdateAsync(
+        Guid id, UpdateTransactionRequest request, AppDbContext db, LinkService links)
     {
         var transaction = await db.Transactions.Visible().FirstOrDefaultAsync(t => t.Id == id);
         if (transaction is null) return Results.NotFound();
@@ -141,6 +149,10 @@ public static class TransactionEndpoints
             return Results.NotFound();
         }
 
+        // A change to what the pairing is based on (amount, date, or the line leaving the queue) drops its links.
+        var invalidatesLinks = transaction.Amount != amount || transaction.Date != request.Date.Value
+            || (request.State == TransactionState.Normal && transaction.State != TransactionState.Normal);
+
         transaction.Date = request.Date.Value;
         transaction.Amount = amount;
         transaction.NormalizedDescription = description;
@@ -155,12 +167,16 @@ public static class TransactionEndpoints
             transaction.EditedByUser = true; // SourceKey, Ordinal, BatchId, Origin and the original text stay as imported.
         }
 
+        // Edit and link invalidation commit together; LinkService joins this transaction (and takes its lock).
+        await using var tx = await db.Database.BeginTransactionAsync();
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { return Results.NotFound(); } // removed by an undo meanwhile
-        return Results.Ok(ToResponse(transaction));
+        if (invalidatesLinks) await links.InvalidateAsync(id);
+        await tx.CommitAsync();
+        return Results.Ok(await ToResponseAsync(db, transaction));
     }
 
-    private static async Task<IResult> DeleteAsync(Guid id, AppDbContext db)
+    private static async Task<IResult> DeleteAsync(Guid id, AppDbContext db, LinkService links)
     {
         var transaction = await db.Transactions.Visible().FirstOrDefaultAsync(t => t.Id == id);
         if (transaction is null) return Results.NotFound();
@@ -168,8 +184,12 @@ public static class TransactionEndpoints
         if (transaction.Origin == TransactionOrigin.Manual) db.Transactions.Remove(transaction);
         else transaction.IsDeleted = true; // keeps SourceKey so a re-import does not bring the line back
 
+        // Links cascade on a manual delete; a hidden line keeps its row, so its links are invalidated explicitly.
+        await using var tx = await db.Database.BeginTransactionAsync();
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { return Results.NotFound(); } // removed by an undo meanwhile
+        await links.InvalidateAsync(id);
+        await tx.CommitAsync();
         return Results.NoContent();
     }
 
@@ -183,6 +203,35 @@ public static class TransactionEndpoints
     {
         description = raw?.Trim() ?? "";
         return description.Length is >= 1 and <= MaxDescription;
+    }
+
+    private static async Task<TransactionResponse> ToResponseAsync(AppDbContext db, Transaction t)
+    {
+        var links = await LinksForAsync(db, [t.Id]);
+        return ToResponse(t) with { Link = links.GetValueOrDefault(t.Id) };
+    }
+
+    /// <summary>One query for a whole page: Confirmed/Suggested links of the given lines (Confirmed first).</summary>
+    private static async Task<Dictionary<Guid, TransactionLink>> LinksForAsync(AppDbContext db, List<Guid> ids)
+    {
+        var result = new Dictionary<Guid, TransactionLink>();
+        if (ids.Count == 0) return result;
+
+        var rows = await db.Links.AsNoTracking()
+            .Where(l => (l.State == LinkState.Confirmed || l.State == LinkState.Suggested)
+                && (ids.Contains(l.OutTransactionId) || ids.Contains(l.InTransactionId)))
+            .OrderBy(l => l.State == LinkState.Confirmed ? 0 : 1).ThenBy(l => l.CreatedAt).ThenBy(l => l.Id)
+            .ToListAsync();
+        var wanted = ids.ToHashSet();
+        foreach (var l in rows)
+        {
+            if (wanted.Contains(l.OutTransactionId))
+                result.TryAdd(l.OutTransactionId, new TransactionLink(l.Id, l.Kind, l.State, l.InTransactionId));
+            if (wanted.Contains(l.InTransactionId))
+                result.TryAdd(l.InTransactionId, new TransactionLink(l.Id, l.Kind, l.State, l.OutTransactionId));
+        }
+
+        return result;
     }
 
     private static TransactionResponse ToResponse(Transaction t) => new(
