@@ -242,6 +242,36 @@
       "deleted": "Lançamento apagado.",
       "loading": "Carregando lançamentos…",
       "empty": "Nenhum lançamento encontrado."
+    },
+    "overview": {
+      "accounts": "Contas",
+      "addAccount": "+ Adicionar conta",
+      "pendingNotice": "{count} lançamento pendente | {count} lançamentos pendentes",
+      "pendingReview": "Revisar pendentes",
+      "monthPicker": "Mês exibido",
+      "prevMonth": "Mês anterior",
+      "nextMonth": "Próximo mês",
+      "monthSummary": "Resumo do mês",
+      "income": "Receitas",
+      "expenses": "Despesas",
+      "net": "Resultado do mês",
+      "pendingOutside": "{count} pendente fora do resumo | {count} pendentes fora do resumo",
+      "sixMonthTitle": "Últimos seis meses",
+      "sixMonthAlt": "Gráfico de barras de receitas e despesas dos últimos seis meses",
+      "valuesHidden": "valores ocultos",
+      "monthUnavailable": "indisponível",
+      "monthFailed": "Não foi possível carregar {month}.",
+      "retry": "Tentar novamente",
+      "categoriesTitle": "Despesas por categoria",
+      "categoriesAlt": "Gráfico de rosca das despesas por categoria; a lista ao lado traz os mesmos dados",
+      "categoriesEmpty": "Nenhuma despesa categorizada neste mês.",
+      "uncategorized": "Sem categoria",
+      "recentTitle": "Últimos lançamentos",
+      "seeAll": "Ver todos",
+      "loading": "Carregando…",
+      "emptyTitle": "Ainda não há lançamentos",
+      "emptyBody": "Importe um extrato ou fatura para ver o resumo, os gráficos e os últimos lançamentos.",
+      "emptyAction": "Ir para Importar"
     }
   }
 }
