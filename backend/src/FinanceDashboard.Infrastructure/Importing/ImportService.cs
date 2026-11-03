@@ -10,7 +10,8 @@ namespace FinanceDashboard.Infrastructure.Importing;
 
 public sealed record ImportCheckpointView(DateOnly Date, decimal Amount);
 
-public sealed record ImportLineView(DateOnly Date, decimal Amount, string Description, TransactionState State, bool Existing);
+/// <summary>A preview line. <see cref="SourceKey"/> (the FITID) is what a confirm override refers to.</summary>
+public sealed record ImportLineView(string SourceKey, DateOnly Date, decimal Amount, string Description, TransactionState State, bool Existing);
 
 public sealed record ImportPreviewView(
     Guid BatchId,
@@ -82,6 +83,12 @@ public sealed record PreviewOutcome(ImportPreviewView? Preview, PreviewError? Er
     public static PreviewOutcome Fail(PreviewError error, string? kind = null) => new(null, error, kind);
 }
 
+/// <summary>
+/// Classification chosen in the preview for one line, by its <see cref="SourceKey"/>. <see cref="State"/> and
+/// <see cref="CategoryId"/> are independent; a null one keeps what the import rules gave the line.
+/// </summary>
+public sealed record ImportLineOverride(string SourceKey, TransactionState? State = null, Guid? CategoryId = null);
+
 public sealed record ConfirmResult(Guid BatchId, int Created, int Skipped);
 
 public enum ConfirmError
@@ -95,6 +102,7 @@ public enum ConfirmError
     BlockingWarnings,
     UnsupportedAmountPrecision,
     UnsupportedLine,
+    InvalidOverride,
 }
 
 public sealed record ConfirmOutcome(ConfirmResult? Result, ConfirmError? Error, IReadOnlyList<ImportWarning> Warnings)
@@ -245,7 +253,15 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
     /// the partial unique hash index rejects a second confirm of the same file, and
     /// <c>ON CONFLICT DO NOTHING</c> on the (account, key, ordinal) index skips lines another confirm just wrote.
     /// </summary>
-    public async Task<ConfirmOutcome> ConfirmAsync(Guid batchId, bool acknowledgeBlockingWarnings, CancellationToken ct = default)
+    /// <remarks>
+    /// <paramref name="overrides"/> are validated before anything is written (unknown or repeated source key,
+    /// category missing or of another user: <see cref="ConfirmError.InvalidOverride"/>). They reach only the rows
+    /// this confirm actually inserts: a line that is existing (at preview time, or because another confirm recorded
+    /// it since) is skipped by the insert, so its override is silently ignored and the stored row stays untouched.
+    /// </remarks>
+    public async Task<ConfirmOutcome> ConfirmAsync(
+        Guid batchId, bool acknowledgeBlockingWarnings, IReadOnlyList<ImportLineOverride>? overrides = null,
+        CancellationToken ct = default)
     {
         var batch = await db.ImportBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == batchId, ct);
         if (batch is null) return ConfirmOutcome.Fail(ConfirmError.NotFound);
@@ -267,6 +283,16 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             return ConfirmOutcome.Fail(ConfirmError.UnsupportedLine);
         }
 
+        var byKey = ValidOverrides(stored, overrides);
+        if (byKey is null) return ConfirmOutcome.Fail(ConfirmError.InvalidOverride);
+        var categoryIds = byKey.Values.Where(o => o.CategoryId is not null).Select(o => o.CategoryId!.Value).Distinct().ToList();
+        // Query filter: another user's category is not found, exactly like a missing one.
+        if (categoryIds.Count > 0
+            && await db.Categories.CountAsync(cat => categoryIds.Contains(cat.Id), ct) != categoryIds.Count)
+        {
+            return ConfirmOutcome.Fail(ConfirmError.InvalidOverride);
+        }
+
         // Another batch of the same file (this one may have been confirmed since it was read: decided by the claim below).
         if (await db.ImportBatches.AnyAsync(
                 b => b.Id != batch.Id && b.State == ImportBatchState.Confirmed && b.FileHash == batch.FileHash, ct))
@@ -282,6 +308,13 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             .OrderBy(l => l.FitId, StringComparer.Ordinal).ToList();
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // Holds the chosen categories until commit, so a concurrent delete cannot break the insert's foreign key.
+        if (categoryIds.Count > 0 && await LockCategoriesAsync(batch.UserId, categoryIds, ct) != categoryIds.Count)
+        {
+            await tx.RollbackAsync(ct);
+            return ConfirmOutcome.Fail(ConfirmError.InvalidOverride);
+        }
+
         int claimed;
         try
         {
@@ -305,7 +338,7 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             return ConfirmOutcome.Fail(state is { } s2 ? StateError(s2) : ConfirmError.NotFound);
         }
 
-        var created = await InsertLinesAsync(batch, lines, ct);
+        var created = await InsertLinesAsync(batch, lines, byKey, ct);
         if (stored.Checkpoint is { } checkpoint) await AddCheckpointAsync(batch, checkpoint, ct);
 
         var skipped = stored.Lines.Count - created;
@@ -360,6 +393,33 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         _ => ConfirmError.NotFound,
     };
 
+    /// <summary>Overrides keyed by source key, or null when one is invalid (missing, repeated or not in the preview).</summary>
+    private static Dictionary<string, ImportLineOverride>? ValidOverrides(
+        StoredPreview stored, IReadOnlyList<ImportLineOverride>? overrides)
+    {
+        var byKey = new Dictionary<string, ImportLineOverride>(StringComparer.Ordinal);
+        if (overrides is null) return byKey;
+
+        var keys = stored.Lines.Select(l => l.FitId).ToHashSet(StringComparer.Ordinal);
+        foreach (var o in overrides)
+        {
+            if (o?.SourceKey is null || !keys.Contains(o.SourceKey) || !byKey.TryAdd(o.SourceKey, o)) return null;
+            if (o.State is { } state && !Enum.IsDefined(state)) return null;
+        }
+
+        return byKey;
+    }
+
+    /// <summary>Locks (FOR KEY SHARE) the user's categories among <paramref name="ids"/>; returns how many exist.</summary>
+    private async Task<int> LockCategoriesAsync(string userId, IReadOnlyList<Guid> ids, CancellationToken ct)
+    {
+        var found = await db.Database.SqlQueryRaw<Guid>(
+                "SELECT \"Id\" AS \"Value\" FROM \"Categories\" WHERE \"UserId\" = @user AND \"Id\" = ANY(@ids) FOR KEY SHARE",
+                new NpgsqlParameter("user", userId), new NpgsqlParameter("ids", ids.ToArray()))
+            .ToListAsync(ct);
+        return found.Count;
+    }
+
     /// <summary>The blocking checks of the preview, recomputed against the current state.</summary>
     private async Task<List<ImportWarning>> BlockingWarningsAsync(Account account, StoredPreview stored, CancellationToken ct)
     {
@@ -379,18 +439,21 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
     }
 
     /// <summary>One INSERT … ON CONFLICT DO NOTHING over arrays; returns how many lines were actually created.</summary>
-    private Task<int> InsertLinesAsync(ImportBatch batch, IReadOnlyList<StoredPreviewLine> lines, CancellationToken ct)
+    /// <remarks>Overrides ride along per line; rows skipped by ON CONFLICT (existing lines) never get theirs.</remarks>
+    private Task<int> InsertLinesAsync(
+        ImportBatch batch, IReadOnlyList<StoredPreviewLine> lines, IReadOnlyDictionary<string, ImportLineOverride> overrides,
+        CancellationToken ct)
     {
         if (lines.Count == 0) return Task.FromResult(0);
 
         const string sql = """
             INSERT INTO "Transactions" ("Id", "UserId", "AccountId", "Date", "PurchaseDate", "Amount",
-                "OriginalDescription", "NormalizedDescription", "State", "Origin", "BatchId", "SourceKey", "Ordinal",
+                "OriginalDescription", "NormalizedDescription", "State", "CategoryId", "Origin", "BatchId", "SourceKey", "Ordinal",
                 "CounterpartyName", "CounterpartyDocument", "IsDeleted", "EditedByUser")
-            SELECT l.id, @user, @account, l.date, l.date, l.amount, l.original, l.normalized, l.state, @origin, @batch,
-                l.key, 0, l.name, l.document, FALSE, FALSE
-            FROM unnest(@ids, @dates, @amounts, @originals, @normalized, @states, @keys, @names, @documents)
-                WITH ORDINALITY AS l(id, date, amount, original, normalized, state, key, name, document, n)
+            SELECT l.id, @user, @account, l.date, l.date, l.amount, l.original, l.normalized, l.state, l.category, @origin,
+                @batch, l.key, 0, l.name, l.document, FALSE, FALSE
+            FROM unnest(@ids, @dates, @amounts, @originals, @normalized, @states, @categories, @keys, @names, @documents)
+                WITH ORDINALITY AS l(id, date, amount, original, normalized, state, category, key, name, document, n)
             ORDER BY l.n
             ON CONFLICT ("AccountId", "SourceKey", "Ordinal") WHERE "SourceKey" IS NOT NULL DO NOTHING
             """;
@@ -406,12 +469,18 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             new NpgsqlParameter("amounts", lines.Select(l => l.Amount).ToArray()),
             new NpgsqlParameter("originals", lines.Select(l => Cut(l.Memo, MaxDescription)).ToArray()),
             new NpgsqlParameter("normalized", lines.Select(l => Cut(NormalizeDescription(l.Memo), MaxDescription)).ToArray()),
-            new NpgsqlParameter("states", lines.Select(l => l.State.ToString()).ToArray()),
+            new NpgsqlParameter("states", lines.Select(l => (Override(l)?.State ?? l.State).ToString()).ToArray()),
+            new NpgsqlParameter("categories", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Uuid)
+            {
+                Value = lines.Select(l => Override(l)?.CategoryId).ToArray(),
+            },
             new NpgsqlParameter("keys", lines.Select(l => l.FitId).ToArray()),
             new NpgsqlParameter("names", lines.Select(l => CutOrNull(l.CounterpartyName, MaxCounterpartyName)).ToArray()),
             new NpgsqlParameter("documents", lines.Select(l => CutOrNull(l.CounterpartyDocument, MaxCounterpartyDocument)).ToArray()),
         ];
         return db.Database.ExecuteSqlRawAsync(sql, parameters, ct);
+
+        ImportLineOverride? Override(StoredPreviewLine l) => overrides.GetValueOrDefault(l.FitId);
     }
 
     /// <summary>LEDGERBAL checkpoint, unless the account already has one with the same date and amount.</summary>
@@ -520,6 +589,6 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         IReadOnlyList<StoredPreviewLine> lines, int editedCount = 0) =>
         new(batch.Id, batch.AccountId, batch.Source, batch.State, batch.PeriodStart, batch.PeriodEnd,
             batch.NewCount, batch.ExistingCount, warnings, checkpoint,
-            lines.Select(l => new ImportLineView(l.Date, l.Amount, l.Memo, l.State, l.Existing)).ToList(),
+            lines.Select(l => new ImportLineView(l.FitId, l.Date, l.Amount, l.Memo, l.State, l.Existing)).ToList(),
             batch.CreatedAt, batch.ExpiresAt, editedCount);
 }

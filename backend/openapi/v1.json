@@ -1185,6 +1185,15 @@
           "acknowledgeBlockingWarnings": {
             "type": "boolean",
             "default": false
+          },
+          "overrides": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ImportLineOverride"
+            }
           }
         }
       },
@@ -1474,8 +1483,37 @@
           }
         }
       },
+      "ImportLineOverride": {
+        "required": [
+          "sourceKey"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceKey": {
+            "type": "string"
+          },
+          "state": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TransactionState"
+              }
+            ]
+          },
+          "categoryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "ImportLineView": {
         "required": [
+          "sourceKey",
           "date",
           "amount",
           "description",
@@ -1484,6 +1522,9 @@
         ],
         "type": "object",
         "properties": {
+          "sourceKey": {
+            "type": "string"
+          },
           "date": {
             "type": "string",
             "format": "date"

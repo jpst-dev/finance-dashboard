@@ -6,7 +6,13 @@ namespace FinanceDashboard.Api.Imports;
 
 public sealed record ImportErrorResponse(string Error);
 
-public sealed record ConfirmImportRequest(bool AcknowledgeBlockingWarnings = false);
+/// <summary>
+/// <c>overrides</c> (optional): classification of the preview's new lines by <c>sourceKey</c>; ignored for lines that
+/// turn out to exist already. Unknown or repeated <c>sourceKey</c>, or a category the user does not own:
+/// <c>422 {error: "invalid_override"}</c> and nothing is recorded.
+/// </summary>
+public sealed record ConfirmImportRequest(
+    bool AcknowledgeBlockingWarnings = false, IReadOnlyList<ImportLineOverride>? Overrides = null);
 
 public sealed record BlockingWarningsResponse(string Error, IReadOnlyList<ImportWarning> Warnings);
 
@@ -83,7 +89,7 @@ public static class ImportEndpoints
     private static async Task<IResult> ConfirmAsync(
         Guid id, ConfirmImportRequest? request, ImportService imports, CancellationToken ct)
     {
-        var outcome = await imports.ConfirmAsync(id, request?.AcknowledgeBlockingWarnings ?? false, ct);
+        var outcome = await imports.ConfirmAsync(id, request?.AcknowledgeBlockingWarnings ?? false, request?.Overrides, ct);
         return outcome.Error switch
         {
             null => Results.Ok(outcome.Result),
@@ -94,6 +100,7 @@ public static class ImportEndpoints
             ConfirmError.AlreadyImported => Error("already_imported", StatusCodes.Status409Conflict),
             ConfirmError.AccountArchived => Error("account_archived", StatusCodes.Status409Conflict),
             ConfirmError.BlockingWarnings => Results.Conflict(new BlockingWarningsResponse("blocking_warnings", outcome.Warnings)),
+            ConfirmError.InvalidOverride => Error("invalid_override", StatusCodes.Status422UnprocessableEntity),
             ConfirmError.UnsupportedAmountPrecision => Error("unsupported_amount_precision", StatusCodes.Status422UnprocessableEntity),
             _ => Error("unsupported_line", StatusCodes.Status422UnprocessableEntity),
         };
