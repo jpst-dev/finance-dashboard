@@ -121,14 +121,35 @@ docker compose restart web
 
 ### Desenvolvimento
 
-Com o `db` do Compose rodando (`docker compose up -d db`), rode a API localmente (perfil `http`, porta 5288) e o front com Vite; o proxy do Vite encaminha `/api` para a API:
+O `db` do Compose precisa estar rodando (`docker compose up -d db`; fica em `127.0.0.1:5432`). A API local usa a porta 5288 (perfil `http`) e o serviço `api` do Compose não publica porta no host, então não há conflito e não é preciso parar a stack. O Vite encaminha `/api` para `http://localhost:5288`.
 
-```bash
-dotnet run --project backend/src/FinanceDashboard.Api
-npm run dev
+Defina as variáveis no terminal onde vai rodar a API (substitua os placeholders pelos valores do seu `.env`):
+
+PowerShell:
+
+```powershell
+$env:ConnectionStrings__Default = "Host=localhost;Port=5432;Database=finance;Username=postgres;Password=<POSTGRES_PASSWORD do .env>"
+$env:Database__MigrateOnStartup = "true"
+$env:SEED_USER_EMAIL = "<SEED_USER_EMAIL do .env>"
+$env:SEED_USER_PASSWORD = "<SEED_USER_PASSWORD do .env>"
+dotnet run --project backend/src/FinanceDashboard.Api --launch-profile http
 ```
 
-A API local precisa da connection string (`ConnectionStrings__Default`) e, no primeiro uso, de `Database__MigrateOnStartup=true` e das variáveis `SEED_*` no ambiente do processo.
+bash:
+
+```bash
+export ConnectionStrings__Default="Host=localhost;Port=5432;Database=finance;Username=postgres;Password=<POSTGRES_PASSWORD do .env>"
+export Database__MigrateOnStartup=true
+export SEED_USER_EMAIL="<SEED_USER_EMAIL do .env>"
+export SEED_USER_PASSWORD="<SEED_USER_PASSWORD do .env>"
+dotnet run --project backend/src/FinanceDashboard.Api --launch-profile http
+```
+
+Em outro terminal, na raiz do repositório:
+
+```bash
+npm run dev
+```
 
 ### Testes
 
