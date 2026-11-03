@@ -92,6 +92,7 @@ public class CategoryRuleMatcherTests
     [InlineData("Assinatura Ficticia 03 11", "ASSINATURA FICTICIA")]
     [InlineData("Loja Exemplo 12345", "LOJA EXEMPLO")]
     [InlineData("Padaria S.A. - Centro", "PADARIA S.A. - CENTRO")]
+    [InlineData("IFOOD *LOJA EXEMPLO", "IFOOD *LOJA EXEMPLO")]
     [InlineData("Padaria 24 Horas", "PADARIA 24 HORAS")]
     [InlineData("AB 12", null)]
     public void SuggestPattern_strips_masked_documents_dates_and_trailing_numbers(string description, string? expected) =>
