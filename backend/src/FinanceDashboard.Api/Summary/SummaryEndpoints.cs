@@ -39,9 +39,7 @@ public static class SummaryEndpoints
 
         // Pending lines already on a Confirmed link are not "to classify"; everything else counts as before.
         var query = db.Transactions.AsNoTracking().Visible().Where(t => t.Date >= start && t.Date < end)
-            .Where(t => t.State != TransactionState.PendingClassification
-                || !db.Links.Any(l => l.State == LinkState.Confirmed
-                    && (l.OutTransactionId == t.Id || l.InTransactionId == t.Id)));
+            .ExcludingConfirmedPending(db);
         if (accountId is not null) query = query.Where(t => t.AccountId == accountId);
 
         var lines = await query

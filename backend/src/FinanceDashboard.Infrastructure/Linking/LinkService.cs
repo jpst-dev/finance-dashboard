@@ -28,11 +28,13 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
     public Task<LinkOutcome> UndoAsync(Guid id, CancellationToken ct = default) =>
         InLockedTransactionAsync(() => DecideAsync(id, LinkState.Confirmed, LinkState.Rejected, ct), ct);
 
-    /// <summary>Drops every link (any state) that cites the line and reconciles again.</summary>
+    /// <summary>Drops the Suggested and Confirmed links that cite the line (Rejected ones survive, so a rejected pair never
+    /// comes back after an edit) and reconciles again.</summary>
     public Task InvalidateAsync(Guid transactionId, CancellationToken ct = default) =>
         InLockedTransactionAsync(async () =>
         {
-            await db.Links.Where(l => l.OutTransactionId == transactionId || l.InTransactionId == transactionId)
+            await db.Links.Where(l => l.State != LinkState.Rejected
+                    && (l.OutTransactionId == transactionId || l.InTransactionId == transactionId))
                 .ExecuteDeleteAsync(ct);
             return await ReconcileCoreAsync(ct);
         }, ct);

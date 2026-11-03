@@ -322,7 +322,7 @@
     },
     "links": {
       "suggestionsTitle": "Link suggestions",
-      "suggestionsHelp": "Pairs that look like the same movement (transfer between your accounts or invoice payment). Confirm to take them out of spending and the queue.",
+      "suggestionsHelp": "Pairs that look like the same movement (transfer between your accounts or invoice payment). Confirm to take them out of the pending queue.",
       "linkedTitle": "Recently linked",
       "out": "Out",
       "in": "In",

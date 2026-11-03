@@ -322,7 +322,7 @@
     },
     "links": {
       "suggestionsTitle": "Sugestões de vínculo",
-      "suggestionsHelp": "Pares que parecem ser a mesma movimentação (transferência entre suas contas ou pagamento de fatura). Confirme para tirá-los dos gastos e da fila.",
+      "suggestionsHelp": "Pares que parecem ser a mesma movimentação (transferência entre suas contas ou pagamento de fatura). Confirme para tirá-los da fila de pendências.",
       "linkedTitle": "Vinculados recentemente",
       "out": "Saída",
       "in": "Entrada",

@@ -263,6 +263,7 @@ Pagamentos de fatura e transferências entre contas próprias aparecem como duas
 - **Vincula sozinho**: pares sem ambiguidade; pagamento de fatura só dentro do mesmo banco (conta e cartão do Nubank, ou do Itaú) e transferência entre contas correntes com no máximo 1 dia de diferença.
 - **Fica como sugestão ou pendente**: pares ambíguos, transferências com 2 ou 3 dias de diferença, fatura paga por outro banco e pagamentos parciais.
 - **Na tela Pendências**: confirme ou rejeite as sugestões; em Vinculados, desfaça um vínculo (ele não será sugerido de novo). Linhas vinculadas saem da fila e não mudam saldos nem receitas/despesas.
+- **Banco já existente**: depois de atualizar, a próxima importação (ou `POST /api/links/reconcile`) vincula as pendências mais antigas; não há botão na tela para isso.
 - **API** (`/api/links`): `GET /` (lista, filtro por estado), `POST /reconcile`, `POST /{id}/confirm`, `POST /{id}/reject` e `DELETE /{id}` (desfaz).
 - O demo público mostra vínculos de exemplo (somente leitura). Decisões em [ADR 0007](docs/adr/0007-vinculos-e-neutralidade-derivada.md).
 
@@ -333,7 +334,7 @@ Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos
 
 ### Roteiro
 
-Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. Próximas fatias: S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. S3(a) conciliação (pagamento de fatura e transferência entre contas próprias) entregue. Próximas fatias: S3(b) Pix parcelado e aplicação/resgate, S3(c) regras de categoria e recorrências, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
 
 ## 🤝 Contribuindo
 

@@ -37,7 +37,10 @@ function fmtDate(d: string): string {
 }
 async function setState(id: string, e: Event) {
   const state = (e.target as HTMLSelectElement).value as TransactionState;
-  if (await store.classify(id, { state })) status.value = t("real.pending.saved");
+  if (await store.classify(id, { state })) {
+    status.value = t("real.pending.saved");
+    void links.load(); // the server drops the line's links on a state change; avoid stale suggestions
+  }
 }
 async function setCategory(id: string, categoryId: string | null) {
   if (await store.classify(id, { categoryId })) status.value = t("real.pending.saved");

@@ -12,9 +12,9 @@ Pagamento de fatura (saída na conta, entrada no cartão) e transferência entre
 - **Pareamento exato 1:1** (`LinkMatcher`): contas diferentes, valores opostos iguais, datas a até `WindowDays = 3`, papéis compatíveis (fatura só no mesmo banco: conta e cartão do Nubank, ou do Itaú; transferência só entre contas correntes). Só lê linhas `PendingClassification`, visíveis e sem vínculo confirmado.
 - **Ambiguidade medida no grafo inteiro**: o par só é confirmado sozinho se seu componente conexo (no grafo de candidatos da janela de 3 dias) tem uma única aresta. `OwnTransfer` só confirma sozinho com |Δdata| ≤ `AutoTransferDays = 1`; acima disso fica `Suggested`.
 - **Sugestões recalculadas** a cada reconciliação (as `Suggested` são apagadas e refeitas); `Confirmed` e `Rejected` são preservados.
-- **Reconciliação dentro da transação da confirmação da importação**, sob `pg_advisory_xact_lock` por usuário; confirmar, rejeitar, desfazer e invalidar usam o mesmo lock, então não se intercalam.
+- **Reconciliação dentro da transação da confirmação da importação**, sob `pg_advisory_xact_lock` por usuário; reconciliar, confirmar, rejeitar, desfazer vínculo e invalidar usam o mesmo lock, então não se intercalam. **Exceção:** desfazer um lote de importação (`ImportService.UndoAsync`) não toma esse lock. Consequência, muito rara num uso de um só usuário: editar/confirmar ao mesmo tempo que um desfazer de lote pode falhar por deadlock ou violação de FK; a transação é revertida e a API responde 500, sem perda de dados (basta repetir).
 - **Desfazer vínculo marca `Rejected`**: o matcher nunca recria o par.
-- **Editar valor, data, ou estado para `Normal`, e ocultar a linha, apagam todos os vínculos dela** (inclusive `Rejected`) e reconciliam de novo (`LinkService.InvalidateAsync`). Excluir uma linha manual apaga por cascata.
+- **Editar valor, data, ou estado para `Normal`, e ocultar a linha, apagam os vínculos `Suggested` e `Confirmed` dela** e reconciliam de novo (`LinkService.InvalidateAsync`). Os `Rejected` sobrevivem à edição, para um par rejeitado não voltar depois de o usuário ajustar a linha. Excluir uma linha manual apaga por cascata.
 
 ## Consequências
 - O resumo e os saldos continuam como estavam; o ganho é a fila limpa e os movimentos internos identificados (tela Vinculados).

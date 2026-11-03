@@ -319,4 +319,25 @@ public sealed class LinkServiceTests(PostgresFixture postgres)
         Assert.Equal(LinkState.Confirmed, link.State);
         Assert.Equal((o.Id, i2.Id), (link.OutTransactionId, link.InTransactionId));
     }
+
+    [Fact]
+    public async Task Invalidate_keeps_rejected_links_so_the_pair_does_not_come_back()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var w = new World(db);
+        var o = await w.AccountPay(-100m, 5);
+        var i = await w.CardPay(100m, 6);
+        await Service(db).ReconcileAsync();
+        var link = await db.Links.AsNoTracking().SingleAsync();
+        Assert.Equal(LinkOutcome.Ok, await Service(db).UndoAsync(link.Id));
+
+        // The line is edited (date still inside the window): the rejection must survive.
+        await db.Transactions.Where(t => t.Id == i.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.Date, new DateOnly(2026, 10, 7)));
+        await Service(db).InvalidateAsync(i.Id);
+
+        var after = await db.Links.AsNoTracking().SingleAsync();
+        Assert.Equal(LinkState.Rejected, after.State);
+        Assert.Equal((o.Id, i.Id), (after.OutTransactionId, after.InTransactionId));
+    }
 }
