@@ -182,11 +182,11 @@
         "PeriodGap": "There is a gap between this file and the periods already imported for this account.",
         "PeriodOverlap": "This file's period overlaps periods already imported for this account.",
         "InvoiceTotalMismatch": "The sum of the bill lines does not match the bill total declared in the file.",
-        "InvoiceHasMissingLines": "The bill appears to be missing lines; the import cannot proceed. Export the file again.",
-        "LedgerBalanceBeforeLastLine": "The balance reported in the file predates the last line.",
+        "InvoiceHasMissingLines": "This bill is missing lines that were imported before; the import cannot proceed. Undo the previous import of this bill and import again with the complete file.",
+        "LedgerBalanceBeforeLastLine": "The balance reported in the file predates the last line and will not be used as a balance checkpoint.",
         "PossibleDuplicate": "Some lines look like duplicates of existing transactions.",
         "UnknownLineKinds": "The file has unknown line kinds, treated as ordinary transactions.",
-        "UnknownCardSuffix": "Some lines belong to a card (last digits) we do not recognize on this account.",
+        "UnknownCardSuffix": "Some lines have card last digits not yet seen on this account.",
         "unknown": "Notice about the file."
       },
       "history": {

@@ -153,6 +153,7 @@ describe("imports store", () => {
   });
 
   it("Each_warning_code_has_a_translation_in_both_languages", () => {
+    // Atualize este número ao acrescentar códigos de aviso no servidor (ImportWarning.cs).
     expect(IMPORT_WARNING_CODES.length).toBe(13);
     const ws = (o: unknown) => (o as { real: { import: { warnings: Record<string, string> } } }).real.import.warnings;
     for (const c of IMPORT_WARNING_CODES) {

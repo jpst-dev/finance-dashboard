@@ -182,11 +182,11 @@
         "PeriodGap": "Há um intervalo sem importação entre este arquivo e os períodos já importados desta conta.",
         "PeriodOverlap": "O período deste arquivo se sobrepõe a períodos já importados desta conta.",
         "InvoiceTotalMismatch": "A soma das linhas da fatura não bate com o total da fatura informado no arquivo.",
-        "InvoiceHasMissingLines": "A fatura parece estar sem linhas; a importação não pode continuar. Exporte o arquivo de novo.",
-        "LedgerBalanceBeforeLastLine": "O saldo informado no arquivo é anterior à última linha.",
+        "InvoiceHasMissingLines": "Faltam nesta fatura linhas que já foram importadas antes; a importação não pode continuar. Desfaça a importação anterior desta fatura e importe novamente (o arquivo deve estar completo).",
+        "LedgerBalanceBeforeLastLine": "O saldo informado no arquivo é anterior à última linha e não será usado como ponto de conferência.",
         "PossibleDuplicate": "Algumas linhas parecem duplicar lançamentos já existentes.",
         "UnknownLineKinds": "O arquivo tem tipos de linha desconhecidos, tratados como lançamentos comuns.",
-        "UnknownCardSuffix": "Algumas linhas são de um cartão (final) que não reconhecemos nesta conta.",
+        "UnknownCardSuffix": "Algumas linhas têm final de cartão ainda não visto nesta conta.",
         "unknown": "Aviso sobre o arquivo."
       },
       "history": {

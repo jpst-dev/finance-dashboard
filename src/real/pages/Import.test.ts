@@ -64,6 +64,7 @@ describe("Import page", () => {
     const card = w.find("[data-test=file-hint]").text();
     expect(card).toContain(".xlsx");
     expect(chk).not.toContain(".xlsx");
+    expect(chk).toContain(".ofx");
     expect(new Set([none, chk, card]).size).toBe(3);
   });
 
