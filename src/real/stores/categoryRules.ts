@@ -53,7 +53,7 @@ export const useCategoryRulesStore = defineStore("fd-category-rules", () => {
       code = ruleErrorCodeOf(e);
     }
     try {
-      await Promise.all([load(), ...(ok && afterOk ? [afterOk()] : [])]);
+      await Promise.all([load(), ...(ok && afterOk ? [afterOk().catch(() => undefined)] : [])]);
     } finally {
       busy.value = false;
     }

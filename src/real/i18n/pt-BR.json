@@ -382,7 +382,6 @@
       "deleteNo": "Cancelar",
       "deleted": "Regra excluída.",
       "apply": "Aplicar regras",
-      "applying": "Aplicando…",
       "shortcut": "Sempre categorizar «{pattern}» como {category}",
       "shortcutButton": "Criar regra",
       "shortcutDismiss": "Dispensar"

@@ -18,6 +18,13 @@ describe("suggestPattern", () => {
   it("keeps_asterisk_store_marker", () => {
     expect(suggestPattern("IFOOD *LOJA")).toBe("IFOOD *LOJA");
   });
+  it("matches_backend_vectors", () => {
+    expect(suggestPattern("Pix FULANO FICTICIO ***.123.456-** 12/05")).toBe("PIX FULANO FICTICIO");
+    expect(suggestPattern("Compra Supermercado Exemplo 12/05/2026")).toBe("COMPRA SUPERMERCADO EXEMPLO");
+    expect(suggestPattern("IFOOD *LOJA EXEMPLO")).toBe("IFOOD *LOJA EXEMPLO");
+    expect(suggestPattern("Padaria 24 Horas")).toBe("PADARIA 24 HORAS");
+    expect(suggestPattern("AB 12")).toBeNull();
+  });
   it("returns_null_when_too_short_or_too_long", () => {
     expect(suggestPattern("AB 12/03")).toBeNull();
     expect(suggestPattern("")).toBeNull();

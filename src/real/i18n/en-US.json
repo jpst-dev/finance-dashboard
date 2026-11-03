@@ -382,7 +382,6 @@
       "deleteNo": "Cancel",
       "deleted": "Rule deleted.",
       "apply": "Apply rules",
-      "applying": "Applying…",
       "shortcut": "Always categorize «{pattern}» as {category}",
       "shortcutButton": "Create rule",
       "shortcutDismiss": "Dismiss"

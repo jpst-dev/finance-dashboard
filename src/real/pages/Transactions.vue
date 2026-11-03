@@ -60,8 +60,10 @@ async function onEdit(v: TransactionInput) {
   if (cur && (await store.update(cur.id, v))) {
     editing.value = null;
     status.value = t("real.transactions.updated");
+    // Só quando a categoria mudou para um valor não nulo.
     // O trecho vem da descrição ORIGINAL (a renomeada não é a que a regra casa).
-    const p = v.categoryId ? suggestPattern(cur.originalDescription) : null;
+    const changed = !!v.categoryId && v.categoryId !== cur.categoryId;
+    const p = changed ? suggestPattern(cur.originalDescription) : null;
     shortcut.value = p && v.categoryId ? { pattern: p, categoryId: v.categoryId } : null;
   }
 }

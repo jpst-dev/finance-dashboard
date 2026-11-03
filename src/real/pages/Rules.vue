@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import type { CategoryRule } from "../api/types";
 import CategorySelect from "../components/CategorySelect.vue";
 import { useCategoriesStore } from "../stores/categories";
+import { PATTERN_MAX } from "../rules/suggestPattern";
 import { useCategoryRulesStore } from "../stores/categoryRules";
 
 const { t } = useI18n();
@@ -90,7 +91,7 @@ const btn =
     <form class="mt-4 flex flex-wrap items-end gap-3" data-test="rule-form" @submit.prevent="onSubmit">
       <div>
         <label for="rule-pattern" class="mb-1 block text-sm">{{ t("real.rules.pattern") }}</label>
-        <input id="rule-pattern" v-model="pattern" type="text" maxlength="200" autocomplete="off" :class="field" data-test="pattern" />
+        <input id="rule-pattern" v-model="pattern" type="text" :maxlength="PATTERN_MAX" autocomplete="off" :class="field" data-test="pattern" />
       </div>
       <div>
         <label for="rule-category" class="mb-1 block text-sm">{{ t("real.rules.category") }}</label>
@@ -103,8 +104,8 @@ const btn =
     <div v-if="confirming" class="mt-3 rounded border border-amber-700 p-3" role="alertdialog" :aria-label="t('real.rules.delete')" data-test="confirm-delete">
       <p>{{ t("real.rules.deleteConfirm", { pattern: confirming.pattern }) }}</p>
       <div class="mt-2 flex gap-2">
-        <button type="button" :class="btn" data-test="confirm-yes" @click="onDelete">{{ t("real.rules.deleteYes") }}</button>
-        <button type="button" :class="btn" data-test="confirm-no" @click="confirming = null">{{ t("real.rules.deleteNo") }}</button>
+        <button type="button" :class="btn" :disabled="store.busy" data-test="confirm-yes" @click="onDelete">{{ t("real.rules.deleteYes") }}</button>
+        <button type="button" :class="btn" :disabled="store.busy" data-test="confirm-no" @click="confirming = null">{{ t("real.rules.deleteNo") }}</button>
       </div>
     </div>
 

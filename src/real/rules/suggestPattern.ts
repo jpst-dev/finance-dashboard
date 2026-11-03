@@ -2,7 +2,7 @@
 export const PATTERN_MIN = 3;
 export const PATTERN_MAX = 100;
 
-const DATE_TOKEN = /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/;
+const DATE_TOKEN = /^\d{1,2}\/\d{1,2}(\/(\d{2}|\d{4}))?$/;
 const NUMBER_TOKEN = /^\d+([.,]\d+)*$/;
 const MASKED_DOC = (tok: string) => tok.includes("*") && /[\d.-]/.test(tok);
 

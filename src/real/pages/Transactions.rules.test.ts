@@ -51,6 +51,12 @@ describe("Transactions rule shortcut", () => {
     expect(text).not.toContain("RENOMEADA");
   });
 
+  it("does_not_appear_when_category_is_unchanged", async () => {
+    const { w } = await setup(tx({ categoryId: "c1", originalDescription: "Supermercado Exemplo" }));
+    await saveWith(w, "c1");
+    expect(w.find("[data-test=rule-shortcut]").exists()).toBe(false);
+  });
+
   it("does_not_appear_when_saved_without_category", async () => {
     const { w } = await setup(tx({ categoryId: "c1", originalDescription: "Supermercado Exemplo" }));
     await saveWith(w, "");
