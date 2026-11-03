@@ -61,9 +61,9 @@ public static class XlsxSheetReader
 
     public static XlsxSheet ReadFirstVisibleSheet(byte[] content)
     {
-        XlsxSafety.Validate(content);
         try
         {
+            XlsxSafety.Validate(content);
             using var stream = new MemoryStream(content, writable: false);
             using var document = SpreadsheetDocument.Open(stream, false,
                 new OpenSettings { MaxCharactersInPart = XlsxSafety.MaxTotalUncompressed });

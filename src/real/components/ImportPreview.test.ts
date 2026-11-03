@@ -180,7 +180,7 @@ describe("ImportPreview", () => {
     expect(w.text()).toContain("Parcela 2 de 10");
     expect(w.text()).toContain("•••• 1234");
     expect(w.text()).toContain(String(i18n.global.t("real.import.cardKinds.VirtualRecurring")));
-    expect(w.html()).not.toContain("virtualrecurring");
+    expect(w.text()).not.toContain("VirtualRecurring");
     const attrs = Array.from((w.element as HTMLElement).querySelectorAll<HTMLElement>("*")).flatMap((e) => Array.from(e.attributes).map((a) => a.value));
     expect(attrs.some((a) => a.includes("1234"))).toBe(false);
   });
@@ -219,6 +219,8 @@ describe("ImportPreview", () => {
     expect(w.find("[data-test=ack]").exists()).toBe(false);
     expect(w.find("[data-test=confirm]").attributes("disabled")).toBeDefined();
     expect(w.find("[data-test=blocked-help]").text()).toContain("desfaça a importação anterior desta fatura e importe de novo");
+    expect(w.find("[data-test=blocked-help]").attributes("id")).toBe("import-blocked-help");
+    expect(w.find("[data-test=confirm]").attributes("aria-describedby")).toBe("import-blocked-help");
     await w.find("[data-test=confirm]").trigger("click");
     expect(imports.confirm).not.toHaveBeenCalled();
   });
@@ -229,6 +231,7 @@ describe("ImportPreview", () => {
     );
     expect(w.find("[data-test=ack]").exists()).toBe(true);
     expect(w.find("[data-test=blocked-help]").exists()).toBe(false);
+    expect(w.find("[data-test=confirm]").attributes("aria-describedby")).toBeUndefined();
     expect(w.find("[data-test=confirm]").attributes("disabled")).toBeDefined();
   });
 

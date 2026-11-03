@@ -190,7 +190,7 @@ public sealed class ItauInvoiceImportTests(PostgresFixture postgres)
         var w = Assert.Single(Warnings(v2), x => x.GetProperty("code").GetString() == "InvoiceHasMissingLines");
         Assert.Equal("blocking", w.GetProperty("severity").GetString());
         Assert.False(w.GetProperty("overridable").GetBoolean());
-        Assert.Contains("1", w.GetProperty("message").GetString());
+        Assert.Equal(FinanceDashboard.Infrastructure.Importing.ImportWarning.InvoiceHasMissingLines(1).Message, w.GetProperty("message").GetString());
 
         // Acknowledging does not help: the warning is not overridable.
         var refused = await ConfirmAsync(c, BatchOf(v2), acknowledge: true);

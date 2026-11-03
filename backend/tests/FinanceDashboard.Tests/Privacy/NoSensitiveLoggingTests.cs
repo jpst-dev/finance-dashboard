@@ -83,10 +83,12 @@ public sealed class NoSensitiveLoggingTests(PostgresFixture postgres)
         const string holderMarker = "TITULARMARKER-QZ84";
         const string cellMarker = "CELULAMARKER-QZ85";
         const string cardNumber = "****9137";
-        string[] markers = [memoMarker, acctMarker, amountMarker, "6543,21", invoiceMarker, holderMarker, cellMarker, cardNumber];
+        const string fileMarker = "FILEMARKER-QZ86";
+        const string externalId = "00012345";
+        string[] markers = [fileMarker, externalId, memoMarker, acctMarker, amountMarker, "6543,21", invoiceMarker, holderMarker, cellMarker, cardNumber];
 
         // External identifier set and different from the file's ACCTID: the mismatch path runs too.
-        var checking = await CreateAccountAsync(c, externalId: "00012345");
+        var checking = await CreateAccountAsync(c, externalId: externalId);
         var card = await CreateAccountAsync(c, "CreditCard");
 
         var ofx = OfxTestFile.Itau().AccountId(acctMarker)
@@ -100,7 +102,7 @@ public sealed class NoSensitiveLoggingTests(PostgresFixture postgres)
             .Line("2026-10-12", "PAGAMENTO EFETUADO", "-" + amountMarker, cardNumber: cardNumber, name: holderMarker)
             .Build();
 
-        foreach (var (acc, bytes, name) in new[] { (checking, ofx, "extrato.ofx"), (card, invoice, "fatura.xlsx") })
+        foreach (var (acc, bytes, name) in new[] { (checking, ofx, fileMarker + ".ofx"), (card, invoice, fileMarker + ".xlsx") })
         {
             var batch = await PreviewAsync(c, acc, bytes, name);
             Assert.Equal(HttpStatusCode.OK, (await c.GetAsync($"/api/imports/{batch}")).StatusCode);
@@ -113,7 +115,7 @@ public sealed class NoSensitiveLoggingTests(PostgresFixture postgres)
         var bad = await UploadAsync(c, card, XlsxTestFile.Invoice("2026-11-10", total: "10.00")
             .Line("2026-10-03", "LOJA " + invoiceMarker, "10.00", cardNumber: cardNumber, name: holderMarker)
             .AmountAsText(0, cellMarker)
-            .Build(), "fatura.xlsx");
+            .Build(), fileMarker + ".xlsx");
         Assert.Equal(HttpStatusCode.UnprocessableEntity, bad.StatusCode);
         var badBody = await bad.Content.ReadAsStringAsync();
         using (var doc = JsonDocument.Parse(badBody))

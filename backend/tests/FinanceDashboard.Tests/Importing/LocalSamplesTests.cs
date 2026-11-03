@@ -53,7 +53,20 @@ internal static class LocalSamples
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
 
-    public static ParsedStatement Read(string file) => Read(File.ReadAllBytes(file));
+    public static ParsedStatement Read(string file)
+    {
+        byte[] bytes;
+        try
+        {
+            bytes = File.ReadAllBytes(file);
+        }
+        catch (Exception e)
+        {
+            Assert.Fail("a sample could not be read: " + e.GetType().Name);
+            throw;
+        }
+        return Read(bytes);
+    }
 
     /// <summary>
     /// Reads sample bytes. On a format error the test fails with the error kind only (a fixed code such as

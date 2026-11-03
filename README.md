@@ -247,7 +247,7 @@ Regras:
 - **Avisos**: `InvoiceTotalMismatch` (total declarado ≠ soma das linhas que não são pagamento; bloqueia, aceita `acknowledgeBlockingWarnings`), `LedgerBalanceBeforeLastLine`, `PossibleDuplicate`, `UnknownLineKinds` e `UnknownCardSuffix` (só avisam), além dos do Nubank.
 - **Fatura com linhas faltando**: se a fatura (mesma conta e vencimento) já tem linhas confirmadas que não aparecem no arquivo novo, a prévia mostra `InvoiceHasMissingLines`, que **bloqueia sem override** (o confirm dá `409 blocking_warnings` mesmo com `acknowledgeBlockingWarnings`). Desfaça o lote anterior dessa fatura e importe de novo. Nada é apagado ou substituído sozinho. Use uma conta `CreditCard` por cartão: dois cartões com o mesmo vencimento na mesma conta se bloqueiam.
 - **Desfazer**: igual ao Nubank. Linhas que você **excluiu** continuam ocupando a chave e não voltam ao reimportar.
-- **Erros de arquivo** (`422`, só com o código): `unsupported_bank`, `not_xlsx`, `encrypted_xlsx`, `xlsx_limits_exceeded`, `xlsx_unsafe_content` (macro, link externo, conteúdo embutido), `unsupported_layout` (layout desconhecido) e `invalid_cell` (com o número da linha da planilha). Fórmulas nunca são avaliadas.
+- **Erros de arquivo** (`422`, só com o código): `unsupported_bank`, `not_xlsx`, `encrypted_xlsx`, `xlsx_limits_exceeded`, `xlsx_unsafe_content` (macro, link externo, conteúdo embutido), `unsupported_layout` (layout desconhecido) e `invalid_cell` (a resposta traz só o código; a linha da planilha fica apenas no diagnóstico interno e nos testes, nunca na resposta nem nos logs). Fórmulas nunca são avaliadas.
 
 ### Desenvolvimento
 

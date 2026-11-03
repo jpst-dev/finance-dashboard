@@ -225,6 +225,7 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
         class="rounded bg-blue-700 px-3 py-1.5 text-white disabled:opacity-50"
         :class="focusRing"
         :disabled="!canConfirm"
+        :aria-describedby="blocked ? 'import-blocked-help' : undefined"
         data-test="confirm"
         @click="confirm"
       >
@@ -234,6 +235,6 @@ const focusRing = "focus-visible:outline focus-visible:outline-2 focus-visible:o
         {{ t("real.import.cancel") }}
       </button>
     </div>
-    <p v-if="blocked" class="mt-2 text-sm text-amber-300" data-test="blocked-help">{{ t("real.import.blockedHelp") }}</p>
+    <p v-if="blocked" id="import-blocked-help" class="mt-2 text-sm text-amber-300" data-test="blocked-help">{{ t("real.import.blockedHelp") }}</p>
   </section>
 </template>

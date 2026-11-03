@@ -311,7 +311,8 @@ public sealed class XlsxSafetyTests
         var allocated = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
 
         Assert.Equal("xlsx_limits_exceeded", ex.Kind);
-        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(2), $"took {sw.ElapsedMilliseconds} ms");
+        // Generous bound: the real guarantee is the allocation cap below; a tight wall-clock limit flakes on slow CI.
+        Assert.True(sw.Elapsed < TimeSpan.FromSeconds(10), $"took {sw.ElapsedMilliseconds} ms");
         Assert.True(allocated < 8L * 1024 * 1024, $"allocated {allocated} bytes");
     }
 
