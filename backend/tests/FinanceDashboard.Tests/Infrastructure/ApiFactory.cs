@@ -17,6 +17,9 @@ public sealed class ApiFactory(string connectionString, Dictionary<string, strin
         {
             ["ConnectionStrings:Default"] = connectionString,
             ["Database:MigrateOnStartup"] = "true",
+            // Isolate from the developer's shell (README tells them to export these for `dotnet run`).
+            ["SEED_USER_EMAIL"] = null,
+            ["SEED_USER_PASSWORD"] = null,
         };
         if (extraConfig is not null)
         {

@@ -101,6 +101,21 @@ public sealed class AuthTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Logout_without_antiforgery_token_is_rejected()
+    {
+        await using var factory = await NewFactoryAsync();
+        await CreateUserAsync(factory, Email, Password);
+        var (client, _) = await LoginAsync(factory, Email, Password);
+        using var _c = client;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/logout");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/auth/me")).StatusCode);
+    }
+
+    [Fact]
     public async Task Me_without_cookie_returns_401()
     {
         await using var factory = await NewFactoryAsync();
