@@ -1,0 +1,29 @@
+[
+  {
+    "id": "0000000a-0000-4000-8000-000000000002",
+    "name": "Cartão Exemplo",
+    "type": "CreditCard",
+    "institution": "Banco Exemplo",
+    "externalIdentifier": null,
+    "isArchived": false,
+    "balance": "-3469.45"
+  },
+  {
+    "id": "0000000a-0000-4000-8000-000000000003",
+    "name": "Carteira",
+    "type": "Wallet",
+    "institution": "",
+    "externalIdentifier": null,
+    "isArchived": false,
+    "balance": "389.25"
+  },
+  {
+    "id": "0000000a-0000-4000-8000-000000000001",
+    "name": "Conta Corrente Exemplo",
+    "type": "Checking",
+    "institution": "Banco Exemplo",
+    "externalIdentifier": null,
+    "isArchived": false,
+    "balance": "21757.63"
+  }
+]

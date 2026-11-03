@@ -1,0 +1,339 @@
+{
+  "2026-05": {
+    "month": "2026-05",
+    "income": "5212.40",
+    "expenses": "-2727.77",
+    "net": "2484.63",
+    "byCategory": [
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000001",
+        "categoryName": "Alimentação",
+        "total": "-515.70"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000002",
+        "categoryName": "Moradia",
+        "total": "-1792.37"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000003",
+        "categoryName": "Transporte",
+        "total": "-210.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000004",
+        "categoryName": "Saúde",
+        "total": "-57.80"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000005",
+        "categoryName": "Lazer",
+        "total": "-48.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000006",
+        "categoryName": "Educação",
+        "total": "-64.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000007",
+        "categoryName": "Assinaturas",
+        "total": "-39.90"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000b",
+        "categoryName": "Salário",
+        "total": "5200.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000c",
+        "categoryName": "Rendimentos",
+        "total": "12.40"
+      }
+    ],
+    "pending": {
+      "count": 0,
+      "total": "0.00"
+    }
+  },
+  "2026-06": {
+    "month": "2026-06",
+    "income": "5248.23",
+    "expenses": "-2786.19",
+    "net": "2462.04",
+    "byCategory": [
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000001",
+        "categoryName": "Alimentação",
+        "total": "-544.27"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000002",
+        "categoryName": "Moradia",
+        "total": "-1799.72"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000003",
+        "categoryName": "Transporte",
+        "total": "-221.40"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000004",
+        "categoryName": "Saúde",
+        "total": "-61.90"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000005",
+        "categoryName": "Lazer",
+        "total": "-49.50"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000006",
+        "categoryName": "Educação",
+        "total": "-69.50"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000007",
+        "categoryName": "Assinaturas",
+        "total": "-39.90"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000b",
+        "categoryName": "Salário",
+        "total": "5235.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000c",
+        "categoryName": "Rendimentos",
+        "total": "13.23"
+      }
+    ],
+    "pending": {
+      "count": 0,
+      "total": "0.00"
+    }
+  },
+  "2026-07": {
+    "month": "2026-07",
+    "income": "5284.06",
+    "expenses": "-3144.61",
+    "net": "2139.45",
+    "byCategory": [
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000001",
+        "categoryName": "Alimentação",
+        "total": "-572.84"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000002",
+        "categoryName": "Moradia",
+        "total": "-1807.07"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000003",
+        "categoryName": "Transporte",
+        "total": "-232.80"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000004",
+        "categoryName": "Saúde",
+        "total": "-66.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000005",
+        "categoryName": "Lazer",
+        "total": "-51.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000006",
+        "categoryName": "Educação",
+        "total": "-75.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000007",
+        "categoryName": "Assinaturas",
+        "total": "-39.90"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000b",
+        "categoryName": "Salário",
+        "total": "5270.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000c",
+        "categoryName": "Rendimentos",
+        "total": "14.06"
+      },
+      {
+        "categoryId": null,
+        "categoryName": null,
+        "total": "-300.00"
+      }
+    ],
+    "pending": {
+      "count": 0,
+      "total": "0.00"
+    }
+  },
+  "2026-08": {
+    "month": "2026-08",
+    "income": "5319.89",
+    "expenses": "-3353.03",
+    "net": "1966.86",
+    "byCategory": [
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000001",
+        "categoryName": "Alimentação",
+        "total": "-601.41"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000002",
+        "categoryName": "Moradia",
+        "total": "-1814.42"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000003",
+        "categoryName": "Transporte",
+        "total": "-244.20"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000004",
+        "categoryName": "Saúde",
+        "total": "-70.10"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000005",
+        "categoryName": "Lazer",
+        "total": "-52.50"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000006",
+        "categoryName": "Educação",
+        "total": "-80.50"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000007",
+        "categoryName": "Assinaturas",
+        "total": "-39.90"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000008",
+        "categoryName": "Compras",
+        "total": "-450.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000b",
+        "categoryName": "Salário",
+        "total": "5305.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000c",
+        "categoryName": "Rendimentos",
+        "total": "14.89"
+      }
+    ],
+    "pending": {
+      "count": 0,
+      "total": "0.00"
+    }
+  },
+  "2026-09": {
+    "month": "2026-09",
+    "income": "5355.72",
+    "expenses": "-3411.45",
+    "net": "1944.27",
+    "byCategory": [
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000001",
+        "categoryName": "Alimentação",
+        "total": "-629.98"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000002",
+        "categoryName": "Moradia",
+        "total": "-1821.77"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000003",
+        "categoryName": "Transporte",
+        "total": "-255.60"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000004",
+        "categoryName": "Saúde",
+        "total": "-74.20"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000005",
+        "categoryName": "Lazer",
+        "total": "-54.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000006",
+        "categoryName": "Educação",
+        "total": "-86.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000007",
+        "categoryName": "Assinaturas",
+        "total": "-39.90"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000008",
+        "categoryName": "Compras",
+        "total": "-450.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000b",
+        "categoryName": "Salário",
+        "total": "5340.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000c",
+        "categoryName": "Rendimentos",
+        "total": "15.72"
+      }
+    ],
+    "pending": {
+      "count": 1,
+      "total": "250.00"
+    }
+  },
+  "2026-10": {
+    "month": "2026-10",
+    "income": "5375.00",
+    "expenses": "-2449.42",
+    "net": "2925.58",
+    "byCategory": [
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000001",
+        "categoryName": "Alimentação",
+        "total": "-130.40"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000002",
+        "categoryName": "Moradia",
+        "total": "-1829.12"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000007",
+        "categoryName": "Assinaturas",
+        "total": "-39.90"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-000000000008",
+        "categoryName": "Compras",
+        "total": "-450.00"
+      },
+      {
+        "categoryId": "0000000c-0000-4000-8000-00000000000b",
+        "categoryName": "Salário",
+        "total": "5375.00"
+      }
+    ],
+    "pending": {
+      "count": 2,
+      "total": "-195.40"
+    }
+  }
+}

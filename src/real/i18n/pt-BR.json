@@ -83,7 +83,11 @@
       "none": "Sem categoria",
       "mismatch": "não combina com o sinal do valor"
     },
+    "demo": {
+      "banner": "Demonstração com dados fictícios, somente leitura"
+    },
     "errors": {
+      "demo_read_only": "Demonstração somente leitura: alterações não são salvas.",
       "network": "Não foi possível conectar. Verifique a conexão e tente novamente.",
       "invalid": "Os dados enviados não foram aceitos. Revise e tente novamente.",
       "not_found": "Item não encontrado. Recarregue a página.",

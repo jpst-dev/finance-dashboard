@@ -217,6 +217,13 @@ describe("imports store", () => {
     expect(s3.store.blockedForGood).toBe(false);
   });
 
+  it("demo_read_only_maps_in_every_import_context", () => {
+    for (const ctx of ["upload", "confirm", "undo"] as const) {
+      expect(importErrorCode(new ApiError(403, "demo_read_only"), ctx)).toBe("demo_read_only");
+    }
+    expect(IMPORT_ERROR_CODES).toContain("demo_read_only");
+  });
+
   it("Each_known_error_code_has_a_translation_in_both_languages", () => {
     const brief = [
       "not_ofx", "empty", "too_large", "malformed", "forbidden_dtd", "unsupported_multiple_statements",

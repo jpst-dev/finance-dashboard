@@ -1,14 +1,21 @@
-// Garante que cada build não carrega código do outro modo.
-// Nunca imprime conteúdo dos arquivos, apenas o nome do arquivo infrator.
+// Garante que cada build carrega só o código do seu modo: o demo estático não pode
+// ter cliente HTTP real e o build real não pode ter fixtures nem o marcador do demo.
+// Nunca imprime conteúdo dos arquivos, apenas pasta/arquivo e o marcador.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-// Nota: "X-XSRF-TOKEN" não serve de marcador do modo real, pois o axios (usado pelo
-// legado) o embute por padrão. O marcador real é definido em src/real/boot.ts.
-const REAL_MARKER = "data-finance-real-mode";
-const checks = [
-  { dir: "dist", forbidden: REAL_MARKER, required: null, why: "código do modo real no bundle demo" },
-  { dir: "dist-real", forbidden: "finance_dashboard_transactions", required: REAL_MARKER, why: "código do modo demo no bundle real" },
+export const RULES = [
+  {
+    dir: "dist",
+    required: ["data-finance-demo-mode", "finance-demo-fixtures"],
+    forbidden: ["data-finance-real-mode", "/api/auth/csrf"],
+  },
+  {
+    dir: "dist-real",
+    required: ["data-finance-real-mode"],
+    forbidden: ["data-finance-demo-mode", "finance-demo-fixtures"],
+  },
 ];
 
 function* walk(dir) {
@@ -19,26 +26,38 @@ function* walk(dir) {
   }
 }
 
-let failed = false;
-for (const { dir, forbidden, required, why } of checks) {
-  if (!existsSync(dir)) {
-    console.error(`FALHA: pasta ${dir}/ não existe (rode o build antes).`);
-    failed = true;
-    continue;
-  }
-  let foundRequired = required === null;
-  for (const file of walk(dir)) {
-    const text = readFileSync(file, "utf8");
-    if (text.includes(forbidden)) {
-      console.error(`FALHA: ${file} contém "${forbidden}" (${why}).`);
-      failed = true;
+export function checkBundles(root, rules = RULES) {
+  const messages = [];
+  for (const { dir, required, forbidden } of rules) {
+    const full = join(root, dir);
+    if (!existsSync(full)) {
+      messages.push(`FALHA: pasta ${dir}/ não existe (rode o build antes).`);
+      continue;
     }
-    if (required && text.includes(required)) foundRequired = true;
+    const files = [...walk(full)];
+    if (files.length === 0) {
+      messages.push(`FALHA: pasta ${dir}/ não tem arquivos de bundle (build vazio?).`);
+      continue;
+    }
+    const found = new Set();
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      const shown = file.slice(root.length).replace(/^[\/]+/, "").replaceAll("\\", "/");
+      for (const marker of forbidden) {
+        if (text.includes(marker)) messages.push(`FALHA: ${shown} contém o marcador proibido "${marker}".`);
+      }
+      for (const marker of required) if (text.includes(marker)) found.add(marker);
+    }
+    for (const marker of required) {
+      if (!found.has(marker)) messages.push(`FALHA: ${dir}/ não contém o marcador obrigatório "${marker}" (build do modo errado?).`);
+    }
   }
-  if (!foundRequired) {
-    console.error(`FALHA: ${dir}/ não contém o marcador "${required}" (build do modo errado?).`);
-    failed = true;
-  }
+  return { ok: messages.length === 0, messages };
 }
-if (!failed) console.log("ok: bundles dist/ e dist-real/ isolados por modo");
-process.exit(failed ? 1 : 0);
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { ok, messages } = checkBundles(process.cwd());
+  for (const m of messages) console.error(m);
+  if (ok) console.log("ok: bundles dist/ e dist-real/ isolados por modo");
+  process.exit(ok ? 0 : 1);
+}

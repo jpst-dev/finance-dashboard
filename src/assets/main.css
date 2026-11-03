@@ -39,12 +39,3 @@
   border: 1px solid #1f232a;
   box-shadow: none;
 }
-
-.Vue-Toastification__toast {
-  font-family: Inter, system-ui, sans-serif;
-  border-radius: 10px;
-}
-.Vue-Toastification__toast--success {
-  background: #c6f432;
-  color: #0a0b0d;
-}

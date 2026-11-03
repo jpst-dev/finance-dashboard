@@ -20,3 +20,6 @@ export class ApiError extends Error {
 }
 
 export const NETWORK_ERROR_CODE = "network";
+
+/** Código do erro que o demo estático devolve em toda escrita. */
+export const DEMO_READ_ONLY_CODE = "demo_read_only";

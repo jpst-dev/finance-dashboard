@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { ApiError } from "../api/errors";
 import { fakeOverviewApi, sum } from "../testingSummary";
+import { setAppConfig } from "../appConfig";
 import { addMonths, currentMonthLocal, useSummaryStore } from "./summary";
 
 beforeEach(() => {
@@ -9,7 +10,10 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(2026, 10, 3, 23, 30)); // 03/11/2026 noite, hora local
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  setAppConfig(null);
+});
 
 describe("month math", () => {
   it("addMonths_rolls_over_years_with_string_arithmetic", () => {
@@ -96,5 +100,29 @@ describe("summary store", () => {
     await s.retryMonth("2026-01"); // fora da janela atual
     expect(JSON.stringify(s.history)).toBe(before);
     expect(api.summary.month).toHaveBeenCalledTimes(12);
+  });
+});
+
+describe("summary store with fixed clock", () => {
+  it("fixed_clock_sets_initial_month_and_blocks_next", async () => {
+    vi.setSystemTime(new Date(2027, 2, 1, 10));
+    setAppConfig({ fixedToday: "2026-10-15" });
+    const api = fakeOverviewApi({});
+    const s = useSummaryStore();
+    expect(s.month).toBe("2026-10");
+    expect(s.canGoNext).toBe(false);
+    await s.setMonth("2026-11");
+    expect(api.summary.month).not.toHaveBeenCalled();
+    expect(s.month).toBe("2026-10");
+  });
+  it("fixed_clock_in_the_future_of_system_time_still_rules", async () => {
+    vi.setSystemTime(new Date(2026, 0, 1, 10));
+    setAppConfig({ fixedToday: "2026-10-15" });
+    const api = fakeOverviewApi({});
+    const s = useSummaryStore();
+    expect(s.month).toBe("2026-10");
+    await s.setMonth("2026-09");
+    expect(s.month).toBe("2026-09");
+    expect(api.summary.month).toHaveBeenCalled();
   });
 });

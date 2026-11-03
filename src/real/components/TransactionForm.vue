@@ -3,7 +3,7 @@ import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import type { Account, Transaction, TransactionState } from "../api/types";
 import { parseMoneyInput } from "../money/input";
-import { todayLocalISO } from "../money/today";
+import { todayISO } from "../money/today";
 import { DESCRIPTION_MAX } from "../stores/transactions";
 import CategorySelect from "./CategorySelect.vue";
 
@@ -24,7 +24,7 @@ const { t } = useI18n();
 const tx = props.transaction;
 const editing = computed(() => !!props.transaction);
 const accountId = ref(tx?.accountId ?? props.accounts[0]?.id ?? "");
-const date = ref(tx?.date ?? todayLocalISO());
+const date = ref(tx?.date ?? todayISO());
 const kind = ref<"expense" | "income">(tx && !tx.amount.startsWith("-") ? "income" : "expense");
 const amountText = ref(tx ? tx.amount.replace(/^-/, "") : "");
 const description = ref(tx?.description ?? "");

@@ -1,0 +1,134 @@
+{
+  "0000001b-0000-4000-8000-000000000001": {
+    "batchId": "0000001b-0000-4000-8000-000000000001",
+    "accountId": "0000000a-0000-4000-8000-000000000002",
+    "source": "ItauCard",
+    "state": "Confirmed",
+    "periodStart": null,
+    "periodEnd": null,
+    "newCount": 2,
+    "existingCount": 0,
+    "warnings": [],
+    "checkpoint": null,
+    "lines": [],
+    "createdAt": "2026-10-05T13:00:00+00:00",
+    "expiresAt": null,
+    "editedCount": 1,
+    "invoice": {
+      "dueDate": "2026-10-10",
+      "declaredTotal": "499.65"
+    }
+  },
+  "0000001b-0000-4000-8000-000000000002": {
+    "batchId": "0000001b-0000-4000-8000-000000000002",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "source": "ItauChecking",
+    "state": "Preview",
+    "periodStart": "2026-10-01",
+    "periodEnd": "2026-10-14",
+    "newCount": 3,
+    "existingCount": 3,
+    "warnings": [
+      {
+        "code": "PossibleDuplicate",
+        "severity": "warning",
+        "message": "1 line(s) may duplicate lines already imported.",
+        "overridable": true
+      }
+    ],
+    "checkpoint": {
+      "date": "2026-10-14",
+      "amount": "22042.73"
+    },
+    "lines": [
+      {
+        "sourceKey": "demo-itau-cc-2026-10-05-salario-empresa-exemplo",
+        "date": "2026-10-05",
+        "amount": "5375.00",
+        "description": "SALARIO EMPRESA EXEMPLO",
+        "state": "Normal",
+        "existing": true,
+        "ordinal": 0,
+        "installmentNumber": null,
+        "installmentTotal": null,
+        "cardSuffix": null,
+        "cardKind": null,
+        "purchaseDate": null
+      },
+      {
+        "sourceKey": "demo-itau-cc-2026-10-08-aluguel-apartamento-exemplo",
+        "date": "2026-10-08",
+        "amount": "-1650.00",
+        "description": "ALUGUEL APARTAMENTO EXEMPLO",
+        "state": "Normal",
+        "existing": true,
+        "ordinal": 0,
+        "installmentNumber": null,
+        "installmentTotal": null,
+        "cardSuffix": null,
+        "cardKind": null,
+        "purchaseDate": null
+      },
+      {
+        "sourceKey": "demo-itau-cc-2026-10-12-conta-de-luz-ficticia",
+        "date": "2026-10-12",
+        "amount": "-179.12",
+        "description": "CONTA DE LUZ FICTICIA",
+        "state": "Normal",
+        "existing": true,
+        "ordinal": 0,
+        "installmentNumber": null,
+        "installmentTotal": null,
+        "cardSuffix": null,
+        "cardKind": null,
+        "purchaseDate": null
+      },
+      {
+        "sourceKey": "demo-itau-cc-2026-10-13-pix-enviado",
+        "date": "2026-10-13",
+        "amount": "-85.00",
+        "description": "PIX ENVIADO EXEMPLO",
+        "state": "Normal",
+        "existing": false,
+        "ordinal": 0,
+        "installmentNumber": null,
+        "installmentTotal": null,
+        "cardSuffix": null,
+        "cardKind": null,
+        "purchaseDate": null
+      },
+      {
+        "sourceKey": "demo-itau-cc-2026-10-14-tarifa",
+        "date": "2026-10-14",
+        "amount": "-29.90",
+        "description": "TARIFA PACOTE FICTICIO",
+        "state": "Normal",
+        "existing": false,
+        "ordinal": 0,
+        "installmentNumber": null,
+        "installmentTotal": null,
+        "cardSuffix": null,
+        "cardKind": null,
+        "purchaseDate": null
+      },
+      {
+        "sourceKey": "demo-itau-cc-2026-10-14-ted-recebida",
+        "date": "2026-10-14",
+        "amount": "400.00",
+        "description": "TED RECEBIDA FICTICIA",
+        "state": "PendingClassification",
+        "existing": false,
+        "ordinal": 0,
+        "installmentNumber": null,
+        "installmentTotal": null,
+        "cardSuffix": null,
+        "cardKind": null,
+        "purchaseDate": null
+      }
+    ],
+    "createdAt": "2026-10-15T11:00:00+00:00",
+    "expiresAt": "2026-10-16T11:00:00+00:00",
+    "editedCount": 0,
+    "invoice": null
+  }
+}

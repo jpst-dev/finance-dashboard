@@ -1,11 +1,12 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { ApiError } from "../api/errors";
 import type { Category } from "../api/types";
 import { acc, fakeAccountsApi } from "../testing";
 import { useAccountsStore } from "./accounts";
 import { useCategoriesStore } from "./categories";
-import { todayLocalISO } from "../money/today";
+import { todayISO, todayLocalISO } from "../money/today";
+import { setAppConfig } from "../appConfig";
 
 const cat = (id: string, kind: "Income" | "Expense"): Category => ({ id, name: id, kind, isDefault: false });
 
@@ -106,5 +107,21 @@ describe("accounts store", () => {
 describe("todayLocalISO", () => {
   it("uses_local_calendar_date", () => {
     expect(todayLocalISO(new Date(2026, 0, 5, 23, 59))).toBe("2026-01-05");
+  });
+
+  describe("todayISO", () => {
+    afterEach(() => {
+      setAppConfig(null);
+      vi.useRealTimers();
+    });
+    it("todayISO_uses_fixed_date_when_configured", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2027, 2, 1, 10));
+      setAppConfig({ fixedToday: "2026-10-15" });
+      expect(todayISO()).toBe("2026-10-15");
+    });
+    it("todayISO_without_config_is_local_date", () => {
+      expect(todayISO()).toBe(todayLocalISO());
+    });
   });
 });

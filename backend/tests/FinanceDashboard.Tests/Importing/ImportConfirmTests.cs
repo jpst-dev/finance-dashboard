@@ -183,7 +183,7 @@ public sealed class ImportConfirmTests(PostgresFixture postgres)
     [Fact]
     public async Task Confirm_expired_preview_is_410()
     {
-        var time = new FakeTimeProvider(new DateTimeOffset(2026, 11, 2, 12, 0, 0, TimeSpan.Zero));
+        var time = TestClock.StartingNow(); // follows the real now: see TestClock
         await using var f = await NewFactoryAsync(time);
         using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
         var acc = await CreateAccountAsync(c);
