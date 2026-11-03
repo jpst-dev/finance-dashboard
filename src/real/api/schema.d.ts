@@ -587,7 +587,7 @@ export interface components {
             kind: null | components["schemas"]["CategoryKind"];
         };
         CreateCategoryRuleRequest: {
-            pattern: string;
+            pattern: null | string;
             /** Format: uuid */
             categoryId: string;
         };
