@@ -21,6 +21,7 @@ const items = [
   { to: "/pending", key: "pending" },
   { to: "/accounts", key: "accounts" },
   { to: "/import", key: "import" },
+  { to: "/installments", key: "installments" },
   { to: "/rules", key: "rules" },
 ];
 const languages: { code: AppLocale; label: string }[] = [

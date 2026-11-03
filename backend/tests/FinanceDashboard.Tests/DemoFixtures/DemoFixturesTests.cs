@@ -87,6 +87,17 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
         Assert.True(invoice.DueDate <= DemoSeed.ReferenceDate);
         Assert.Equal(invoice.DeclaredTotal, -invoiceLines.Where(t => t.State == TransactionState.Normal).Sum(t => t.Amount));
         Assert.Contains(invoiceLines, t => t.InstallmentNumber == 3);
+
+        // Installments: every line of the invoice has the due date as StatementDate; every installment of a purchase
+        // carries the same card (purchase = slug in the SourceKey); N>1 lines are dated one month before the due date (as the real Itaú reader).
+        Assert.All(invoiceLines, t => Assert.Equal(invoice.DueDate, t.StatementDate));
+        var installments = lines.Where(t => t.InstallmentTotal is not null).ToList();
+        Assert.All(installments.GroupBy(t => System.Text.RegularExpressions.Regex.Match(t.SourceKey!, @"\d{4}-\d{2}-\d{2}-(.+)-\d+-\d+$").Groups[1].Value),
+            g => Assert.Single(g.Select(t => t.CardSuffix).Distinct()));
+        Assert.All(invoiceLines.Where(t => t.InstallmentNumber > 1),
+            t => Assert.Equal(invoice.DueDate!.Value.AddMonths(-1), t.Date));
+        Assert.Equal(new[] { "3/3", "3/6", "2/4" }.Order(),
+            invoiceLines.Where(t => t.InstallmentTotal is not null).Select(t => $"{t.InstallmentNumber}/{t.InstallmentTotal}").Order());
     }
 
     [Fact]
@@ -188,6 +199,28 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
 
         var states = JsonNode.Parse(files["imports.json"])!.AsArray().Select(b => b!["state"]!.GetValue<string>()).Order().ToList();
         Assert.Equal(["Confirmed", "Confirmed", "Confirmed", "Confirmed", "Preview"], states);
+    }
+
+    [Fact]
+    public async Task Generated_installments_come_from_the_real_projection_under_the_fixed_clock()
+    {
+        var files = await DemoFixtureGenerator.GenerateAsync(postgres);
+
+        var inst = JsonNode.Parse(files["installments.json"])!;
+        var account = Assert.Single(inst["accounts"]!.AsArray());
+        Assert.Equal(DemoSeed.CardId.ToString(), account!["accountId"]!.GetValue<string>());
+        Assert.Equal("2026-10-10", account["basedOn"]!.GetValue<string>());
+
+        // 3/6 ⇒ 3 left (Oct, Nov, Dec); 2/4 ⇒ 2 left (Oct, Nov); the 3/3 purchase is over.
+        var months = inst["months"]!.AsArray();
+        Assert.Equal(["2026-10", "2026-11", "2026-12"], months.Select(m => m!["month"]!.GetValue<string>()).ToArray());
+        Assert.Equal(["514.90", "514.90", "189.90"], months.Select(m => m!["total"]!.GetValue<string>()).ToArray());
+        Assert.Equal("1219.70", inst["totalCommitted"]!.GetValue<string>());
+
+        var groups = inst["groups"]!.AsArray();
+        Assert.Equal(2, groups.Count);
+        Assert.All(groups, g => Assert.Equal("0000", g!["cardSuffix"]!.GetValue<string>()));
+        Assert.Equal(["Móveis Fictícios", "Eletrodomésticos Exemplo"], groups.Select(g => g!["description"]!.GetValue<string>()).ToArray());
     }
 
     [Fact]

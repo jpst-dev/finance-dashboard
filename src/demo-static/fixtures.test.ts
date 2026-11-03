@@ -136,6 +136,24 @@ describe("fixtures do demo", () => {
     expect(f.rules.some((r) => "TRANSFERENCIA FICTICIA".includes(r.pattern))).toBe(false);
   });
 
+  it("installments_come_from_the_server_projection_and_close_their_sums", () => {
+    const inst = f.installments;
+    const cents = (v: string) => Math.round(Number(v) * 100);
+    expect(inst.accounts.length).toBeGreaterThan(0);
+    expect(inst.accounts.every((a) => a.basedOn <= f.meta.referenceDate && f.accounts.some((x) => x.id === a.accountId))).toBe(true);
+    expect(inst.groups.length).toBeGreaterThan(0);
+    // Todos os meses são a partir do mês de referência (o "hoje" corta o passado) e crescentes.
+    const monthsList = inst.months.map((m) => m.month);
+    expect(monthsList).toEqual([...monthsList].sort());
+    expect(monthsList.every((m) => m >= f.meta.referenceDate.slice(0, 7))).toBe(true);
+    // Somas fecham: meses = total comprometido = soma dos grupos; cada mês = soma dos itens.
+    expect(inst.months.reduce((s, m) => s + cents(m.total), 0)).toBe(cents(inst.totalCommitted));
+    expect(inst.groups.reduce((s, g) => s + cents(g.remainingTotal), 0)).toBe(cents(inst.totalCommitted));
+    for (const m of inst.months) expect(m.items.reduce((s, i) => s + cents(i.amount), 0)).toBe(cents(m.total));
+    // Mesmo cartão em todas as parcelas de uma compra e sinal positivo (módulo).
+    expect(inst.groups.every((g) => g.cardSuffix !== null && cents(g.amount) > 0 && g.installmentNumber < g.installmentTotal)).toBe(true);
+  });
+
   it("preview_batch_exists_in_preview_state", () => {
     expect(f.importDetails[f.meta.previewBatchId]?.state).toBe("Preview");
   });

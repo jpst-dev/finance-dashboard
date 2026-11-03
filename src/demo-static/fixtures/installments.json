@@ -1,0 +1,98 @@
+{
+  "totalCommitted": "1219.70",
+  "accounts": [
+    {
+      "accountId": "0000000a-0000-4000-8000-000000000002",
+      "accountName": "Cartão Exemplo",
+      "basedOn": "2026-10-10"
+    }
+  ],
+  "months": [
+    {
+      "month": "2026-10",
+      "total": "514.90",
+      "items": [
+        {
+          "accountId": "0000000a-0000-4000-8000-000000000002",
+          "description": "Eletrodomésticos Exemplo",
+          "cardSuffix": "0000",
+          "installmentNumber": 4,
+          "installmentTotal": 6,
+          "amount": "189.90"
+        },
+        {
+          "accountId": "0000000a-0000-4000-8000-000000000002",
+          "description": "Móveis Fictícios",
+          "cardSuffix": "0000",
+          "installmentNumber": 3,
+          "installmentTotal": 4,
+          "amount": "325.00"
+        }
+      ]
+    },
+    {
+      "month": "2026-11",
+      "total": "514.90",
+      "items": [
+        {
+          "accountId": "0000000a-0000-4000-8000-000000000002",
+          "description": "Eletrodomésticos Exemplo",
+          "cardSuffix": "0000",
+          "installmentNumber": 5,
+          "installmentTotal": 6,
+          "amount": "189.90"
+        },
+        {
+          "accountId": "0000000a-0000-4000-8000-000000000002",
+          "description": "Móveis Fictícios",
+          "cardSuffix": "0000",
+          "installmentNumber": 4,
+          "installmentTotal": 4,
+          "amount": "325.00"
+        }
+      ]
+    },
+    {
+      "month": "2026-12",
+      "total": "189.90",
+      "items": [
+        {
+          "accountId": "0000000a-0000-4000-8000-000000000002",
+          "description": "Eletrodomésticos Exemplo",
+          "cardSuffix": "0000",
+          "installmentNumber": 6,
+          "installmentTotal": 6,
+          "amount": "189.90"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "accountId": "0000000a-0000-4000-8000-000000000002",
+      "accountName": "Cartão Exemplo",
+      "cardSuffix": "0000",
+      "description": "Móveis Fictícios",
+      "installmentNumber": 2,
+      "installmentTotal": 4,
+      "remaining": 2,
+      "amount": "325.00",
+      "multiplicity": 1,
+      "endsOn": "2026-11-10",
+      "remainingTotal": "650.00"
+    },
+    {
+      "accountId": "0000000a-0000-4000-8000-000000000002",
+      "accountName": "Cartão Exemplo",
+      "cardSuffix": "0000",
+      "description": "Eletrodomésticos Exemplo",
+      "installmentNumber": 3,
+      "installmentTotal": 6,
+      "remaining": 3,
+      "amount": "189.90",
+      "multiplicity": 1,
+      "endsOn": "2026-12-10",
+      "remainingTotal": "569.70"
+    }
+  ]
+}

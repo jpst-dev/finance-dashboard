@@ -147,6 +147,9 @@ public sealed class DemoFixtureGenerator
         for (var i = 0; i < rules.Count; i++) rules[i]!["id"] = DemoSeed.FixtureRuleId(i + 1).ToString();
         Put("rules.json", rules);
 
+        // Committed installments: the server's projection under the fixed clock (nothing is computed here).
+        Put("installments.json", await Get("/api/installments"));
+
         var imports = await Get("/api/imports");
         Put("imports.json", imports);
 

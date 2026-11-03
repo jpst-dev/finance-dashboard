@@ -13,6 +13,7 @@
       "pending": "Pendentes",
       "accounts": "Contas",
       "import": "Importar",
+      "installments": "Parcelas",
       "rules": "Regras"
     },
     "titles": {
@@ -22,6 +23,7 @@
       "pending": "Pendentes",
       "accounts": "Contas",
       "import": "Importar",
+      "installments": "Parcelas",
       "rules": "Regras"
     },
     "login": {
@@ -304,6 +306,9 @@
       "noCounterpartRow": "Sem contrapartida: {description}"
     },
     "overview": {
+      "committedTitle": "Comprometido nos próximos meses",
+      "committedHint": "Parcelas do mês atual e dos 2 seguintes",
+      "committedLink": "Ver parcelas",
       "accounts": "Contas",
       "addAccount": "+ Adicionar conta",
       "pendingNotice": "{count} lançamento pendente | {count} lançamentos pendentes",
@@ -354,11 +359,34 @@
       }
     },
     "plural": {
+      "installmentsRemaining": "nenhuma parcela restante | 1 parcela restante | {n} parcelas restantes",
       "pairs": "nenhum par vinculado | 1 par vinculado | {n} pares vinculados",
       "suggestions": "nenhuma sugestão | 1 sugestão | {n} sugestões",
       "linked": "nenhuma ligada | 1 ligada | {n} ligadas",
       "reclassified": "nenhuma reclassificada | 1 reclassificada | {n} reclassificadas",
       "categorized": "nenhuma linha categorizada | 1 linha categorizada | {n} linhas categorizadas"
+    },
+    "installments": {
+      "help": "Parcelas restantes das compras parceladas, projetadas a partir da fatura mais recente importada de cada cartão. Nada é gravado: o cálculo é refeito a cada consulta.",
+      "loading": "Carregando parcelas…",
+      "retry": "Tentar novamente",
+      "emptyTitle": "Nenhuma parcela comprometida",
+      "emptyBody": "Importe a fatura mais recente do cartão. As compras parceladas (\"parcela N/T\") com parcelas restantes aparecem aqui.",
+      "emptyAction": "Ir para Importar",
+      "staleBase": "{account}: baseado na fatura de {month}; importe a mais recente.",
+      "chartTitle": "Comprometido por mês",
+      "chartAlt": "Gráfico de barras do valor comprometido em parcelas por mês",
+      "total": "Total comprometido",
+      "groupsTitle": "Compras parceladas",
+      "colDescription": "Descrição",
+      "colAccount": "Conta",
+      "colProgress": "Parcela",
+      "colRemaining": "Restantes",
+      "colAmount": "Valor",
+      "colEnds": "Termina em",
+      "nOfT": "{n} de {total}",
+      "times": "×{k}",
+      "valuesHidden": "valores ocultos"
     },
     "rules": {
       "help": "Regras categorizam automaticamente linhas sem categoria cuja descrição original contém o trecho como palavra inteira (\"BAR\" não pega \"BARBEARIA\"). Vence o trecho mais longo.",

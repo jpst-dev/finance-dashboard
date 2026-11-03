@@ -12,6 +12,7 @@ describe("plurals", () => {
     expect([0, 1, 2].map((n) => t("real.plural.reclassified", n))).toEqual(["nenhuma reclassificada", "1 reclassificada", "2 reclassificadas"]);
     expect([0, 1, 2].map((n) => t("real.plural.categorized", n))).toEqual(["nenhuma linha categorizada", "1 linha categorizada", "2 linhas categorizadas"]);
     expect([0, 1, 2].map((n) => t("real.import.resultCategorized", n))).toEqual(["nenhuma categorizada", "1 categorizada", "2 categorizadas"]);
+    expect([0, 1, 2].map((n) => t("real.plural.installmentsRemaining", n))).toEqual(["nenhuma parcela restante", "1 parcela restante", "2 parcelas restantes"]);
   });
 
   it("en-US 0/1/many", () => {
@@ -22,6 +23,7 @@ describe("plurals", () => {
     expect([0, 1, 2].map((n) => t("real.plural.reclassified", n))).toEqual(["none reclassified", "1 reclassified", "2 reclassified"]);
     expect([0, 1, 2].map((n) => t("real.plural.categorized", n))).toEqual(["no lines categorized", "1 line categorized", "2 lines categorized"]);
     expect([0, 1, 2].map((n) => t("real.import.resultCategorized", n))).toEqual(["none categorized", "1 categorized", "2 categorized"]);
+    expect([0, 1, 2].map((n) => t("real.plural.installmentsRemaining", n))).toEqual(["no installments remaining", "1 installment remaining", "2 installments remaining"]);
     i18n.global.locale.value = "pt-BR";
   });
 });

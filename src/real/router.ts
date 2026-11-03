@@ -10,6 +10,7 @@ import Pending from "./pages/Pending.vue";
 import Accounts from "./pages/Accounts.vue";
 import Import from "./pages/Import.vue";
 import Rules from "./pages/Rules.vue";
+import Installments from "./pages/Installments.vue";
 
 export function createRealRouter(history: RouterHistory = createWebHistory()) {
   const router = createRouter({
@@ -22,6 +23,7 @@ export function createRealRouter(history: RouterHistory = createWebHistory()) {
       { path: "/accounts", name: "accounts", component: Accounts, meta: { requiresAuth: true } },
       { path: "/import", name: "import", component: Import, meta: { requiresAuth: true } },
       { path: "/rules", name: "rules", component: Rules, meta: { requiresAuth: true } },
+      { path: "/installments", name: "installments", component: Installments, meta: { requiresAuth: true } },
       { path: "/:pathMatch(.*)*", redirect: "/" },
     ],
   });

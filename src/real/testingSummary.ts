@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import type { ApiClient } from "./api";
 import { setApi } from "./api/context";
-import type { Summary } from "./api/types";
+import type { Installments, Summary } from "./api/types";
 
 export function sum(month: string, over: Partial<Summary> = {}): Summary {
   return {
@@ -25,6 +25,8 @@ export function fakeOverviewApi(opts: {
   recent?: unknown[];
   recentTotal?: number;
   pending?: number;
+  installments?: Installments;
+  installmentsError?: unknown;
 } = {}) {
   const recent = opts.recent ?? [];
   const summary = { month: vi.fn(opts.summaryImpl ?? (async (m: string) => sum(m))) };
@@ -37,6 +39,12 @@ export function fakeOverviewApi(opts: {
         : { items: recent, page: 1, size: q.size ?? 5, total: opts.recentTotal ?? recent.length },
     ),
   };
-  setApi({ summary, accounts, categories, transactions } as unknown as ApiClient);
-  return { summary, accounts, categories, transactions };
+  const installments = {
+    get: vi.fn(async () => {
+      if (opts.installmentsError) throw opts.installmentsError;
+      return opts.installments ?? { totalCommitted: "0.00", accounts: [], months: [], groups: [] };
+    }),
+  };
+  setApi({ summary, accounts, categories, transactions, installments } as unknown as ApiClient);
+  return { summary, accounts, categories, transactions, installments };
 }

@@ -54,6 +54,20 @@ describe("router guard", () => {
     expect(document.title).toBe("Regras · Finance Dashboard");
   });
 
+  it("installments_route_requires_auth_and_has_a_title", async () => {
+    setApi(fakeApi({ me: async () => null }));
+    const anon = createRealRouter(createMemoryHistory());
+    await anon.push("/installments");
+    expect(anon.currentRoute.value.name).toBe("login");
+    setRouter(null);
+    setApi(fakeApi({ me: async () => ({ email: "user@example.test" }) }));
+    await useSessionStore().bootstrap();
+    const router = createRealRouter(createMemoryHistory());
+    await router.push("/installments");
+    expect(router.currentRoute.value.name).toBe("installments");
+    expect(document.title).toBe("Parcelas · Finance Dashboard");
+  });
+
   it("sets_document_title_without_values", async () => {
     setApi(fakeApi({ me: async () => ({ email: "user@example.test" }) }));
     await useSessionStore().bootstrap();

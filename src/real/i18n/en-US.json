@@ -13,6 +13,7 @@
       "pending": "Pending",
       "accounts": "Accounts",
       "import": "Import",
+      "installments": "Installments",
       "rules": "Rules"
     },
     "titles": {
@@ -22,6 +23,7 @@
       "pending": "Pending",
       "accounts": "Accounts",
       "import": "Import",
+      "installments": "Installments",
       "rules": "Rules"
     },
     "login": {
@@ -304,6 +306,9 @@
       "noCounterpartRow": "No counterpart: {description}"
     },
     "overview": {
+      "committedTitle": "Committed in the coming months",
+      "committedHint": "Installments for this month and the next 2",
+      "committedLink": "View installments",
       "accounts": "Accounts",
       "addAccount": "+ Add account",
       "pendingNotice": "{count} pending transaction | {count} pending transactions",
@@ -354,11 +359,34 @@
       }
     },
     "plural": {
+      "installmentsRemaining": "no installments remaining | 1 installment remaining | {n} installments remaining",
       "pairs": "no pairs linked | 1 pair linked | {n} pairs linked",
       "suggestions": "no suggestions | 1 suggestion | {n} suggestions",
       "linked": "none linked | 1 linked | {n} linked",
       "reclassified": "none reclassified | 1 reclassified | {n} reclassified",
       "categorized": "no lines categorized | 1 line categorized | {n} lines categorized"
+    },
+    "installments": {
+      "help": "Remaining installments of purchases paid in parts, projected from the most recent imported statement of each card. Nothing is stored: the calculation is redone on every request.",
+      "loading": "Loading installments…",
+      "retry": "Try again",
+      "emptyTitle": "No committed installments",
+      "emptyBody": "Import the card's most recent statement. Installment purchases (\"installment N/T\") with installments left show up here.",
+      "emptyAction": "Go to Import",
+      "staleBase": "{account}: based on the {month} statement; import the latest one.",
+      "chartTitle": "Committed per month",
+      "chartAlt": "Bar chart of the amount committed in installments per month",
+      "total": "Total committed",
+      "groupsTitle": "Installment purchases",
+      "colDescription": "Description",
+      "colAccount": "Account",
+      "colProgress": "Installment",
+      "colRemaining": "Remaining",
+      "colAmount": "Amount",
+      "colEnds": "Ends on",
+      "nOfT": "{n} of {total}",
+      "times": "×{k}",
+      "valuesHidden": "values hidden"
     },
     "rules": {
       "help": "Rules automatically categorize uncategorized lines whose original description contains the snippet as a whole word (\"BAR\" does not match \"BARBEARIA\"). The longest snippet wins.",
