@@ -5,6 +5,7 @@ using FinanceDashboard.Api.Categories;
 using FinanceDashboard.Api.Json;
 using FinanceDashboard.Api.Health;
 using FinanceDashboard.Api.Security;
+using FinanceDashboard.Api.Summary;
 using FinanceDashboard.Api.Transactions;
 using FinanceDashboard.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -99,6 +100,7 @@ app.MapAccounts();
 app.MapCategories();
 app.MapTransactions();
 app.MapCheckpoints();
+app.MapSummary();
 
 // API docs for developers and reviewers: served in every environment, no authentication.
 app.MapOpenApi("/api/openapi/{documentName}.json");

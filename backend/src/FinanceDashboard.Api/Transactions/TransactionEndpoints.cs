@@ -1,5 +1,5 @@
-using System.Globalization;
 using FinanceDashboard.Api.Security;
+using FinanceDashboard.Api.Summary;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -77,13 +77,7 @@ public static class TransactionEndpoints
         if (state is not null) query = query.Where(t => t.State == state);
         if (month is not null)
         {
-            if (!DateOnly.TryParseExact(month + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture,
-                    DateTimeStyles.None, out var start))
-            {
-                return Results.BadRequest();
-            }
-
-            var end = start.AddMonths(1);
+            if (!MonthRange.TryParse(month, out var start, out var end)) return Results.BadRequest();
             query = query.Where(t => t.Date >= start && t.Date < end);
         }
 
