@@ -2,13 +2,17 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import { getApi } from "../api/context";
 import { ApiError } from "../api/errors";
-import type { LinkResponse } from "../api/types";
+import type { LinkResponse, PairedLink } from "../api/types";
 import { errorCodeOf } from "./errorCode";
 import { useTransactionsStore } from "./transactions";
 
 /** Quantidade de pares recentes mostrados em "Vinculados". */
 export const CONFIRMED_SIZE = 10;
 const SUGGESTED_SIZE = 50;
+
+function isPaired(l: LinkResponse): l is PairedLink {
+  return l.out !== null && l.in !== null;
+}
 
 /** 409 = o vínculo mudou de estado (ou uma linha já tem outro vínculo): recarregar e avisar. */
 function linkErrorCode(e: unknown): string {
@@ -17,8 +21,8 @@ function linkErrorCode(e: unknown): string {
 }
 
 export const useLinksStore = defineStore("fd-links", () => {
-  const suggested = ref<LinkResponse[]>([]);
-  const confirmed = ref<LinkResponse[]>([]);
+  const suggested = ref<PairedLink[]>([]);
+  const confirmed = ref<PairedLink[]>([]);
   const loading = ref(false);
   const busy = ref(false);
   /** Código do último erro; a tela traduz com `real.errors.<code>`. */
@@ -34,8 +38,8 @@ export const useLinksStore = defineStore("fd-links", () => {
         getApi().links.list({ state: "Confirmed", page: 1, size: CONFIRMED_SIZE }),
       ]);
       if (mine !== seq) return;
-      suggested.value = s.items;
-      confirmed.value = c.items;
+      suggested.value = s.items.filter(isPaired);
+      confirmed.value = c.items.filter(isPaired);
       error.value = null;
     } catch (e) {
       if (mine === seq) error.value = linkErrorCode(e);

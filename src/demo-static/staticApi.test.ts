@@ -170,7 +170,7 @@ describe("createStaticApi", () => {
     expect((await a.links.list({})).total).toBe(f.links.confirmed.length + f.links.suggested.length);
     expect((await a.links.list({ state: "Confirmed", page: 99 })).items).toEqual([]);
     expect(await status(a.links.list({ page: 0 }))).toBe(400);
-    c.items[0].out.description = "mutado";
+    c.items[0].out!.description = "mutado";
     expect((await a.links.list({ state: "Confirmed" })).items).toEqual(f.links.confirmed);
   });
 

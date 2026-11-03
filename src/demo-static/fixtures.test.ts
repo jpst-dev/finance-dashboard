@@ -91,8 +91,8 @@ describe("fixtures do demo", () => {
     const byId = new Map([...f.links.confirmed, ...f.links.suggested].map((l) => [l.id, l]));
     for (const l of byId.values()) {
       for (const [end, other] of [[l.out, l.in], [l.in, l.out]] as const) {
-        const t = f.transactions.find((x) => x.id === end.transactionId)!;
-        expect(t.link, end.transactionId).toMatchObject({ id: l.id, kind: l.kind, state: l.state, counterpartTransactionId: other.transactionId });
+        const t = f.transactions.find((x) => x.id === end!.transactionId)!;
+        expect(t.link, end!.transactionId).toMatchObject({ id: l.id, kind: l.kind, state: l.state, counterpartTransactionId: other!.transactionId });
       }
     }
   });

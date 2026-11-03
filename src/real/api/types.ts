@@ -37,11 +37,13 @@ export type LinkState = S["LinkState"];
 export type LinkOrigin = S["LinkOrigin"];
 export type LinkLine = S["LinkLine"];
 export type LinkResponse = S["LinkResponse"];
+/** Vínculo com os dois lados presentes (os de lado vazio chegam na tela de S3(b), Task 6). */
+export type PairedLink = Omit<LinkResponse, "out" | "in"> & { out: LinkLine; in: LinkLine };
 /** Selo de vínculo em TransactionResponse.link (ausente/null quando não há vínculo). */
 export type TransactionLink = S["TransactionLink"];
 export type LinkPage = Omit<IntFields<S["LinkPage"], "page" | "size" | "total">, "items"> & { items: LinkResponse[] };
 export type LinkQuery = { state?: LinkState; page?: number; size?: number };
-export type ReconcileResult = IntFields<S["ReconcileResult"], "linked" | "suggested">;
+export type ReconcileResult = IntFields<S["ReconcileResult"], "linked" | "suggested" | "reclassified">;
 
 export type Transaction = S["TransactionResponse"];
 export type NewTransaction = S["CreateTransactionRequest"];

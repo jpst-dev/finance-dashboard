@@ -19,6 +19,7 @@
         "description": "Pagamento recebido (exemplo)",
         "amount": "499.65"
       },
+      "external": false,
       "createdAt": "2026-10-15T12:00:00+00:00"
     },
     {
@@ -40,6 +41,7 @@
         "description": "Pix recebido da Conta Corrente Exemplo",
         "amount": "350.00"
       },
+      "external": false,
       "createdAt": "2026-10-15T12:00:00+00:00"
     }
   ],
@@ -63,6 +65,7 @@
         "description": "Pix recebido da Conta Corrente Exemplo (reserva)",
         "amount": "180.00"
       },
+      "external": false,
       "createdAt": "2026-10-15T12:00:00+00:00"
     }
   ]

@@ -8,17 +8,18 @@ namespace FinanceDashboard.Api.Links;
 
 public sealed record LinkLine(Guid TransactionId, Guid AccountId, DateOnly Date, string Description, decimal Amount);
 
+/// <summary>
+/// A link as the API shows it. <c>Out</c>/<c>In</c> are null on the empty side of an open link (a line settled against an
+/// external party); <c>External</c> is true exactly then.
+/// </summary>
 public sealed record LinkResponse(
-    Guid Id, LinkKind Kind, LinkState State, LinkOrigin Origin, LinkLine Out, LinkLine In, DateTimeOffset CreatedAt);
+    Guid Id, LinkKind Kind, LinkState State, LinkOrigin Origin, LinkLine? Out, LinkLine? In, bool External,
+    DateTimeOffset CreatedAt);
 
 public sealed record LinkPage(IReadOnlyList<LinkResponse> Items, int Page, int Size, int Total);
 
-/// <summary>
-/// HTTP shape of <c>POST /api/links/reconcile</c>, kept as in S3(a) for now (it shadows the service's
-/// <see cref="Infrastructure.Linking.ReconcileResult"/> inside this namespace). The S3(b) API task adds
-/// <c>reclassified</c> together with the OpenAPI snapshot.
-/// </summary>
-public sealed record ReconcileResult(int Linked, int Suggested);
+/// <summary>Body of a 422 on the mark actions.</summary>
+public sealed record LinkErrorResponse(string Error);
 
 public static class LinkEndpoints
 {
@@ -38,7 +39,7 @@ public static class LinkEndpoints
         group.MapPost("/reconcile", ReconcileAsync)
             .AddEndpointFilter(AntiforgeryFilter.ValidateAsync)
             .WithName("ReconcileLinks").WithSummary("Pair pending lines again (idempotent)")
-            .Produces<ReconcileResult>()
+            .Produces<Infrastructure.Linking.ReconcileResult>()
             .Produces(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/{id:guid}/confirm", ConfirmAsync)
@@ -68,15 +69,22 @@ public static class LinkEndpoints
         return app;
     }
 
+    // Left joins: an open link has an empty side and must still be listed and answered.
     private static IQueryable<LinkResponse> Project(AppDbContext db, IQueryable<Link> links) =>
         from l in links
-        join o in db.Transactions.AsNoTracking() on l.OutTransactionId equals o.Id
-        join i in db.Transactions.AsNoTracking() on l.InTransactionId equals i.Id
+        join o in db.Transactions.AsNoTracking() on l.OutTransactionId equals o.Id into outs
+        from o in outs.DefaultIfEmpty()
+        join i in db.Transactions.AsNoTracking() on l.InTransactionId equals i.Id into ins
+        from i in ins.DefaultIfEmpty()
         select new LinkResponse(
             l.Id, l.Kind, l.State, l.Origin,
-            new LinkLine(o.Id, o.AccountId, o.Date, o.NormalizedDescription, o.Amount),
-            new LinkLine(i.Id, i.AccountId, i.Date, i.NormalizedDescription, i.Amount),
+            o == null ? null : new LinkLine(o.Id, o.AccountId, o.Date, o.NormalizedDescription, o.Amount),
+            i == null ? null : new LinkLine(i.Id, i.AccountId, i.Date, i.NormalizedDescription, i.Amount),
+            l.OutTransactionId == null || l.InTransactionId == null,
             l.CreatedAt);
+
+    internal static Task<LinkResponse?> ViewAsync(AppDbContext db, Guid linkId) =>
+        Project(db, db.Links.AsNoTracking().Where(l => l.Id == linkId)).FirstOrDefaultAsync();
 
     private static async Task<IResult> ListAsync(AppDbContext db, LinkState? state, int? page, int? size)
     {
@@ -99,7 +107,7 @@ public static class LinkEndpoints
     private static async Task<IResult> ReconcileAsync(LinkService links, CancellationToken ct)
     {
         var result = await links.ReconcileAsync(ct);
-        return Results.Ok(new ReconcileResult(result.Linked, result.Suggested));
+        return Results.Ok(result);
     }
 
     private static Task<IResult> ConfirmAsync(Guid id, LinkService links, AppDbContext db, CancellationToken ct) =>
@@ -116,7 +124,7 @@ public static class LinkEndpoints
             case LinkOutcome.Conflict: return Results.Conflict();
         }
 
-        var view = await Project(db, db.Links.AsNoTracking().Where(l => l.Id == id)).FirstOrDefaultAsync();
+        var view = await ViewAsync(db, id);
         return view is null ? Results.NotFound() : Results.Ok(view);
     }
 

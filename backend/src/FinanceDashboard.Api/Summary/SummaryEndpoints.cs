@@ -37,9 +37,10 @@ public static class SummaryEndpoints
             return Results.NotFound();
         }
 
-        // Pending lines already on a Confirmed link are not "to classify"; everything else counts as before.
+        // Lines on a Confirmed link (one side or two, Normal or Pending) are neutral: out of income, expenses, net,
+        // categories and the pending queue. Balances are computed elsewhere and keep every line.
         var query = db.Transactions.AsNoTracking().Visible().Where(t => t.Date >= start && t.Date < end)
-            .ExcludingConfirmedPending(db);
+            .WithoutConfirmedLink(db);
         if (accountId is not null) query = query.Where(t => t.AccountId == accountId);
 
         var lines = await query

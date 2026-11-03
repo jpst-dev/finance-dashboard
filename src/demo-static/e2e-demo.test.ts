@@ -190,7 +190,7 @@ describe("demo estático: interface real somente leitura", () => {
     expect(qa("[data-test=suggestion]")).toHaveLength(f.links.suggested.length);
     expect(q("[data-test=linked-pairs]")).not.toBeNull();
     expect(qa("[data-test=linked]")).toHaveLength(f.links.confirmed.length);
-    for (const l of [...f.links.suggested, ...f.links.confirmed]) expect(bodyText()).toContain(l.out.description);
+    for (const l of [...f.links.suggested, ...f.links.confirmed]) expect(bodyText()).toContain(l.out!.description);
     // As ações são somente leitura (o afterEach confirma que nada foi à rede).
     await click(q("[data-test=link-confirm]"));
     expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);

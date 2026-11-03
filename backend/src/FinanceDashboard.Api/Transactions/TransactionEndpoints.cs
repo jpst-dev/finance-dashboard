@@ -1,7 +1,9 @@
+using FinanceDashboard.Api.Links;
 using FinanceDashboard.Api.Security;
 using FinanceDashboard.Api.Summary;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure;
+using FinanceDashboard.Infrastructure.Importing;
 using FinanceDashboard.Infrastructure.Linking;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,10 +12,17 @@ namespace FinanceDashboard.Api.Transactions;
 public sealed record TransactionResponse(
     Guid Id, Guid AccountId, DateOnly Date, DateOnly? PurchaseDate, DateOnly? StatementDate, decimal Amount,
     string Description, string OriginalDescription, Guid? CategoryId, TransactionState State,
-    TransactionOrigin Origin, bool EditedByUser, string? CounterpartyName, TransactionLink? Link = null);
+    TransactionOrigin Origin, bool EditedByUser, string? CounterpartyName, TransactionPairing? Pairing,
+    TransactionLink? Link);
 
-/// <summary>The Confirmed or Suggested link a line takes part in (a Confirmed one wins over suggestions).</summary>
-public sealed record TransactionLink(Guid Id, LinkKind Kind, LinkState State, Guid CounterpartTransactionId);
+/// <summary>The pairing role of an imported line (from its bank rules), null for any other line.</summary>
+public enum TransactionPairing { OwnTransfer, InvoicePayment, PixCredit }
+
+/// <summary>
+/// The Confirmed or Suggested link a line takes part in (a Confirmed one wins over suggestions). The counterpart is null
+/// on an open link (the other side is outside the app).
+/// </summary>
+public sealed record TransactionLink(Guid Id, LinkKind Kind, LinkState State, Guid? CounterpartTransactionId);
 
 public sealed record TransactionPage(IReadOnlyList<TransactionResponse> Items, int Page, int Size, int Total);
 
@@ -46,6 +55,24 @@ public static class TransactionEndpoints
             .WithName("CreateTransaction").WithSummary("Create a manual transaction")
             .Produces<TransactionResponse>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapPost("/{id:guid}/own-transfer", MarkOwnAsync)
+            .AddEndpointFilter(AntiforgeryFilter.ValidateAsync)
+            .WithName("MarkOwnTransfer").WithSummary("Mark a transfer line as mine (open Confirmed link, no counterpart)")
+            .Produces<LinkResponse>()
+            .Produces<LinkErrorResponse>(StatusCodes.Status422UnprocessableEntity)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapPost("/{id:guid}/no-counterpart", MarkNoCounterpartAsync)
+            .AddEndpointFilter(AntiforgeryFilter.ValidateAsync)
+            .WithName("MarkNoCounterpart").WithSummary("Mark a pending invoice payment as having no counterpart in the app")
+            .Produces<LinkResponse>()
+            .Produces<LinkErrorResponse>(StatusCodes.Status422UnprocessableEntity)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
@@ -92,11 +119,40 @@ public static class TransactionEndpoints
             .Skip((int)Math.Min((long)(pageNo - 1) * pageSize, int.MaxValue)).Take(pageSize)
             .Select(t => new TransactionResponse(
                 t.Id, t.AccountId, t.Date, t.PurchaseDate, t.StatementDate, t.Amount, t.NormalizedDescription,
-                t.OriginalDescription, t.CategoryId, t.State, t.Origin, t.EditedByUser, t.CounterpartyName))
+                t.OriginalDescription, t.CategoryId, t.State, t.Origin, t.EditedByUser, t.CounterpartyName, null, null))
             .ToListAsync();
-        var links = await LinksForAsync(db, items.Select(i => i.Id).ToList());
-        items = items.Select(i => links.TryGetValue(i.Id, out var l) ? i with { Link = l } : i).ToList();
+        var ids = items.Select(i => i.Id).ToList();
+        var links = await LinksForAsync(db, ids);
+        var pairings = await PairingsForAsync(db, ids);
+        items = items.Select(i => i with
+        {
+            Link = links.GetValueOrDefault(i.Id),
+            Pairing = pairings.TryGetValue(i.Id, out var p) ? p : null,
+        }).ToList();
         return Results.Ok(new TransactionPage(items, pageNo, pageSize, total));
+    }
+
+    private static Task<IResult> MarkOwnAsync(Guid id, LinkService links, AppDbContext db, CancellationToken ct) =>
+        MarkAsync(links.MarkOwnAsync(id, ct), db);
+
+    private static Task<IResult> MarkNoCounterpartAsync(Guid id, LinkService links, AppDbContext db, CancellationToken ct) =>
+        MarkAsync(links.MarkNoCounterpartAsync(id, ct), db);
+
+    // No outer transaction here: the service runs under its own lock, and a unique violation inside an ambient
+    // transaction would abort it.
+    private static async Task<IResult> MarkAsync(Task<LinkResult> mark, AppDbContext db)
+    {
+        var result = await mark;
+        switch (result.Outcome)
+        {
+            case LinkOutcome.NotFound: return Results.NotFound();
+            case LinkOutcome.Conflict: return Results.Conflict();
+            case LinkOutcome.NotApplicable:
+                return Results.UnprocessableEntity(new LinkErrorResponse("not_applicable"));
+        }
+
+        var view = result.LinkId is { } linkId ? await LinkEndpoints.ViewAsync(db, linkId) : null;
+        return view is null ? Results.NotFound() : Results.Ok(view);
     }
 
     private static async Task<IResult> CreateAsync(CreateTransactionRequest request, AppDbContext db)
@@ -210,7 +266,12 @@ public static class TransactionEndpoints
     private static async Task<TransactionResponse> ToResponseAsync(AppDbContext db, Transaction t)
     {
         var links = await LinksForAsync(db, [t.Id]);
-        return ToResponse(t) with { Link = links.GetValueOrDefault(t.Id) };
+        var pairings = await PairingsForAsync(db, [t.Id]);
+        return ToResponse(t) with
+        {
+            Link = links.GetValueOrDefault(t.Id),
+            Pairing = pairings.TryGetValue(t.Id, out var p) ? p : null,
+        };
     }
 
     /// <summary>One query for a whole page: Confirmed/Suggested links of the given lines (Confirmed first).</summary>
@@ -221,19 +282,47 @@ public static class TransactionEndpoints
 
         var rows = await db.Links.AsNoTracking()
             .Where(l => (l.State == LinkState.Confirmed || l.State == LinkState.Suggested)
-                && l.OutTransactionId != null && l.InTransactionId != null
-                && (ids.Contains(l.OutTransactionId.Value) || ids.Contains(l.InTransactionId.Value)))
+                && ((l.OutTransactionId != null && ids.Contains(l.OutTransactionId.Value))
+                    || (l.InTransactionId != null && ids.Contains(l.InTransactionId.Value))))
             .OrderBy(l => l.State == LinkState.Confirmed ? 0 : 1).ThenBy(l => l.CreatedAt).ThenBy(l => l.Id)
             .ToListAsync();
         var wanted = ids.ToHashSet();
         foreach (var l in rows)
         {
-            var outId = l.OutTransactionId!.Value;
-            var inId = l.InTransactionId!.Value;
-            if (wanted.Contains(outId))
-                result.TryAdd(outId, new TransactionLink(l.Id, l.Kind, l.State, inId));
-            if (wanted.Contains(inId))
-                result.TryAdd(inId, new TransactionLink(l.Id, l.Kind, l.State, outId));
+            if (l.OutTransactionId is { } outId && wanted.Contains(outId))
+                result.TryAdd(outId, new TransactionLink(l.Id, l.Kind, l.State, l.InTransactionId));
+            if (l.InTransactionId is { } inId && wanted.Contains(inId))
+                result.TryAdd(inId, new TransactionLink(l.Id, l.Kind, l.State, l.OutTransactionId));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// One query for a whole page: the pairing role of imported lines (batch Source join, bank rules in memory).
+    /// Manual lines have no batch and so no role.
+    /// </summary>
+    private static async Task<Dictionary<Guid, TransactionPairing>> PairingsForAsync(AppDbContext db, List<Guid> ids)
+    {
+        var result = new Dictionary<Guid, TransactionPairing>();
+        if (ids.Count == 0) return result;
+
+        var rows = await (
+                from t in db.Transactions.AsNoTracking().Visible()
+                where ids.Contains(t.Id)
+                join b in db.ImportBatches.AsNoTracking() on t.BatchId equals b.Id
+                select new { t.Id, b.Source, t.OriginalDescription, t.Amount })
+            .ToListAsync();
+        foreach (var r in rows)
+        {
+            TransactionPairing? pairing = PairingRules.RoleOf(r.Source, r.OriginalDescription, r.Amount) switch
+            {
+                PairingRole.Transfer => TransactionPairing.OwnTransfer,
+                PairingRole.InvoiceAccountSide or PairingRole.InvoiceCardSide => TransactionPairing.InvoicePayment,
+                PairingRole.PixCreditCredit or PairingRole.PixCreditDebit => TransactionPairing.PixCredit,
+                _ => null,
+            };
+            if (pairing is { } p) result[r.Id] = p;
         }
 
         return result;
@@ -241,5 +330,5 @@ public static class TransactionEndpoints
 
     private static TransactionResponse ToResponse(Transaction t) => new(
         t.Id, t.AccountId, t.Date, t.PurchaseDate, t.StatementDate, t.Amount, t.NormalizedDescription,
-        t.OriginalDescription, t.CategoryId, t.State, t.Origin, t.EditedByUser, t.CounterpartyName);
+        t.OriginalDescription, t.CategoryId, t.State, t.Origin, t.EditedByUser, t.CounterpartyName, null, null);
 }
