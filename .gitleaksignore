@@ -1,0 +1,3 @@
+# Valores sintéticos de teste (falsos positivos do gitleaks).
+f6e3920e6295658a844ed5ba2cb2b188a3cef054:src/real/api/http.test.ts:generic-api-key:95
+5bb87b2ca7f76d67a20442a5b40347f6e635ad47:backend/tests/FinanceDashboard.Tests/Importing/ImportOverridesTests.cs:generic-api-key:296

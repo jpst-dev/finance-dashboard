@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "build:real": "vue-tsc && vite build --mode real --outDir dist-real",
+    "dev:real": "vite --mode real",
+    "api:types": "openapi-typescript backend/openapi/v1.json -o src/real/api/schema.d.ts",
     "preview": "vite preview",
     "test": "vitest run"
   },
@@ -25,8 +28,10 @@
     "@types/node": "^20.5.9",
     "@vitejs/plugin-vue": "^4.2.3",
     "@vue/compiler-sfc": "^3.5.13",
+    "@vue/test-utils": "2.5.1",
     "autoprefixer": "^10.4.15",
     "jsdom": "^25.0.1",
+    "openapi-typescript": "7.13.0",
     "postcss": "^8.4.29",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.8.3",

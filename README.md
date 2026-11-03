@@ -88,7 +88,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md) e [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md) e [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md).
 
 ### Rodando localmente
 
@@ -108,7 +108,7 @@ Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/a
    ```bash
    docker compose up -d --build
    ```
-4. Acesse **http://127.0.0.1:8080**. Na S0 o front ainda é a demo da v1 e não tem tela de login (ela chega na S1); o login é exercitado pela API, em `/api/docs` ou com `curl` (cookie jar + token antiforgery):
+4. Acesse **http://127.0.0.1:8080**. O front servido pelo Compose é o **modo real** (veja [Modo real (interface)](#modo-real-interface)): entre com o usuário criado a partir de `SEED_USER_EMAIL`/`SEED_USER_PASSWORD`. A API também pode ser exercitada em `/api/docs` ou com `curl` (cookie jar + token antiforgery):
    ```bash
    curl -s -c jar.txt -b jar.txt http://127.0.0.1:8080/api/auth/csrf
    # copie o valor de "token" da resposta e use em X-XSRF-TOKEN:
@@ -124,6 +124,52 @@ Depois de recriar o container da API (`docker compose up -d --build api`), reini
 ```bash
 docker compose restart web
 ```
+
+### Modo real (interface)
+
+O mesmo código-fonte gera **dois builds**, escolhidos em tempo de build pela variável `VITE_APP_MODE`:
+
+| Build | Comando | Saída | Uso |
+| --- | --- | --- | --- |
+| `demo` (padrão) | `npm run build` | `dist/` | Vercel: dados de exemplo no navegador, sem login e sem backend |
+| `real` | `npm run build:real` (usa `.env.real`, `VITE_APP_MODE=real`) | `dist-real/` | Imagem Docker do `web` (nginx), falando com a API na mesma origem |
+
+Só o valor exato `real` ativa o modo real; qualquer outro (ou ausente) cai no `demo`, então a Vercel continua intacta. Cada bundle não contém código do outro modo (ver [ADR 0004](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md)). O modo real tem login, Visão geral (resumo calculado no servidor), Lançamentos, Pendentes de classificação, Contas e Importar (OFX Nubank com prévia, classificação das pendentes, confirmação e desfazer pelo histórico).
+
+**Como rodar (Compose):**
+
+```bash
+docker compose up -d --build
+```
+
+Abra **http://127.0.0.1:8080** e entre com o usuário inicial definido no `.env` (`SEED_USER_EMAIL` / `SEED_USER_PASSWORD`). Depois de mudar o front, basta `docker compose up -d --build web`.
+
+**Desenvolvimento:** com a API local na porta 5288 (veja [Desenvolvimento](#desenvolvimento)), rode na raiz:
+
+```bash
+npm run dev:real
+```
+
+O Vite encaminha `/api` para `http://localhost:5288`, mantendo a mesma origem.
+
+**Esconder valores:** o botão "Esconder valores" na barra lateral troca todo dinheiro por `••••` (texto, atributos acessíveis e título da página), sem nova chamada à API. A preferência fica no navegador (`localStorage`, chave `fd.hideValues`); o idioma (pt-BR/en-US) fica em `fd.locale`. Nada disso vai ao servidor.
+
+**Tipos da API e contrato:** os tipos do front são gerados a partir do OpenAPI versionado em `backend/openapi/v1.json`:
+
+```bash
+npm run api:types
+```
+
+Depois de mudar endpoints ou DTOs, regenere antes o snapshot do OpenAPI e, em seguida, os tipos:
+
+```bash
+UPDATE_OPENAPI_SNAPSHOT=1 dotnet test backend/FinanceDashboard.sln --filter "FullyQualifiedName~OpenApiSnapshot"
+npm run api:types
+```
+
+**Checagens na CI:** além dos testes, a CI regenera os tipos e falha se `src/real/api/schema.d.ts` divergir do commit (`git diff --exit-code`), e roda `node scripts/check-bundles.mjs`, que falha se o bundle `dist/` contiver o marcador do modo real ou se `dist-real/` contiver código do modo demo (ou faltar o marcador). O teste `src/real/e2e-smoke.test.ts` percorre o fluxo completo (login, conta, importação com classificação, resumo, esconder valores, desfazer) com uma API simulada.
+
+**Fora desta fatia:** o demo estático com a mesma interface (S1c), o importador do Itaú (S2) e conciliação, investimentos e patrimônio (S3/S4). Metas, criptomoedas e investimentos ficam escondidos no modo real (continuam só no demo).
 
 ### Importando um extrato Nubank (S1a)
 
@@ -210,6 +256,12 @@ dotnet test backend/FinanceDashboard.sln
 
 Os testes de integração usam Postgres real via Testcontainers, então o **Docker precisa estar rodando**. A CI (`.github/workflows/ci.yml`) roda backend, front e gitleaks.
 
+O contrato OpenAPI fica versionado em `backend/openapi/v1.json` e um teste falha se ele divergir da API. Depois de mudar endpoints ou DTOs, regenere o arquivo (o front gera os tipos a partir dele):
+
+```bash
+UPDATE_OPENAPI_SNAPSHOT=1 dotnet test backend/FinanceDashboard.sln --filter "FullyQualifiedName~OpenApiSnapshot"
+```
+
 ### Backup e restauração
 
 ```powershell
@@ -225,7 +277,7 @@ Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos
 
 ### Roteiro
 
-Próximas fatias: S1 núcleo + Nubank, S2 Itaú, S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+Entregue: S0 fundação, S1a API de núcleo + importação Nubank e S1b interface do modo real. Próximas fatias: S1c demo estático com a nova interface, S2 Itaú, S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
 
 ## 🤝 Contribuindo
 
