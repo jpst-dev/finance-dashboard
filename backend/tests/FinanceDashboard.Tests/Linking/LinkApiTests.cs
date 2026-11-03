@@ -259,15 +259,17 @@ public sealed class LinkApiTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Suggested_link_shows_on_pending_lines_that_stay_in_the_queue()
+    public async Task Suggested_link_shows_on_pix_lines_that_are_normal_now()
     {
         await using var f = await NewFactoryAsync();
         using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
         await SuggestedTransferAsync(c);
 
-        var pending = await TransactionsAsync(c, "?state=PendingClassification");
-        Assert.Equal(2, pending.Count);
-        Assert.All(pending, p => Assert.Equal("Suggested", p.GetProperty("link").GetProperty("state").GetString()));
+        // Pix is Normal since S3(b): the pair is no longer in the pending queue, but its lines carry the suggestion.
+        Assert.Empty(await TransactionsAsync(c, "?state=PendingClassification"));
+        var all = await TransactionsAsync(c);
+        Assert.Equal(2, all.Count);
+        Assert.All(all, p => Assert.Equal("Suggested", p.GetProperty("link").GetProperty("state").GetString()));
     }
 
     [Fact]

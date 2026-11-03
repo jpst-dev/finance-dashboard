@@ -45,13 +45,16 @@ public sealed class LinkService(AppDbContext db, TimeProvider time)
                 from t in db.Transactions.AsNoTracking().Visible().WithoutConfirmedLink(db)
                 join b in db.ImportBatches.AsNoTracking() on t.BatchId equals b.Id
                 where t.State == TransactionState.PendingClassification
-                select new { t.Id, t.AccountId, b.Source, t.OriginalDescription, t.Date, t.Amount })
+                    || t.State == TransactionState.Normal
+                select new { t.Id, t.AccountId, b.Source, t.OriginalDescription, t.Date, t.Amount, t.State })
             .ToListAsync(ct);
 
         var candidates = new List<PairingCandidate>();
         foreach (var r in rows)
         {
-            if (PairingRules.RoleOf(r.Source, r.OriginalDescription, r.Amount) is { } role)
+            // Transfers are candidates in any state (Pix is Normal now); the other roles only while Pending.
+            if (PairingRules.RoleOf(r.Source, r.OriginalDescription, r.Amount) is { } role
+                && (role == PairingRole.Transfer || r.State == TransactionState.PendingClassification))
                 // TEMPORARY (S3(b) Task 1): real counterpart name keys arrive with Task 4. A shared constant keeps
                 // the S3(a) auto-confirm behavior of own transfers until then.
                 candidates.Add(new PairingCandidate(r.Id, r.AccountId, r.Source, role, r.Date, r.Amount,
