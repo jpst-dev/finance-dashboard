@@ -10,7 +10,7 @@ A API guarda dados financeiros pessoais e tem praticamente um único usuário, s
 - Autenticação com **ASP.NET Core Identity e cookie de sessão** `httpOnly`, com **proteção antiforgery** (o token vem de `/api/auth/csrf`).
 - **Mesma origem**: front e API atrás do mesmo host e porta (`http://127.0.0.1:8080`). Sem CORS e sem cookie entre domínios.
 - Sem cadastro aberto: o usuário inicial é criado por variáveis de ambiente (`SEED_USER_EMAIL`, `SEED_USER_PASSWORD`).
-- Rate limit nas rotas de autenticação, por IP do cliente.
+- Rate limit no `POST /api/auth/login`, por IP do cliente (as demais rotas de autenticação não têm rate limit).
 
 ## Consequências
 - Nenhum token fica acessível a JavaScript (menos superfície para XSS) e não há fluxo de refresh, rotação ou revogação para manter.

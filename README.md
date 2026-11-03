@@ -92,7 +92,7 @@ Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/a
 
 ### Rodando localmente
 
-1. Depois de clonar, ative o hook de pre-commit que roda o gitleaks (hooks não são versionados; sem o gitleaks instalado ele só avisa, não bloqueia):
+1. Depois de clonar, ative o hook de pre-commit que roda o gitleaks (a pasta `.githooks/` é versionada, mas a configuração `core.hooksPath` não, então cada clone precisa ativá-la; sem o gitleaks instalado ele só avisa, não bloqueia):
    ```bash
    git config core.hooksPath .githooks
    ```
@@ -102,13 +102,19 @@ Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/a
    ```
    - `POSTGRES_PASSWORD`: apenas letras e números (a senha entra numa connection string).
    - `SEED_USER_EMAIL`: precisa ser um e-mail válido.
-   - `SEED_USER_PASSWORD`: no mínimo 12 caracteres e pelo menos um caractere não alfanumérico (política de senha do Identity).
+   - `SEED_USER_PASSWORD`: no mínimo 12 caracteres, com letra maiúscula, letra minúscula, dígito e pelo menos um caractere não alfanumérico (política de senha do Identity). Se a senha não cumprir a regra, a API não sobe; se ela ficar reiniciando, rode `docker compose logs api`.
    - Não há cadastro aberto: o usuário inicial é criado a partir de `SEED_USER_EMAIL`/`SEED_USER_PASSWORD`. Se `SEED_*` estiver definido, `Database__MigrateOnStartup` for `false` e não houver schema, a API falha na inicialização (fail-fast). O Compose já define `Database__MigrateOnStartup=true`.
 3. Suba a stack:
    ```bash
    docker compose up -d --build
    ```
-4. Acesse **http://127.0.0.1:8080** e entre com o usuário do `.env`.
+4. Acesse **http://127.0.0.1:8080**. Na S0 o front ainda é a demo da v1 e não tem tela de login (ela chega na S1); o login é exercitado pela API, em `/api/docs` ou com `curl` (cookie jar + token antiforgery):
+   ```bash
+   curl -s -c jar.txt -b jar.txt http://127.0.0.1:8080/api/auth/csrf
+   # copie o valor de "token" da resposta e use em X-XSRF-TOKEN:
+   curl -s -c jar.txt -b jar.txt -X POST http://127.0.0.1:8080/api/auth/login      -H "Content-Type: application/json" -H "X-XSRF-TOKEN: <token>"      -d '{"email":"<SEED_USER_EMAIL>","password":"<SEED_USER_PASSWORD>"}'
+   curl -s -b jar.txt http://127.0.0.1:8080/api/auth/me
+   ```
    - Documentação da API (Scalar): http://127.0.0.1:8080/api/docs (especificação em `/api/openapi/v1.json`)
    - Health check: http://127.0.0.1:8080/api/health/ready
    - O Postgres fica publicado só em `127.0.0.1:5432`.
