@@ -160,6 +160,8 @@ public static class NubankOfxReader
             var upper = tag.ToUpperInvariant();
             var value = rawValue.Trim();
             if (value.Length > MaxFieldChars) throw new ImportFormatException("malformed", tagLine);
+            foreach (var ch in value)
+                if (ch < 0x20 && ch != '	') throw new ImportFormatException("malformed", tagLine);
 
             if (value.Length == 0)
             {
@@ -179,6 +181,8 @@ public static class NubankOfxReader
 
             // leaf with value (closing tag, if any, is ignored when it does not match stack top)
             value = WebUtility.HtmlDecode(value);
+            foreach (var ch in value) // entities such as &#0; decode to control characters
+                if (ch < 0x20 && ch != '	') throw new ImportFormatException("malformed", tagLine);
             var top = stack.Count > 0 ? stack[^1] : "";
             switch (upper)
             {

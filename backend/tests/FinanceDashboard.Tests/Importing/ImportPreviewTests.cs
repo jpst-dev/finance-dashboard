@@ -168,6 +168,18 @@ public sealed class ImportPreviewTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task File_with_control_character_is_422_not_500()
+    {
+        await using var f = new ApiFactory(await postgres.CreateDatabaseAsync());
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var acc = await CreateAccountAsync(c);
+        var bytes = OfxTestFile.Checking().Line("20261031000000", "-1.00", "Compra X", Guid.NewGuid().ToString()).Build();
+        var r = await UploadAsync(c, acc, bytes);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, r.StatusCode);
+        Assert.Equal("malformed", (await JsonOf(r)).GetProperty("error").GetString());
+    }
+
+    [Fact]
     public async Task Invalid_file_is_422_with_kind_and_without_content()
     {
         var logs = new CapturingLoggerProvider();
