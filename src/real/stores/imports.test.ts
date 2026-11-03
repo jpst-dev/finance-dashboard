@@ -1,0 +1,189 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
+import pt from "../i18n/pt-BR.json";
+import en from "../i18n/en-US.json";
+import { ApiError } from "../api/errors";
+import { acc } from "../testing";
+import { fakeImportApi, line, ofx, preview } from "../testingImport";
+import { useAccountsStore } from "./accounts";
+import { useTransactionsStore } from "./transactions";
+import { IMPORT_ERROR_CODES, MAX_FILE_BYTES, importErrorCode, useImportsStore, validateFiles } from "./imports";
+
+async function setup(opts: Parameters<typeof fakeImportApi>[0] = {}) {
+  setActivePinia(createPinia());
+  const fake = fakeImportApi(opts);
+  await useAccountsStore().load();
+  return { ...fake, store: useImportsStore() };
+}
+
+function sized(name: string, size: number): File {
+  const f = ofx(name);
+  Object.defineProperty(f, "size", { value: size });
+  return f;
+}
+
+beforeEach(() => localStorage.clear());
+
+describe("imports store", () => {
+  it("Oversized_or_non_ofx_file_rejected_client_side_before_upload", async () => {
+    const { store, imports } = await setup();
+    expect(MAX_FILE_BYTES).toBe(5 * 1024 * 1024);
+    expect(validateFiles([sized("a.ofx", MAX_FILE_BYTES + 1)])).toBe("too_large");
+    expect(validateFiles([sized("a.ofx", MAX_FILE_BYTES)])).toBeNull();
+    expect(validateFiles([ofx("a.csv")])).toBe("not_ofx");
+    expect(validateFiles([ofx("A.OFX")])).toBeNull();
+    expect(validateFiles([ofx("a.ofx", "")])).toBe("empty");
+    expect(validateFiles([])).toBe("no_file");
+    expect(validateFiles([ofx("a.ofx"), ofx("b.ofx")])).toBe("one_file");
+
+    expect(await store.upload("a1", sized("a.ofx", MAX_FILE_BYTES + 1))).toBe(false);
+    expect(store.error).toBe("too_large");
+    expect(await store.upload("a1", ofx("extrato.txt"))).toBe(false);
+    expect(store.error).toBe("not_ofx");
+    expect(imports.preview).not.toHaveBeenCalled();
+  });
+
+  it("upload_only_to_active_checking_or_card_accounts", async () => {
+    const { store, imports } = await setup({
+      accounts: [
+        acc({ id: "a1", type: "Checking" }),
+        acc({ id: "card", type: "CreditCard" }),
+        acc({ id: "w", type: "Wallet" }),
+        acc({ id: "old", type: "Checking", isArchived: true }),
+      ],
+    });
+    expect(store.importableAccounts.map((a) => a.id)).toEqual(["a1", "card"]);
+    expect(await store.upload("w", ofx())).toBe(false);
+    expect(await store.upload("old", ofx())).toBe(false);
+    expect(store.error).toBe("invalid_account");
+    expect(imports.preview).not.toHaveBeenCalled();
+    expect(await store.upload("card", ofx())).toBe(true);
+    expect(imports.preview).toHaveBeenCalledTimes(1);
+  });
+
+  it("Pending_tab_override_is_sent_on_confirm_only_for_new_lines", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    store.setOverride("p1", { state: "Normal" });
+    store.setOverride("p1", { categoryId: "c-exp" });
+    store.setOverride("e1", { state: "PendingClassification", categoryId: "c-exp" }); // existente: nunca enviado
+    store.setOverride("zz", { state: "Normal" }); // fora da prévia
+    store.setOverride("n1", { state: "Normal", categoryId: null }); // igual ao padrão: descartado
+    await store.confirm(false);
+    expect(imports.confirm).toHaveBeenCalledWith("b1", {
+      acknowledgeBlockingWarnings: false,
+      overrides: [{ sourceKey: "p1", state: "Normal", categoryId: "c-exp" }],
+    });
+  });
+
+  it("overrides_dropped_for_lines_no_longer_new", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    store.setOverride("p1", { categoryId: "c-exp" });
+    // Reenvio: agora a mesma linha já existe.
+    imports.preview.mockResolvedValueOnce(
+      preview({ batchId: "b2", lines: [line({ sourceKey: "p1", state: "PendingClassification", existing: true })] }),
+    );
+    await store.upload("a1", ofx());
+    await store.confirm(false);
+    const body = imports.confirm.mock.calls[0][1] as { overrides?: unknown[] };
+    expect(body.overrides ?? []).toEqual([]);
+  });
+
+  it("override_back_to_default_clears_entry", async () => {
+    const { store } = await setup();
+    await store.upload("a1", ofx());
+    store.setOverride("p1", { state: "Normal" });
+    expect(store.overrides.has("p1")).toBe(true);
+    store.setOverride("p1", { state: "PendingClassification" });
+    expect(store.overrides.has("p1")).toBe(false);
+    store.setOverride("p1", { categoryId: "c-exp" });
+    store.clearOverride("p1");
+    expect(store.overrides.size).toBe(0);
+  });
+
+  it("double_click_confirm_sends_once", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    const a = store.confirm(false);
+    const b = store.confirm(false);
+    await Promise.all([a, b]);
+    expect(imports.confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirm_success_refreshes_pending_count_and_history", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    expect(await store.confirm(false)).toBe(true);
+    expect(store.result).toEqual({ batchId: "b1", created: 3, skipped: 1 });
+    expect(store.preview).toBeNull();
+    expect(useTransactionsStore().pendingCount).toBe(7);
+    expect(imports.list).toHaveBeenCalled();
+  });
+
+  it("confirm_errors_keep_preview_and_overrides", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    store.setOverride("p1", { state: "Normal" });
+    imports.confirm.mockRejectedValueOnce(new ApiError(422, "invalid_override"));
+    expect(await store.confirm(false)).toBe(false);
+    expect(store.error).toBe("invalid_override");
+    expect(store.preview?.batchId).toBe("b1");
+    expect(store.overrides.get("p1")).toEqual({ state: "Normal" });
+
+    imports.confirm.mockRejectedValueOnce(new ApiError(409, "blocking_warnings"));
+    await store.confirm(false);
+    expect(store.error).toBe("blocking_warnings");
+    expect(store.ackRequired).toBe(true);
+
+    imports.confirm.mockRejectedValueOnce(new ApiError(404));
+    await store.confirm(true);
+    expect(store.error).toBe("preview_expired");
+    expect(store.expired).toBe(true);
+  });
+
+  it("error_codes_never_carry_server_text", () => {
+    expect(importErrorCode(new ApiError(422, "something_new"), "upload")).toBe("invalid");
+    expect(importErrorCode(new ApiError(410, "preview_expired"), "confirm")).toBe("preview_expired");
+    expect(importErrorCode(new ApiError(409), "upload")).toBe("account_archived");
+    expect(importErrorCode(new ApiError(413, "too_large"), "upload")).toBe("too_large");
+    expect(importErrorCode(new ApiError(0, "network"), "upload")).toBe("network");
+    expect(importErrorCode(new Error("R$ 9999"), "upload")).toBe("server");
+    expect(importErrorCode(new ApiError(409, "already_undone"), "undo")).toBe("already_undone");
+  });
+
+  it("Each_known_error_code_has_a_translation_in_both_languages", () => {
+    const brief = [
+      "not_ofx", "empty", "too_large", "malformed", "forbidden_dtd", "unsupported_multiple_statements",
+      "account_type_mismatch", "already_imported", "already_confirmed", "already_undone", "account_archived",
+      "unsupported_amount_precision", "unsupported_line", "invalid_override", "preview_expired",
+    ];
+    for (const c of brief) expect(IMPORT_ERROR_CODES).toContain(c);
+    const errs = (o: unknown) => (o as { real: { errors: Record<string, string> } }).real.errors;
+    for (const c of IMPORT_ERROR_CODES) {
+      expect(typeof errs(pt)[c], `pt-BR ${c}`).toBe("string");
+      expect(typeof errs(en)[c], `en-US ${c}`).toBe("string");
+    }
+  });
+
+  it("undo_refreshes_history_and_pending_and_translates_errors", async () => {
+    const { store, imports } = await setup();
+    expect(await store.undo("h1")).toBe(true);
+    expect(imports.undo).toHaveBeenCalledWith("h1");
+    expect(imports.list).toHaveBeenCalled();
+    expect(useTransactionsStore().pendingCount).toBe(7);
+    imports.undo.mockRejectedValueOnce(new ApiError(409, "already_undone"));
+    expect(await store.undo("h1")).toBe(false);
+    expect(store.historyError).toBe("already_undone");
+  });
+
+  it("cancel_drops_preview_on_server_and_locally", async () => {
+    const { store, imports } = await setup();
+    await store.upload("a1", ofx());
+    store.setOverride("p1", { state: "Normal" });
+    await store.cancel();
+    expect(imports.undo).toHaveBeenCalledWith("b1");
+    expect(store.preview).toBeNull();
+    expect(store.overrides.size).toBe(0);
+  });
+});
