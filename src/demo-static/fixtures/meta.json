@@ -1,0 +1,16 @@
+{
+  "generator": "finance-demo-fixtures",
+  "referenceDate": "2026-10-15",
+  "months": [
+    "2026-05",
+    "2026-06",
+    "2026-07",
+    "2026-08",
+    "2026-09",
+    "2026-10"
+  ],
+  "previewBatchId": "0000001b-0000-4000-8000-000000000002",
+  "user": {
+    "email": "visitante@exemplo.invalid"
+  }
+}

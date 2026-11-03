@@ -4,3 +4,4 @@
 *.xlsx binary
 backend/tests/fixtures/** -text
 backend/openapi/*.json text eol=lf
+src/demo-static/fixtures/*.json text eol=lf

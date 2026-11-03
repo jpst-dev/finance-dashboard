@@ -1,0 +1,80 @@
+[
+  {
+    "id": "0000000c-0000-4000-8000-000000000001",
+    "name": "Alimentação",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000007",
+    "name": "Assinaturas",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000008",
+    "name": "Compras",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000006",
+    "name": "Educação",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000009",
+    "name": "Impostos e taxas",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000005",
+    "name": "Lazer",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000002",
+    "name": "Moradia",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-00000000000a",
+    "name": "Outros",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000004",
+    "name": "Saúde",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-000000000003",
+    "name": "Transporte",
+    "kind": "Expense",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-00000000000d",
+    "name": "Outras receitas",
+    "kind": "Income",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-00000000000c",
+    "name": "Rendimentos",
+    "kind": "Income",
+    "isDefault": true
+  },
+  {
+    "id": "0000000c-0000-4000-8000-00000000000b",
+    "name": "Salário",
+    "kind": "Income",
+    "isDefault": true
+  }
+]

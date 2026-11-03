@@ -1,0 +1,11 @@
+{
+  "month": "2026-04",
+  "income": "0.00",
+  "expenses": "0.00",
+  "net": "0.00",
+  "byCategory": [],
+  "pending": {
+    "count": 0,
+    "total": "0.00"
+  }
+}
