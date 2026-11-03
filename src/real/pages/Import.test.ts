@@ -147,6 +147,21 @@ describe("Import page", () => {
     expect((w.find("[data-test=account]").element as HTMLSelectElement).value).toBe("a1");
   });
 
+  it("confirm_result_shows_categorized_only_when_positive", async () => {
+    const a = await setup();
+    await uploadFlow(a.w);
+    await a.w.find("[data-test=confirm]").trigger("click");
+    await flushPromises();
+    expect(a.w.find("[data-test=result-categorized]").exists()).toBe(false);
+    a.w.unmount();
+    const b = await setup();
+    b.imports.confirm.mockResolvedValueOnce({ batchId: "b1", created: 3, skipped: 1, linked: 0, suggested: 0, categorized: 2 });
+    await uploadFlow(b.w);
+    await b.w.find("[data-test=confirm]").trigger("click");
+    await flushPromises();
+    expect(b.w.find("[data-test=result-categorized]").text()).toBe("2 categorizadas");
+  });
+
   it("confirm_success_shows_created_and_skipped_with_links", async () => {
     const { w } = await setup();
     await uploadFlow(w);

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
 import i18n from "../i18n";
 import { setApi } from "../api/context";
 import type { ApiClient } from "../api";
@@ -24,7 +25,7 @@ async function setup(opts: { items?: ReturnType<typeof tx>[]; total?: number } =
     list: async () => [acc({ id: "a1", name: "Conta Ativa" }), acc({ id: "a2", name: "Conta Velha", isArchived: true, type: "CreditCard" }), acc({ id: "a3", name: "Cartão Ativo", type: "CreditCard" })],
   };
   setApi({ transactions, accounts, categories: { list: async () => cats } } as unknown as ApiClient);
-  const w = mount(Transactions, { global: { plugins: [pinia, i18n] } });
+  const w = mount(Transactions, { global: { plugins: [pinia, i18n, createRouter({ history: createMemoryHistory(), routes: [] })] } });
   await flushPromises();
   return { w, transactions };
 }

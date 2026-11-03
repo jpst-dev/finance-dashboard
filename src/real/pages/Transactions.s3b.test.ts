@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
 import i18n from "../i18n";
 import { setApi } from "../api/context";
 import { ApiError } from "../api/errors";
@@ -20,7 +21,7 @@ async function setup() {
   };
   const links = { list: vi.fn(async () => ({ items: [], page: 1, size: 50, total: 0 })) };
   setApi({ transactions, links, accounts: { list: async () => [acc({ id: "a1", name: "Conta" })] }, categories: { list: async () => [] } } as unknown as ApiClient);
-  const w = mount(Transactions, { global: { plugins: [pinia, i18n] } });
+  const w = mount(Transactions, { global: { plugins: [pinia, i18n, createRouter({ history: createMemoryHistory(), routes: [] })] } });
   await flushPromises();
   return { w, transactions, links };
 }

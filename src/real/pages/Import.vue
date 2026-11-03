@@ -53,6 +53,9 @@ const btn = "rounded px-3 py-1.5 focus-visible:outline focus-visible:outline-2 f
           linked: t("real.plural.pairs", { n: store.result.linked }, store.result.linked),
           suggested: t("real.plural.suggestions", { n: store.result.suggested }, store.result.suggested),
         }) }}</p>
+      <p v-if="store.result.categorized > 0" class="mt-1" data-test="result-categorized">
+        {{ t("real.import.resultCategorized", { n: store.result.categorized }, store.result.categorized) }}
+      </p>
       <div class="mt-2 flex flex-wrap gap-3">
         <RouterLink to="/transactions" :class="[btn, 'border border-gray-600']">{{ t("real.import.goTransactions") }}</RouterLink>
         <RouterLink to="/pending" :class="[btn, 'border border-gray-600']">{{ t("real.import.goPending") }}</RouterLink>

@@ -3,7 +3,9 @@
 import type {
   Account,
   AccountUpdate,
+  ApplyRulesResult,
   Category,
+  CategoryRule,
   Checkpoint,
   ConfirmBody,
   ConfirmResult,
@@ -14,6 +16,7 @@ import type {
   LinkQuery,
   LinkResponse,
   NewAccount,
+  NewCategoryRule,
   NewCheckpoint,
   NewTransaction,
   Page,
@@ -69,5 +72,12 @@ export interface ApiClient {
     reject(id: string): Promise<LinkResponse>;
     undo(id: string): Promise<void>;
     reconcile(): Promise<ReconcileResult>;
+  };
+  categoryRules: {
+    list(): Promise<CategoryRule[]>;
+    create(b: NewCategoryRule): Promise<CategoryRule>;
+    remove(id: string): Promise<void>;
+    /** Aplica as regras às linhas candidatas; devolve quantas foram categorizadas. */
+    apply(): Promise<ApplyRulesResult>;
   };
 }
