@@ -12,7 +12,8 @@
       "transactions": "Lançamentos",
       "pending": "Pendentes",
       "accounts": "Contas",
-      "import": "Importar"
+      "import": "Importar",
+      "rules": "Regras"
     },
     "titles": {
       "login": "Entrar",
@@ -20,7 +21,8 @@
       "transactions": "Lançamentos",
       "pending": "Pendentes",
       "accounts": "Contas",
-      "import": "Importar"
+      "import": "Importar",
+      "rules": "Regras"
     },
     "login": {
       "title": "Entrar",
@@ -129,7 +131,9 @@
       "one_file": "Envie um arquivo por vez.",
       "invalid_account": "Escolha uma conta corrente ou de cartão de crédito ativa.",
       "link_conflict": "O vínculo mudou enquanto você olhava. A lista foi atualizada.",
-      "not_applicable": "Esta linha não se aplica a essa ação. A lista foi atualizada."
+      "not_applicable": "Esta linha não se aplica a essa ação. A lista foi atualizada.",
+      "duplicate_rule": "Já existe uma regra com esse trecho.",
+      "invalid_pattern": "O trecho deve ter de 3 a 100 caracteres."
     },
     "import": {
       "help": "Envie o extrato ou a fatura (.ofx do Nubank ou do Itaú; fatura do Itaú em .xlsx), um arquivo por vez, até 5 MB. Nada é gravado antes de você confirmar.",
@@ -234,7 +238,8 @@
         "deletedKeys": "Linhas que você excluiu e que pertencem a outras importações continuam ocupando a chave e não voltam ao reimportar; as excluídas desta importação voltam se você importar o arquivo de novo.",
         "undone": "Importação desfeita."
       },
-      "resultLinks": "{linked}, {suggested}"
+      "resultLinks": "{linked}, {suggested}",
+      "resultCategorized": "nenhuma categorizada | 1 categorizada | {n} categorizadas"
     },
     "pagination": {
       "label": "Paginação",
@@ -352,7 +357,34 @@
       "pairs": "nenhum par vinculado | 1 par vinculado | {n} pares vinculados",
       "suggestions": "nenhuma sugestão | 1 sugestão | {n} sugestões",
       "linked": "nenhuma ligada | 1 ligada | {n} ligadas",
-      "reclassified": "nenhuma reclassificada | 1 reclassificada | {n} reclassificadas"
+      "reclassified": "nenhuma reclassificada | 1 reclassificada | {n} reclassificadas",
+      "categorized": "nenhuma linha categorizada | 1 linha categorizada | {n} linhas categorizadas"
+    },
+    "rules": {
+      "help": "Regras categorizam automaticamente linhas sem categoria cuja descrição original contém o trecho como palavra inteira (\"BAR\" não pega \"BARBEARIA\"). Vence o trecho mais longo.",
+      "empty": "Nenhuma regra criada",
+      "loading": "Carregando regras…",
+      "tablePattern": "Trecho",
+      "tableCategory": "Categoria",
+      "tableMatches": "Linhas que pega",
+      "tableActions": "Ações",
+      "matchesHint": "O total de \"linhas que pega\" pode somar mais do que \"Aplicar regras\" categoriza, porque o trecho mais longo vence quando mais de uma regra pega a mesma linha.",
+      "formTitle": "Nova regra",
+      "pattern": "Trecho da descrição",
+      "category": "Categoria",
+      "add": "Criar regra",
+      "created": "Regra criada.",
+      "fromSuggestion": "Trecho sugerido a partir de um lançamento; edite se quiser.",
+      "delete": "Excluir",
+      "deleteRow": "Excluir regra {pattern}",
+      "deleteConfirm": "Excluir a regra «{pattern}»? As categorias já aplicadas não mudam.",
+      "deleteYes": "Sim, excluir",
+      "deleteNo": "Cancelar",
+      "deleted": "Regra excluída.",
+      "apply": "Aplicar regras",
+      "shortcut": "Sempre categorizar «{pattern}» como {category}",
+      "shortcutButton": "Criar regra",
+      "shortcutDismiss": "Dispensar"
     }
   }
 }

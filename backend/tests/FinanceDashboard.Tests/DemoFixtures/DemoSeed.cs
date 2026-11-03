@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure;
+using FinanceDashboard.Infrastructure.Categorization;
 using FinanceDashboard.Infrastructure.Importing;
 using FinanceDashboard.Infrastructure.Linking;
 using FinanceDashboard.Tests.Infrastructure;
@@ -34,6 +35,7 @@ public static class DemoSeed
     private const int CheckpointKind = 0xB;
     private const int BatchKind = 0x1B;
     private const int LinkKind = 0x1E;
+    private const int RuleKind = 0x2E;
 
     public static Guid Id(int kind, int n) => new(FormattableString.Invariant($"{kind:x8}-0000-4000-8000-{n:x12}"));
 
@@ -52,6 +54,9 @@ public static class DemoSeed
 
     /// <summary>Deterministic id for the n-th link in the generated fixtures (the server uses random ones).</summary>
     public static Guid FixtureLinkId(int n) => Id(LinkKind, n);
+
+    /// <summary>Deterministic id for the n-th rule (by pattern order) in the generated fixtures (the server uses random ones).</summary>
+    public static Guid FixtureRuleId(int n) => Id(RuleKind, n);
 
     // Same names and kinds as DefaultCategories, in its order: 10 expenses then 3 incomes.
     private static readonly (string Name, CategoryKind Kind)[] Categories =
@@ -200,7 +205,8 @@ public static class DemoSeed
         {
             var date = new DateOnly(2026, 7 + k, 2);
             var description = FormattableString.Invariant($"Loja Eletrônicos Exemplo {k}/3");
-            var t = Add(CardId, date, -450.00m, description, "Compras");
+            // The last installment (in the confirmed invoice) is left without category: a rule fills it (see below).
+            var t = Add(CardId, date, -450.00m, description, k == 3 ? null : "Compras");
             t.PurchaseDate = purchase;
             t.InstallmentNumber = k;
             t.InstallmentTotal = 3;
@@ -304,6 +310,28 @@ public static class DemoSeed
         {
             throw new InvalidOperationException(
                 "Demo one-sided links drifted: " + string.Join(", ", open.Select(l => $"{l.Kind}/{l.State}")) + ".");
+        }
+
+        // Category rules come from the real service: two are applied (they categorize imported, unedited, uncategorized
+        // Normal lines: the invoice's last installment and the condominium boleto) and one is left unapplied, so the
+        // demo shows a rule with matches. Totals do not change: the categories only redistribute the same amounts.
+        var rules = new CategoryRuleService(db, f.Services.GetRequiredService<TimeProvider>());
+        async Task Rule(string pattern, string category)
+        {
+            if ((await rules.CreateAsync(pattern, Cat(category), ct)).Outcome != CreateRuleOutcome.Created)
+            {
+                throw new InvalidOperationException("Demo rule could not be created.");
+            }
+        }
+
+        await Rule("LOJA ELETRONICOS", "Compras");
+        await Rule("CONDOMINIO", "Moradia");
+        var applied = await rules.ApplyAsync(null, ct);
+        await Rule("FORNECEDOR", "Compras");
+        var listed = await rules.ListAsync(ct);
+        if (applied != 2 || listed.Count != 3 || listed.Sum(r => r.Matches) != 1)
+        {
+            throw new InvalidOperationException($"Demo rules drifted: {applied} applied, matches {string.Join("/", listed.Select(r => r.Matches))}.");
         }
 
         var before = await db.Categories.CountAsync(ct);

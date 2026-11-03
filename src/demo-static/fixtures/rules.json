@@ -1,0 +1,26 @@
+[
+  {
+    "id": "0000002e-0000-4000-8000-000000000001",
+    "pattern": "CONDOMINIO",
+    "categoryId": "0000000c-0000-4000-8000-000000000002",
+    "categoryName": "Moradia",
+    "createdAt": "2026-10-15T12:00:00+00:00",
+    "matches": 0
+  },
+  {
+    "id": "0000002e-0000-4000-8000-000000000002",
+    "pattern": "FORNECEDOR",
+    "categoryId": "0000000c-0000-4000-8000-000000000008",
+    "categoryName": "Compras",
+    "createdAt": "2026-10-15T12:00:00+00:00",
+    "matches": 1
+  },
+  {
+    "id": "0000002e-0000-4000-8000-000000000003",
+    "pattern": "LOJA ELETRONICOS",
+    "categoryId": "0000000c-0000-4000-8000-000000000008",
+    "categoryName": "Compras",
+    "createdAt": "2026-10-15T12:00:00+00:00",
+    "matches": 0
+  }
+]

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRouter } from "vue-router";
 import type { Transaction, TransactionState } from "../api/types";
 import Pagination from "../components/Pagination.vue";
 import TransactionForm from "../components/TransactionForm.vue";
 import TransactionTable from "../components/TransactionTable.vue";
 import { useAccountsStore } from "../stores/accounts";
+import { suggestPattern } from "../rules/suggestPattern";
 import { useCategoriesStore } from "../stores/categories";
+import { useCategoryRulesStore } from "../stores/categoryRules";
 import { useTransactionsStore, type TransactionInput } from "../stores/transactions";
 
 const { t } = useI18n();
@@ -18,6 +21,10 @@ const creating = ref(false);
 const editing = ref<Transaction | null>(null);
 const confirming = ref<Transaction | null>(null);
 const status = ref("");
+const rules = useCategoryRulesStore();
+const router = useRouter();
+/** Atalho "Sempre categorizar…" mostrado depois de salvar uma edição com categoria. */
+const shortcut = ref<{ pattern: string; categoryId: string } | null>(null);
 
 onMounted(async () => {
   void accounts.load();
@@ -37,6 +44,7 @@ function filterVal(e: Event): string | undefined {
   return (e.target as HTMLInputElement | HTMLSelectElement).value || undefined;
 }
 function startEdit(tx: Transaction) {
+  shortcut.value = null;
   editing.value = tx;
   creating.value = false;
 }
@@ -48,10 +56,22 @@ async function onCreate(v: TransactionInput & { accountId: string }) {
   }
 }
 async function onEdit(v: TransactionInput) {
-  if (editing.value && (await store.update(editing.value.id, v))) {
+  const cur = editing.value;
+  if (cur && (await store.update(cur.id, v))) {
     editing.value = null;
     status.value = t("real.transactions.updated");
+    // Só quando a categoria mudou para um valor não nulo.
+    // O trecho vem da descrição ORIGINAL (a renomeada não é a que a regra casa).
+    const changed = !!v.categoryId && v.categoryId !== cur.categoryId;
+    const p = changed ? suggestPattern(cur.originalDescription) : null;
+    shortcut.value = p && v.categoryId ? { pattern: p, categoryId: v.categoryId } : null;
   }
+}
+function goCreateRule() {
+  if (!shortcut.value) return;
+  rules.suggestion = { ...shortcut.value };
+  shortcut.value = null;
+  void router.push("/rules");
 }
 async function onDelete() {
   const tx = confirming.value;
@@ -71,6 +91,14 @@ const stateOptions: TransactionState[] = ["Normal", "PendingClassification"];
     <h1 class="text-xl font-semibold">{{ t("real.nav.transactions") }}</h1>
     <p class="sr-only" role="status" aria-live="polite">{{ status }}</p>
     <p v-if="errorText" class="mt-2 text-sm text-red-400" role="alert" data-test="error">{{ errorText }}</p>
+
+    <div role="status" aria-live="polite">
+      <div v-if="shortcut" class="mt-3 flex flex-wrap items-center gap-3 rounded border border-blue-700 p-3 text-sm" data-test="rule-shortcut">
+        <span data-test="rule-shortcut-text">{{ t("real.rules.shortcut", { pattern: shortcut.pattern, category: categoryName(shortcut.categoryId) }) }}</span>
+        <button type="button" :class="btn" data-test="rule-shortcut-go" @click="goCreateRule">{{ t("real.rules.shortcutButton") }}</button>
+        <button type="button" :class="btn" data-test="rule-shortcut-dismiss" @click="shortcut = null">{{ t("real.rules.shortcutDismiss") }}</button>
+      </div>
+    </div>
 
     <div class="mt-3 flex flex-wrap items-end gap-3" role="group" :aria-label="t('real.transactions.filters')">
       <div>

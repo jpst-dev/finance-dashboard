@@ -1285,6 +1285,143 @@
         }
       }
     },
+    "/api/category-rules": {
+      "get": {
+        "tags": [
+          "CategoryRules"
+        ],
+        "summary": "List the category rules with the lines each would catch now",
+        "operationId": "ListCategoryRules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryRuleResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CategoryRules"
+        ],
+        "summary": "Create a rule (it is not applied until asked)",
+        "operationId": "CreateCategoryRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryRuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryRuleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryRuleErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryRuleErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/category-rules/apply": {
+      "post": {
+        "tags": [
+          "CategoryRules"
+        ],
+        "summary": "Give uncategorized lines the category of their winning rule",
+        "operationId": "ApplyCategoryRules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyRulesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/category-rules/{id}": {
+      "delete": {
+        "tags": [
+          "CategoryRules"
+        ],
+        "summary": "Delete a rule (categories it already gave stay)",
+        "operationId": "DeleteCategoryRule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -1367,6 +1504,22 @@
         ],
         "type": "string"
       },
+      "ApplyRulesResponse": {
+        "required": [
+          "applied"
+        ],
+        "type": "object",
+        "properties": {
+          "applied": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "BlockingWarningsResponse": {
         "required": [
           "error",
@@ -1422,6 +1575,56 @@
           },
           "isDefault": {
             "type": "boolean"
+          }
+        }
+      },
+      "CategoryRuleErrorResponse": {
+        "required": [
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "CategoryRuleResponse": {
+        "required": [
+          "id",
+          "pattern",
+          "categoryId",
+          "categoryName",
+          "createdAt",
+          "matches"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "matches": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1514,7 +1717,8 @@
           "created",
           "skipped",
           "linked",
-          "suggested"
+          "suggested",
+          "categorized"
         ],
         "type": "object",
         "properties": {
@@ -1547,6 +1751,14 @@
             "format": "int32"
           },
           "suggested": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "categorized": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -1617,6 +1829,25 @@
                 "$ref": "#/components/schemas/CategoryKind"
               }
             ]
+          }
+        }
+      },
+      "CreateCategoryRuleRequest": {
+        "required": [
+          "pattern",
+          "categoryId"
+        ],
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -2708,6 +2939,9 @@
     },
     {
       "name": "Links"
+    },
+    {
+      "name": "CategoryRules"
     }
   ]
 }

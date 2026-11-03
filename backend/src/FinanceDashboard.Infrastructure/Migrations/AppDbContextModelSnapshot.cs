@@ -132,6 +132,37 @@ namespace FinanceDashboard.Infrastructure.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("FinanceDashboard.Domain.CategoryRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId", "Pattern")
+                        .IsUnique();
+
+                    b.ToTable("CategoryRules");
+                });
+
             modelBuilder.Entity("FinanceDashboard.Domain.ImportBatch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -610,6 +641,15 @@ namespace FinanceDashboard.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("BatchId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("FinanceDashboard.Domain.CategoryRule", b =>
+                {
+                    b.HasOne("FinanceDashboard.Domain.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FinanceDashboard.Domain.ImportBatch", b =>

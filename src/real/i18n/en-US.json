@@ -12,7 +12,8 @@
       "transactions": "Transactions",
       "pending": "Pending",
       "accounts": "Accounts",
-      "import": "Import"
+      "import": "Import",
+      "rules": "Rules"
     },
     "titles": {
       "login": "Sign in",
@@ -20,7 +21,8 @@
       "transactions": "Transactions",
       "pending": "Pending",
       "accounts": "Accounts",
-      "import": "Import"
+      "import": "Import",
+      "rules": "Rules"
     },
     "login": {
       "title": "Sign in",
@@ -129,7 +131,9 @@
       "one_file": "Upload one file at a time.",
       "invalid_account": "Choose an active checking or credit card account.",
       "link_conflict": "The link changed while you were looking. The list was refreshed.",
-      "not_applicable": "This line does not apply to that action. The list was refreshed."
+      "not_applicable": "This line does not apply to that action. The list was refreshed.",
+      "duplicate_rule": "A rule with that snippet already exists.",
+      "invalid_pattern": "The snippet must be 3 to 100 characters long."
     },
     "import": {
       "help": "Upload the statement or card bill (.ofx from Nubank or Itaú; Itaú card bill as .xlsx), one file at a time, up to 5 MB. Nothing is recorded until you confirm.",
@@ -234,7 +238,8 @@
         "deletedKeys": "Lines you deleted that belong to other imports keep occupying their key and do not come back when you re-import; lines deleted from this import come back if you import the file again.",
         "undone": "Import undone."
       },
-      "resultLinks": "{linked}, {suggested}"
+      "resultLinks": "{linked}, {suggested}",
+      "resultCategorized": "none categorized | 1 categorized | {n} categorized"
     },
     "pagination": {
       "label": "Pagination",
@@ -352,7 +357,34 @@
       "pairs": "no pairs linked | 1 pair linked | {n} pairs linked",
       "suggestions": "no suggestions | 1 suggestion | {n} suggestions",
       "linked": "none linked | 1 linked | {n} linked",
-      "reclassified": "none reclassified | 1 reclassified | {n} reclassified"
+      "reclassified": "none reclassified | 1 reclassified | {n} reclassified",
+      "categorized": "no lines categorized | 1 line categorized | {n} lines categorized"
+    },
+    "rules": {
+      "help": "Rules automatically categorize uncategorized lines whose original description contains the snippet as a whole word (\"BAR\" does not match \"BARBEARIA\"). The longest snippet wins.",
+      "empty": "No rules yet",
+      "loading": "Loading rules…",
+      "tablePattern": "Snippet",
+      "tableCategory": "Category",
+      "tableMatches": "Lines matched",
+      "tableActions": "Actions",
+      "matchesHint": "The total of \"lines matched\" may add up to more than \"Apply rules\" categorizes, because the longest snippet wins when more than one rule matches the same line.",
+      "formTitle": "New rule",
+      "pattern": "Description snippet",
+      "category": "Category",
+      "add": "Create rule",
+      "created": "Rule created.",
+      "fromSuggestion": "Snippet suggested from a transaction; edit it if you like.",
+      "delete": "Delete",
+      "deleteRow": "Delete rule {pattern}",
+      "deleteConfirm": "Delete the rule «{pattern}»? Categories already applied are kept.",
+      "deleteYes": "Yes, delete",
+      "deleteNo": "Cancel",
+      "deleted": "Rule deleted.",
+      "apply": "Apply rules",
+      "shortcut": "Always categorize «{pattern}» as {category}",
+      "shortcutButton": "Create rule",
+      "shortcutDismiss": "Dismiss"
     }
   }
 }

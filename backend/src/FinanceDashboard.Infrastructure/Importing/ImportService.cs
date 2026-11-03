@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using FinanceDashboard.Domain;
+using FinanceDashboard.Infrastructure.Categorization;
 using FinanceDashboard.Infrastructure.Linking;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -122,7 +123,8 @@ public sealed record PreviewOutcome(ImportPreviewView? Preview, PreviewError? Er
 /// </summary>
 public sealed record ImportLineOverride(string SourceKey, TransactionState? State = null, Guid? CategoryId = null, int Ordinal = 0);
 
-public sealed record ConfirmResult(Guid BatchId, int Created, int Skipped, int Linked, int Suggested);
+/// <summary><see cref="Categorized"/>: new lines of the batch that a category rule filled.</summary>
+public sealed record ConfirmResult(Guid BatchId, int Created, int Skipped, int Linked, int Suggested, int Categorized);
 
 public enum ConfirmError
 {
@@ -149,9 +151,10 @@ public enum UndoError { NotFound, AlreadyUndone }
 
 /// <summary>
 /// Upload → preview (writes only the <see cref="ImportBatch"/> in state Preview), confirm (lines + checkpoint + link
-/// reconciliation in one database transaction) and undo (removes what the batch created and frees its file hash).
+/// reconciliation + category rules in one database transaction) and undo (removes what the batch created and frees its
+/// file hash).
 /// </summary>
-public sealed partial class ImportService(AppDbContext db, TimeProvider time, LinkService links)
+public sealed partial class ImportService(AppDbContext db, TimeProvider time, LinkService links, CategoryRuleService rules)
 {
     public static readonly TimeSpan PreviewLifetime = TimeSpan.FromHours(24);
 
@@ -416,8 +419,12 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time, Li
         // Same transaction: a reconcile failure rolls the whole confirm back. LinkService joins the ambient transaction
         // and flushes the context itself; nothing else is pending here (the save above took the checkpoint).
         var reconciled = await links.ReconcileAsync(ct);
+        // After the reconciliation (a line it neutralizes is not categorized) and only over this batch's lines; a line
+        // that got a category from a preview override is not a candidate, so the override wins over the rules.
+        var categorized = await rules.ApplyAsync(batch.Id, ct);
         await tx.CommitAsync(ct);
-        return ConfirmOutcome.Ok(new ConfirmResult(batch.Id, created, skipped, reconciled.Linked, reconciled.Suggested));
+        return ConfirmOutcome.Ok(new ConfirmResult(batch.Id, created, skipped, reconciled.Linked, reconciled.Suggested,
+            categorized));
     }
 
     /// <summary>

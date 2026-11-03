@@ -2,6 +2,7 @@ using System.Text.Json;
 using FinanceDashboard.Api.Accounts;
 using FinanceDashboard.Api.Auth;
 using FinanceDashboard.Api.Categories;
+using FinanceDashboard.Api.CategoryRules;
 using FinanceDashboard.Api.Json;
 using FinanceDashboard.Api.Health;
 using FinanceDashboard.Api.Imports;
@@ -128,6 +129,7 @@ app.MapCheckpoints();
 app.MapSummary();
 app.MapImports();
 app.MapLinks();
+app.MapCategoryRules();
 
 // API docs for developers and reviewers: served in every environment, no authentication.
 app.MapOpenApi("/api/openapi/{documentName}.json");

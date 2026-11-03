@@ -40,6 +40,20 @@ describe("router guard", () => {
     expect(router.currentRoute.value.path).toBe("/");
   });
 
+  it("rules_route_requires_auth_and_has_a_title", async () => {
+    setApi(fakeApi({ me: async () => null }));
+    const anon = createRealRouter(createMemoryHistory());
+    await anon.push("/rules");
+    expect(anon.currentRoute.value.name).toBe("login");
+    setRouter(null);
+    setApi(fakeApi({ me: async () => ({ email: "user@example.test" }) }));
+    await useSessionStore().bootstrap();
+    const router = createRealRouter(createMemoryHistory());
+    await router.push("/rules");
+    expect(router.currentRoute.value.name).toBe("rules");
+    expect(document.title).toBe("Regras · Finance Dashboard");
+  });
+
   it("sets_document_title_without_values", async () => {
     setApi(fakeApi({ me: async () => ({ email: "user@example.test" }) }));
     await useSessionStore().bootstrap();

@@ -36,6 +36,11 @@ describe("AppShell", () => {
     expect(w.find("[data-testid=logout]").exists()).toBe(true);
     expect(w.find("[data-testid=demo-banner]").exists()).toBe(false);
   });
+  it("menu_has_rules_link", async () => {
+    const w = await setup();
+    const link = w.findAll("nav a").find((a) => a.attributes("href") === "/rules");
+    expect(link?.text()).toBe("Regras");
+  });
   it("read_only_config_shows_banner_and_hides_logout", async () => {
     const w = await setup({ readOnly: true, hideLogout: true, fixedToday: null });
     expect(w.find("[data-testid=demo-banner]").text()).toBe("Demonstração com dados fictícios, somente leitura");

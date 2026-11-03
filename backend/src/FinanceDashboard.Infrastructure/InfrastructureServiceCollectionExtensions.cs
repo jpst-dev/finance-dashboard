@@ -1,3 +1,4 @@
+using FinanceDashboard.Infrastructure.Categorization;
 using FinanceDashboard.Infrastructure.Importing;
 using FinanceDashboard.Infrastructure.Linking;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ public static class InfrastructureServiceCollectionExtensions
         s.TryAddSingleton(TimeProvider.System);
         s.AddScoped<ImportService>();
         s.AddScoped<LinkService>();
+        s.AddScoped<CategoryRuleService>();
         return s;
     }
 }

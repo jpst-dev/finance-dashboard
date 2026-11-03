@@ -268,6 +268,17 @@ Pagamentos de fatura e transferências entre contas próprias aparecem como duas
 - **API** (`/api/links`): `GET /` (lista, filtro por estado), `POST /reconcile`, `POST /{id}/confirm`, `POST /{id}/reject` e `DELETE /{id}` (desfaz).
 - O demo público mostra vínculos de exemplo (somente leitura). Decisões em [ADR 0007](docs/adr/0007-vinculos-e-neutralidade-derivada.md).
 
+### Regras de categoria (S3c)
+
+Regras "trecho da descrição → categoria" categorizam sozinhas as linhas importadas que ainda não têm categoria.
+
+- **Criar uma regra**: na página **Regras**, informe o trecho e a categoria. O trecho é normalizado (sem acento, maiúsculas) e precisa casar a **palavra inteira** na descrição original; se mais de uma regra pega a linha, vence o trecho mais longo (empate: a mais antiga). A coluna "Linhas que pega" mostra quantas linhas sem categoria a regra pegaria agora.
+- **Atalho**: ao mudar a categoria de um lançamento, a tela oferece "Sempre categorizar «trecho» como categoria" (só quando a categoria muda); um clique abre a regra já preenchida.
+- **Aplicar regras**: criar a regra não categoriza nada. O botão **Aplicar regras** da página Regras categoriza as linhas pendentes de categoria; a confirmação de cada importação aplica as regras sozinha às linhas do lote.
+- **O que as regras nunca tocam**: linhas com categoria, manuais, editadas por você, pendentes de classificação, excluídas ou vinculadas (pagamento de fatura e transferências), nem estornos em categoria de despesa. Categorizar por regra não conta como edição.
+- **Excluir**: apagar uma regra não desfaz as categorias já aplicadas; apagar uma categoria apaga as regras dela.
+- O demo público mostra regras de exemplo (somente leitura: criar, excluir e aplicar não salvam). Decisões em [ADR 0009](docs/adr/0009-regras-de-categoria.md).
+
 ### Desenvolvimento
 
 O `db` do Compose precisa estar rodando (`docker compose up -d db`; fica em `127.0.0.1:5432`). A API local usa a porta 5288 (perfil `http`) e o serviço `api` do Compose não publica porta no host, então não há conflito e não é preciso parar a stack. O Vite encaminha `/api` para `http://localhost:5288`.
@@ -335,7 +346,7 @@ Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos
 
 ### Roteiro
 
-Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. S3(a) conciliação (pagamento de fatura e transferência entre contas próprias) entregue. Próximas fatias: S3(b) Pix parcelado e aplicação/resgate, S3(c) regras de categoria e recorrências, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. S3(a) conciliação (pagamento de fatura e transferência entre contas próprias), S3(b) pendências residuais e S3(c) regras de categoria entregues. Próximas fatias: S3(d) recorrências, Pix parcelado e aplicação/resgate, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
 
 ## 🤝 Contribuindo
 

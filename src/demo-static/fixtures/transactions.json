@@ -364,7 +364,7 @@
     "amount": "-512.30",
     "description": "Boleto Condomínio Exemplo",
     "originalDescription": "PAG BOLETO CONDOMINIO EXEMPLO",
-    "categoryId": null,
+    "categoryId": "0000000c-0000-4000-8000-000000000002",
     "state": "Normal",
     "origin": "Imported",
     "editedByUser": false,

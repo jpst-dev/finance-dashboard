@@ -120,6 +120,22 @@ describe("fixtures do demo", () => {
     expect([third.state, third.link, third.pairing]).toEqual(["Normal", null, "OwnTransfer"]);
   });
 
+  it("rules_reference_real_categories_and_one_still_has_matches", () => {
+    expect(f.rules.length).toBeGreaterThanOrEqual(2);
+    const cats = new Map(f.categories.map((c) => [c.id, c.name]));
+    for (const r of f.rules) {
+      expect(cats.get(r.categoryId), r.pattern).toBe(r.categoryName);
+      expect(r.pattern).toMatch(/^[A-Z0-9 ]+$/);
+      expect(Number.isInteger(r.matches)).toBe(true);
+    }
+    expect(f.rules.some((r) => r.matches > 0)).toBe(true);
+    expect(new Set(f.rules.map((r) => r.id)).size).toBe(f.rules.length);
+    // A linha "Transferência Fictícia" fica sem categoria e fora de qualquer regra.
+    const transfer = f.transactions.find((t) => t.description === "Transferência Fictícia")!;
+    expect(transfer.categoryId).toBeNull();
+    expect(f.rules.some((r) => "TRANSFERENCIA FICTICIA".includes(r.pattern))).toBe(false);
+  });
+
   it("preview_batch_exists_in_preview_state", () => {
     expect(f.importDetails[f.meta.previewBatchId]?.state).toBe("Preview");
   });

@@ -4,7 +4,9 @@ import type { ApiClient } from "./client";
 import { ApiError, NETWORK_ERROR_CODE } from "./errors";
 import type {
   Account,
+  ApplyRulesResult,
   Category,
+  CategoryRule,
   Checkpoint,
   ConfirmResult,
   CsrfTokenResponse,
@@ -241,6 +243,12 @@ export function createHttpApi(opts: HttpApiOptions = {}): ApiClient {
       reject: (id) => request<LinkResponse>(`/api/links/${enc(id)}/reject`, { method: "POST" }),
       undo: (id) => request<void>(`/api/links/${enc(id)}`, { method: "DELETE" }),
       reconcile: () => request<ReconcileResult>("/api/links/reconcile", { method: "POST" }),
+    },
+    categoryRules: {
+      list: () => request<CategoryRule[]>("/api/category-rules"),
+      create: (b) => request<CategoryRule>("/api/category-rules", { method: "POST", json: b }),
+      remove: (id) => request<void>(`/api/category-rules/${enc(id)}`, { method: "DELETE" }),
+      apply: () => request<ApplyRulesResult>("/api/category-rules/apply", { method: "POST" }),
     },
   };
 }
