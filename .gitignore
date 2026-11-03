@@ -35,3 +35,12 @@ yarn-error.log*
 # Dados financeiros reais (nunca versionar)
 finance-samples/
 private/
+
+# Extratos e planilhas bancarios (nunca versionar)
+*.ofx
+*.qfx
+*.xlsx
+!backend/tests/fixtures/**
+
+# Exemplo versionado (precisa vir depois de .env*)
+!.env.example

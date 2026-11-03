@@ -1,0 +1,8 @@
+title = "finance-dashboard"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Arquivo de exemplo com valores de placeholder"
+paths = ['''(^|/)\.env\.example$''']
