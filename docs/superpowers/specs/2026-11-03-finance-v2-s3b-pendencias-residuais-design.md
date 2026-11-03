@@ -77,7 +77,7 @@ Dinheiro exato (`numeric(18,2)`), isolamento por usuário, dados sintéticos, an
 
 ### API
 - `GET /api/links` e `LinkResponse`: `Out`/`In` anuláveis; novo campo `External: bool` (true quando um lado é vazio) e `LinkKind` inclui `PixCredit`.
-- `POST /api/transactions/{id}/own-transfer` → `LinkResponse` (cria o vínculo `Confirmed` de lado vazio e o apelido). `POST /api/transactions/{id}/no-counterpart` → `LinkResponse`. Ambos com antiforgery; 404 se a linha não é do usuário; 409 se a linha não tem papel adequado ou já tem vínculo `Confirmed`.
+- `POST /api/transactions/{id}/own-transfer` → `LinkResponse` (cria o vínculo `Confirmed` de lado vazio e o apelido). `POST /api/transactions/{id}/no-counterpart` → `LinkResponse`. Ambos com antiforgery; 404 se a linha não é do usuário; 422 `not_applicable` se a linha não tem papel adequado (convenção dos imports); 409 se já tem vínculo `Confirmed`.
 - `POST /api/links/reconcile` → `{ linked, suggested, reclassified }`.
 - `TransactionResponse` ganha `Pairing: "OwnTransfer" | "InvoicePayment" | "PixCredit" | null` (o que a linha pode virar) calculado por `PairingRules`; o front usa para mostrar "é meu" / "sem contrapartida".
 - Resumo mensal e lista de pendentes: a exclusão de linhas com vínculo `Confirmed` vale para **qualquer estado** (resumo: nem receita nem despesa; fila: nem aparece).

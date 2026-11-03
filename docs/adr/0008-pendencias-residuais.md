@@ -15,6 +15,8 @@ Depois da S3(a), a fila de Pendências ainda guardava Pix para terceiros e bolet
 - **Vínculo de lado vazio** (`Out` ou `In` nulos, `External` na API): "É meu" (`OwnTransfer`) e "Sem contrapartida" (`InvoicePayment`, só linha pendente) criam vínculo `Confirmed`/`User`. Se a contraparte real chegar depois: par `AutoConfirm` apaga o vínculo vazio e vira o vínculo da linha; par `Suggested` convive com ele e confirmar o par apaga os vazios. Editar valor/data preserva o vínculo `User` de lado vazio; ocultar apaga tudo.
 - **Apelidos (`OwnAlias`)**: "É meu" grava o trecho normalizado (≥ 7 caracteres) do nome. Linhas `Transfer` cujo nome coincide (prefixo mútuo, entre bancos) recebem **sugestão** de lado vazio, nunca confirmação automática. Não há tela para apagar apelidos.
 - **Reclassificação**: `POST /api/links/reconcile` (botão "Reconciliar pendências") também move para `Normal` linhas importadas, pendentes e não editadas que a regra atual classifica como Normal; é idempotente e nunca toca linha editada ou manual.
+- **Rebaixamento de pares legados**: a cada reconcile, pares `Confirmed`/`Auto`/`OwnTransfer` (confirmados pela regra antiga da S3(a), sem checar nomes) cujas contrapartes não coincidem são apagados e recriados como `Suggested` pelo fluxo normal; as duas linhas voltam a contar. Vínculos de origem `User` nunca são tocados; depois do rebaixamento nada mais casa, então é idempotente.
+- **Marcação não aplicável** responde 422 `not_applicable` (a spec dizia 409; 422 segue a convenção dos imports). 409 fica para linha que já tem vínculo `Confirmed`.
 - **Override do preview** (estado escolhido diferente da regra) grava `EditedByUser = true`, para a reclassificação não desfazer a escolha.
 
 ## Consequências
@@ -22,6 +24,11 @@ Depois da S3(a), a fila de Pendências ainda guardava Pix para terceiros e bolet
 - Pix no crédito e "sem contrapartida" saem da fila sem registro do gasto até a fatura do cartão ser importada; para contar antes, ponha as linhas em `Normal`.
 - Colisão de apelido (mesmo início de nome) gera sugestão, não ação.
 - Linhas com override de estado no import contam como "editadas" no aviso de desfazer lote, e a futura S3(c) deve lembrar disso.
+
+- Limitação conhecida: editar o valor de modo que o sinal inverta mantém o vínculo `User` de lado vazio no lado antigo (sem efeito em dinheiro).
+- O upgrade automático para par apaga o vínculo vazio do usuário; desfazer o par depois deixa a linha contada, sem a marca anterior.
+- A primeira importação após o deploy reclassifica linhas Pix pendentes antigas sem informar a contagem.
+- "Reconciliar pendências" sempre informa as sugestões recalculadas (não apenas as novas).
 
 ## Alternativas consideradas
 - Campo ou estado novo "interna" em `Transaction`: duplica o fato do vínculo.
