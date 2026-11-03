@@ -17,6 +17,8 @@ public sealed class OfxTestFile
     private string? _ledger = "100.50|20261031000000[-3:BRT]";
     private string _acctId = "ACC-0001";
     private string? _extraBeforeOfx;
+    private string _dtStart = "20261001000000[-3:BRT]";
+    private string _dtEnd = "20261031000000[-3:BRT]";
 
     public static OfxTestFile Checking() => new();
     public static OfxTestFile Card() => new() { _card = true };
@@ -30,6 +32,7 @@ public sealed class OfxTestFile
     public OfxTestFile NoLedger() { _ledger = null; return this; }
     public OfxTestFile Ledger(string amount, string asOf) { _ledger = amount + "|" + asOf; return this; }
     public OfxTestFile BeforeOfx(string text) { _extraBeforeOfx = text; return this; }
+    public OfxTestFile Period(string start, string end) { _dtStart = start; _dtEnd = end; return this; }
 
     public OfxTestFile Line(string posted, string amount, string memo, string? fitId = null, string type = "OTHER")
     {
@@ -66,8 +69,8 @@ public sealed class OfxTestFile
             sb.Append(Leaf("ACCTID", _acctId));
             if (!_card) sb.Append(Leaf("ACCTTYPE", "CHECKING"));
             sb.Append("</").Append(from).Append('>').Append(nl);
-            sb.Append("<BANKTRANLIST>").Append(Leaf("DTSTART", "20261001000000[-3:BRT]"))
-              .Append(Leaf("DTEND", "20261031000000[-3:BRT]")).Append(nl);
+            sb.Append("<BANKTRANLIST>").Append(Leaf("DTSTART", _dtStart))
+              .Append(Leaf("DTEND", _dtEnd)).Append(nl);
             foreach (var t in _lines)
             {
                 sb.Append("<STMTTRN>").Append(Leaf("TRNTYPE", t.Type)).Append(Leaf("DTPOSTED", t.Posted))
