@@ -3,6 +3,8 @@ using FinanceDashboard.Api.Auth;
 using FinanceDashboard.Api.Health;
 using FinanceDashboard.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,35 @@ builder.Services.AddAuth();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("database")
     .AddCheck<TimeZoneHealthCheck>("timezone");
+
+// Health checks are middleware-style endpoints, invisible to API Explorer: describe them by hand.
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+{
+    document.Info.Title = "Finance Dashboard API";
+    document.Paths ??= [];
+    document.Paths["/api/health"] = HealthPath("HealthLive", "Liveness: the process is up");
+    document.Paths["/api/health/ready"] = HealthPath("HealthReady", "Readiness: database and time zone are available", unhealthy: true);
+    return Task.CompletedTask;
+
+    static OpenApiPathItem HealthPath(string name, string summary, bool unhealthy = false)
+    {
+        var responses = new OpenApiResponses { ["200"] = new OpenApiResponse { Description = "Healthy" } };
+        if (unhealthy) responses["503"] = new OpenApiResponse { Description = "Unhealthy" };
+        return new OpenApiPathItem
+        {
+            Operations = new Dictionary<HttpMethod, OpenApiOperation>
+            {
+                [HttpMethod.Get] = new()
+                {
+                    OperationId = name,
+                    Summary = summary,
+                    Tags = new HashSet<OpenApiTagReference> { new("Health") },
+                    Responses = responses,
+                },
+            },
+        };
+    }
+}));
 
 var app = builder.Build();
 
@@ -32,6 +63,13 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapAuth();
+
+// API docs for developers and reviewers: served in every environment, no authentication.
+app.MapOpenApi("/api/openapi/{documentName}.json");
+app.MapScalarApiReference("/api/docs", options => options
+    .WithTitle("Finance Dashboard API")
+    .WithOpenApiRoutePattern("/api/openapi/{documentName}.json"));
+
 app.MapHealthChecks("/api/health", new() { Predicate = _ => false });
 app.MapHealthChecks("/api/health/ready", new()
 {

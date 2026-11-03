@@ -82,22 +82,35 @@ public static class AuthEndpoints
     public static IEndpointRouteBuilder MapAuth(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth")
-            .WithMetadata(new RequestSizeLimitAttribute(MaxAuthRequestBodyBytes));
+            .WithMetadata(new RequestSizeLimitAttribute(MaxAuthRequestBodyBytes))
+            .WithTags("Auth");
 
         // Antiforgery tokens are bound to the caller's identity: clients must fetch a new token after login.
         group.MapGet("/csrf", (HttpContext http, IAntiforgery antiforgery) =>
-            Results.Ok(new { token = antiforgery.GetAndStoreTokens(http).RequestToken }));
+            Results.Ok(new { token = antiforgery.GetAndStoreTokens(http).RequestToken }))
+            .WithName("GetCsrfToken").WithSummary("Issue an antiforgery token (send it in X-XSRF-TOKEN)");
 
         group.MapPost("/login", LoginAsync)
             .AddEndpointFilter(ValidateAntiforgeryAsync)
-            .RequireRateLimiting(LoginRateLimitPolicy);
+            .RequireRateLimiting(LoginRateLimitPolicy)
+            .WithName("Login").WithSummary("Sign in with e-mail and password; sets the session cookie")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status429TooManyRequests);
 
         group.MapPost("/logout", LogoutAsync)
-            .AddEndpointFilter(ValidateAntiforgeryAsync);
+            .AddEndpointFilter(ValidateAntiforgeryAsync)
+            .WithName("Logout").WithSummary("Sign out and invalidate the session")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest);
 
         group.MapGet("/me", (ClaimsPrincipal user) =>
                 Results.Ok(new { email = user.FindFirstValue(ClaimTypes.Email) }))
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .WithName("GetCurrentUser").WithSummary("E-mail of the signed-in user")
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         return app;
     }
