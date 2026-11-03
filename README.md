@@ -88,7 +88,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md) e [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md) e [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md) e [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md).
 
 ### Rodando localmente
 
@@ -165,7 +165,7 @@ Regras e limites:
 
 - **Limites do upload**: 1 arquivo `.ofx` de até **5 MB** (o nginx aceita até 6 MB de corpo; acima disso `413`). O formato é validado pelo conteúdo: arquivo vazio, não-OFX ou com `<!DOCTYPE`/entidades responde `422` com um código de erro, sem repetir o conteúdo. O arquivo **não é guardado**; só a prévia fica no servidor, por **24 h**. Depois disso a confirmação é recusada e é preciso enviar de novo.
 - **Idempotência**: reenviar o mesmo arquivo, ou outro com períodos sobrepostos, não duplica lançamentos (identidade = conta + FITID + ordinal). Veja o [ADR 0003](docs/adr/0003-importacao-idempotente-e-desfazer.md).
-- **Pendentes de classificação**: linhas que as regras não sabem classificar (ex.: parte do cartão sem categoria clara) entram com `state = PendingClassification`. Elas **ficam fora do resumo** (receitas, despesas e categorias) e são só contadas em `pendingCount`/`pendingTotal` até serem reclassificadas. Para reclassificar, use `PUT /api/transactions/{id}` com `state` (`Normal`) e/ou `categoryId`; a linha passa a contar no resumo.
+- **Pendentes de classificação**: pagamento de fatura, pagamento recebido, transferências (enviada/recebida) e Pix no Crédito entram com `state = PendingClassification`; as compras comuns entram como `Normal`, sem categoria. Elas **ficam fora do resumo** (receitas, despesas e categorias) e são só contadas em `pending: { count, total }` até serem reclassificadas. Para reclassificar, use `PUT /api/transactions/{id}` com `state` (`Normal`) e/ou `categoryId`; a linha passa a contar no resumo.
 - **Exclusão lógica**: `DELETE /api/transactions/{id}` de uma linha importada a marca como excluída (marcador); ela some das listagens e do resumo e **não volta** se o mesmo arquivo for importado de novo.
 - **Desfazer**: `POST /api/imports/{id}/undo` apaga as linhas criadas pelo lote (inclusive as excluídas logicamente) e o checkpoint de saldo que ele gerou, e libera o arquivo para reimportar. Atenção: se outro lote sobreposto "pulou" linhas que o primeiro criou, desfazer o primeiro **remove essas linhas também**; reimporte o arquivo para recuperá-las. Desfazer uma prévia apenas a descarta.
 - **Documentação interativa**: abra **http://127.0.0.1:8080/api/docs** (Scalar). Faça login pelas rotas `/api/auth/*` e use o campo de cabeçalho `X-XSRF-TOKEN` nas chamadas que alteram dados; a especificação OpenAPI fica em `/api/openapi/v1.json`.
