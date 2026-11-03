@@ -1,6 +1,4 @@
 import { createI18n } from "vue-i18n";
-import legacyEn from "../../i18n/locales/en-US.json";
-import legacyPt from "../../i18n/locales/pt-BR.json";
 import realEn from "./en-US.json";
 import realPt from "./pt-BR.json";
 
@@ -17,14 +15,13 @@ function loadLocale(): AppLocale {
   return "pt-BR";
 }
 
-// Mescla os rótulos compartilhados do legado com as chaves exclusivas do modo real.
 const i18n = createI18n({
   legacy: false,
   locale: loadLocale(),
   fallbackLocale: "en-US",
   messages: {
-    "en-US": { ...legacyEn, ...realEn },
-    "pt-BR": { ...legacyPt, ...realPt },
+    "en-US": realEn,
+    "pt-BR": realPt,
   },
 });
 
