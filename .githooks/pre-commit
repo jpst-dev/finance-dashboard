@@ -1,0 +1,8 @@
+#!/bin/sh
+# Bloqueia commits com segredos. Requer gitleaks (https://github.com/gitleaks/gitleaks).
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --redact --config .gitleaks.toml --verbose || exit 1
+else
+  echo "AVISO: gitleaks nao instalado; verificacao de segredos ignorada." >&2
+fi
+exit 0

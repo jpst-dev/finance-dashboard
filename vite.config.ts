@@ -10,4 +10,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      // Same-origin API in development (http profile of backend/.../launchSettings.json).
+      "/api": "http://localhost:5288",
+    },
+  },
 });

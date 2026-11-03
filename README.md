@@ -77,6 +77,111 @@ Para rodar o projeto, você precisará criar um arquivo `.env` na raiz do projet
 # Adicione suas variáveis de ambiente aqui
 ```
 
+## 🧱 v2 · Backend
+
+A v2 adiciona um backend em **.NET 10 + PostgreSQL** (pasta `backend/`) para uso real: login por cookie de sessão, banco de dados e, nas próximas fatias, importação de extratos e patrimônio. O site público na Vercel segue como **demo** (dados de exemplo no navegador, sem login e sem backend); o app real roda localmente pelo Docker Compose, tudo na mesma origem, sem CORS.
+
+```mermaid
+flowchart LR
+    B[Navegador] -->|http://127.0.0.1:8080| W[web: nginx<br/>front buildado]
+    W -->|/api/| A[api: ASP.NET Core]
+    A --> D[(db: PostgreSQL 17)]
+```
+
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md) e [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md).
+
+### Rodando localmente
+
+1. Depois de clonar, ative o hook de pre-commit que roda o gitleaks (a pasta `.githooks/` é versionada, mas a configuração `core.hooksPath` não, então cada clone precisa ativá-la; sem o gitleaks instalado ele só avisa, não bloqueia):
+   ```bash
+   git config core.hooksPath .githooks
+   ```
+2. Crie o `.env` a partir do exemplo e ajuste os valores:
+   ```bash
+   cp .env.example .env
+   ```
+   - `POSTGRES_PASSWORD`: apenas letras e números (a senha entra numa connection string).
+   - `SEED_USER_EMAIL`: precisa ser um e-mail válido.
+   - `SEED_USER_PASSWORD`: no mínimo 12 caracteres, com letra maiúscula, letra minúscula, dígito e pelo menos um caractere não alfanumérico (política de senha do Identity). Se a senha não cumprir a regra, a API não sobe; se ela ficar reiniciando, rode `docker compose logs api`.
+   - Não há cadastro aberto: o usuário inicial é criado a partir de `SEED_USER_EMAIL`/`SEED_USER_PASSWORD`. Se `SEED_*` estiver definido, `Database__MigrateOnStartup` for `false` e não houver schema, a API falha na inicialização (fail-fast). O Compose já define `Database__MigrateOnStartup=true`.
+3. Suba a stack:
+   ```bash
+   docker compose up -d --build
+   ```
+4. Acesse **http://127.0.0.1:8080**. Na S0 o front ainda é a demo da v1 e não tem tela de login (ela chega na S1); o login é exercitado pela API, em `/api/docs` ou com `curl` (cookie jar + token antiforgery):
+   ```bash
+   curl -s -c jar.txt -b jar.txt http://127.0.0.1:8080/api/auth/csrf
+   # copie o valor de "token" da resposta e use em X-XSRF-TOKEN:
+   curl -s -c jar.txt -b jar.txt -X POST http://127.0.0.1:8080/api/auth/login      -H "Content-Type: application/json" -H "X-XSRF-TOKEN: <token>"      -d '{"email":"<SEED_USER_EMAIL>","password":"<SEED_USER_PASSWORD>"}'
+   curl -s -b jar.txt http://127.0.0.1:8080/api/auth/me
+   ```
+   - Documentação da API (Scalar): http://127.0.0.1:8080/api/docs (especificação em `/api/openapi/v1.json`)
+   - Health check: http://127.0.0.1:8080/api/health/ready
+   - O Postgres fica publicado só em `127.0.0.1:5432`.
+
+Depois de recriar o container da API (`docker compose up -d --build api`), reinicie também o `web`, porque o nginx resolve o endereço da API uma única vez:
+
+```bash
+docker compose restart web
+```
+
+### Desenvolvimento
+
+O `db` do Compose precisa estar rodando (`docker compose up -d db`; fica em `127.0.0.1:5432`). A API local usa a porta 5288 (perfil `http`) e o serviço `api` do Compose não publica porta no host, então não há conflito e não é preciso parar a stack. O Vite encaminha `/api` para `http://localhost:5288`.
+
+Defina as variáveis no terminal onde vai rodar a API (substitua os placeholders pelos valores do seu `.env`):
+
+PowerShell:
+
+```powershell
+$env:ConnectionStrings__Default = "Host=localhost;Port=5432;Database=finance;Username=postgres;Password=<POSTGRES_PASSWORD do .env>"
+$env:Database__MigrateOnStartup = "true"
+$env:SEED_USER_EMAIL = "<SEED_USER_EMAIL do .env>"
+$env:SEED_USER_PASSWORD = "<SEED_USER_PASSWORD do .env>"
+dotnet run --project backend/src/FinanceDashboard.Api --launch-profile http
+```
+
+bash:
+
+```bash
+export ConnectionStrings__Default="Host=localhost;Port=5432;Database=finance;Username=postgres;Password=<POSTGRES_PASSWORD do .env>"
+export Database__MigrateOnStartup=true
+export SEED_USER_EMAIL="<SEED_USER_EMAIL do .env>"
+export SEED_USER_PASSWORD="<SEED_USER_PASSWORD do .env>"
+dotnet run --project backend/src/FinanceDashboard.Api --launch-profile http
+```
+
+Em outro terminal, na raiz do repositório:
+
+```bash
+npm run dev
+```
+
+### Testes
+
+```bash
+dotnet test backend/FinanceDashboard.sln
+```
+
+Os testes de integração usam Postgres real via Testcontainers, então o **Docker precisa estar rodando**. A CI (`.github/workflows/ci.yml`) roda backend, front e gitleaks.
+
+### Backup e restauração
+
+```powershell
+powershell -File scripts/backup-db.ps1
+powershell -File scripts/restore-db.ps1 -File backups/finance-<data>.sql.gz
+```
+
+O backup é gravado em `backups/` (ignorado pelo git). A restauração vai para um banco separado, `finance_restore`, e o script recusa `finance`, `postgres` e `template*`. Resetar o Docker Desktop apaga os volumes: faça backup antes.
+
+### Privacidade
+
+Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos ignorados pelo git, assim como `*.ofx`, `*.qfx` e `*.xlsx` (exceto em `backend/tests/fixtures/`). Nunca versione dados reais.
+
+### Roteiro
+
+Próximas fatias: S1 núcleo + Nubank, S2 Itaú, S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+
 ## 🤝 Contribuindo
 
 Contribuições são sempre bem-vindas! Sinta-se à vontade para abrir uma issue ou enviar um pull request.

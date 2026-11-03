@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      # Avisos são erros por configuração do projeto.
+      - name: Build
+        run: dotnet build backend/FinanceDashboard.sln --configuration Release
+      # Os testes criam o próprio Postgres via Testcontainers (Docker do runner).
+      - name: Test
+        run: dotnet test backend/FinanceDashboard.sln --configuration Release --no-build
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # pull-requests: read permite à action listar os commits do PR.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Repositórios de organização exigem o secret GITLEAKS_LICENSE;
+      # repositórios pessoais não.
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

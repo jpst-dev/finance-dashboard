@@ -1,0 +1,12 @@
+.git
+node_modules
+dist
+finance-samples
+private
+backups
+.env*
+.superpowers
+.vercel
+**/bin
+**/obj
+docs

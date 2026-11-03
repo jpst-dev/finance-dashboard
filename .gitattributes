@@ -1,0 +1,5 @@
+* text=auto
+*.ofx -text
+*.qfx -text
+*.xlsx binary
+backend/tests/fixtures/** -text
