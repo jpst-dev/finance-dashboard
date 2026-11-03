@@ -88,7 +88,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md) [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md) e [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md) e [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md).
 
 ### Rodando localmente
 

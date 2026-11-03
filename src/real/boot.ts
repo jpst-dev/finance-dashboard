@@ -1,6 +1,5 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
-import "../assets/main.css";
 import RealApp from "./RealApp.vue";
 import { createRealRouter } from "./router";
 import i18n from "./i18n";
