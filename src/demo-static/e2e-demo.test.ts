@@ -200,6 +200,19 @@ describe("demo estático: interface real somente leitura", () => {
     expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);
   });
 
+  it("rules_page_lists_example_rules_without_network", async () => {
+    const { router } = await boot();
+    await visit(router, "/rules");
+    expect(router.currentRoute.value.path).toBe("/rules");
+    expect(q("[data-test=rules-table]")).not.toBeNull();
+    expect(qa("[data-test=rule-row]")).toHaveLength(f.rules.length);
+    expect(qa("[data-test=rule-pattern]").map((e) => e.textContent)).toEqual(f.rules.map((r) => r.pattern));
+    expect(qa("[data-test=rule-matches]").map((e) => e.textContent?.trim())).toEqual(f.rules.map((r) => String(r.matches)));
+    // Aplicar é somente leitura (o afterEach confirma que nada foi à rede).
+    await click(q("[data-test=apply]"));
+    expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);
+  });
+
   it("transactions_show_link_badges_and_mark_actions_without_network", async () => {
     const { router } = await boot();
     await visit(router, "/transactions");

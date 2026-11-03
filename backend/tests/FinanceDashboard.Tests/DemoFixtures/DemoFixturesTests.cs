@@ -158,6 +158,23 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Generated_rules_are_deterministic_and_categorized_the_seeded_lines()
+    {
+        var files = await DemoFixtureGenerator.GenerateAsync(postgres);
+
+        var rules = JsonNode.Parse(files["rules.json"])!.AsArray();
+        Assert.Equal(["CONDOMINIO", "FORNECEDOR", "LOJA ELETRONICOS"], rules.Select(r => r!["pattern"]!.GetValue<string>()).ToArray());
+        Assert.Equal(Enumerable.Range(1, 3).Select(n => DemoSeed.FixtureRuleId(n).ToString()), rules.Select(r => r!["id"]!.GetValue<string>()));
+        Assert.Equal([0, 1, 0], rules.Select(r => r!["matches"]!.GetValue<int>()).ToArray());
+
+        var txs = JsonNode.Parse(files["transactions.json"])!.AsArray().Select(t => t!).ToList();
+        Assert.Equal("0000000c-0000-4000-8000-000000000002", // Moradia
+            txs.Single(t => t["description"]!.GetValue<string>() == "Boleto Condomínio Exemplo")["categoryId"]!.GetValue<string>());
+        Assert.Null(txs.Single(t => t["description"]!.GetValue<string>() == "Pix para Fornecedor Fictício")["categoryId"]);
+        Assert.Null(txs.Single(t => t["description"]!.GetValue<string>() == "Transferência Fictícia")["categoryId"]);
+    }
+
+    [Fact]
     public async Task Generated_preview_matches_seed()
     {
         var files = await DemoFixtureGenerator.GenerateAsync(postgres);

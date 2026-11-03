@@ -313,7 +313,7 @@
       {
         "categoryId": "0000000c-0000-4000-8000-000000000002",
         "categoryName": "Moradia",
-        "total": "-1829.12"
+        "total": "-2341.42"
       },
       {
         "categoryId": "0000000c-0000-4000-8000-000000000007",
@@ -333,7 +333,7 @@
       {
         "categoryId": null,
         "categoryName": null,
-        "total": "-482.20"
+        "total": "30.10"
       }
     ],
     "pending": {

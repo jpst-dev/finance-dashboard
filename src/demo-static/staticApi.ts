@@ -98,7 +98,7 @@ export function createStaticApi(f: DemoFixtures): ApiClient {
       reconcile: readOnly,
     },
     categoryRules: {
-      list: async () => [], // dados de exemplo chegam na Task 5
+      list: async () => clone(f.rules),
       create: readOnly,
       remove: readOnly,
       apply: readOnly,

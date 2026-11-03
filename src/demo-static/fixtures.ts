@@ -3,6 +3,7 @@
 import type {
   Account,
   Category,
+  CategoryRule,
   Checkpoint,
   CurrentUser,
   ImportBatch,
@@ -18,6 +19,7 @@ import importDetails from "./fixtures/import-details.json";
 import imports from "./fixtures/imports.json";
 import links from "./fixtures/links.json";
 import meta from "./fixtures/meta.json";
+import rules from "./fixtures/rules.json";
 import summaries from "./fixtures/summaries.json";
 import emptySummary from "./fixtures/summary-empty.json";
 import transactions from "./fixtures/transactions.json";
@@ -37,6 +39,8 @@ export interface DemoFixtures {
   importDetails: Record<string, ImportPreview>;
   /** Vínculos gerados pelo pareador real, por estado (sem envelope de página: o adaptador pagina). */
   links: { confirmed: LinkResponse[]; suggested: LinkResponse[] };
+  /** Regras de categoria geradas pelo serviço real (com `matches`). */
+  rules: CategoryRule[];
 }
 
 export const DEMO_FIXTURES = {
@@ -50,4 +54,5 @@ export const DEMO_FIXTURES = {
   imports,
   importDetails,
   links,
+  rules,
 } as unknown as DemoFixtures;

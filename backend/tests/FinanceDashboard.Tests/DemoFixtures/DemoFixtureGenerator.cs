@@ -142,6 +142,11 @@ public sealed class DemoFixtureGenerator
         }
         Put("summary-empty.json", empty);
 
+        // Rules: listed by pattern (the server's order); the random ids become the deterministic fixture ids.
+        var rules = (await Get("/api/category-rules")).AsArray();
+        for (var i = 0; i < rules.Count; i++) rules[i]!["id"] = DemoSeed.FixtureRuleId(i + 1).ToString();
+        Put("rules.json", rules);
+
         var imports = await Get("/api/imports");
         Put("imports.json", imports);
 

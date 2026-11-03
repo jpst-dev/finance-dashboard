@@ -215,6 +215,9 @@ describe("createStaticApi", () => {
     ["links.reject", (a) => a.links.reject("id")],
     ["links.undo", (a) => a.links.undo("id")],
     ["links.reconcile", (a) => a.links.reconcile()],
+    ["categoryRules.create", (a) => a.categoryRules.create({} as never)],
+    ["categoryRules.remove", (a) => a.categoryRules.remove("id")],
+    ["categoryRules.apply", (a) => a.categoryRules.apply()],
   ];
   it.each(mutations)("every_mutation_rejects_with_demo_read_only %s", async (_n, call) => {
     const e = await call(api()).then(
@@ -224,6 +227,16 @@ describe("createStaticApi", () => {
     expect(e).toBeInstanceOf(ApiError);
     expect((e as ApiError).status).toBe(403);
     expect((e as ApiError).code).toBe(DEMO_READ_ONLY_CODE);
+  });
+
+  it("category_rules_list_returns_fixture_copies", async () => {
+    const a = api();
+    const rules = await a.categoryRules.list();
+    expect(rules).toEqual(f.rules);
+    expect(rules.length).toBeGreaterThan(0);
+    rules[0].pattern = "mutado";
+    rules.pop();
+    expect(await a.categoryRules.list()).toEqual(f.rules);
   });
 
   it("works_without_structured_clone_and_still_returns_copies", async () => {
