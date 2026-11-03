@@ -73,8 +73,31 @@ public sealed class DemoFixtureGenerator
             if (items.Count == 0 || transactions.Count >= body["total"]!.GetValue<int>()) break;
         }
 
+        // The server's pending queue must be exactly the exported lines that are pending and not in a Confirmed link
+        // (the static adapter filters by `link.state`; a drift would make the demo queue differ from the real one).
+        var serverQueue = new List<string>();
+        for (var page = 1; ; page++)
+        {
+            var body = await Get($"/api/transactions?state=PendingClassification&page={page}&size={PageSize}");
+            var items = body["items"]!.AsArray();
+            serverQueue.AddRange(items.Select(i => i!["id"]!.GetValue<string>()));
+            if (items.Count == 0 || serverQueue.Count >= body["total"]!.GetValue<int>()) break;
+        }
+
+        var fixtureQueue = transactions
+            .Where(t => t!["state"]!.GetValue<string>() == "PendingClassification"
+                        && t["link"]?["state"]?.GetValue<string>() != "Confirmed")
+            .Select(t => t!["id"]!.GetValue<string>());
+        if (!serverQueue.Order(StringComparer.Ordinal).SequenceEqual(fixtureQueue.Order(StringComparer.Ordinal)))
+        {
+            throw new InvalidOperationException(
+                "The server's pending queue differs from the fixtures' pending lines without a Confirmed link.");
+        }
+
         // The server gives links random ids and, with equal timestamps, an arbitrary order: sort by what the seed fixes
-        // (kind, outgoing date and line id) and rename the ids, both in the lists and in each line's `link` badge.
+        // (kind, date and id of the first present side: out, else in) and rename the ids, both in the lists and in each
+        // line's `link` badge. One-sided links have a null side.
+        static JsonNode Side(JsonNode link) => link["out"] ?? link["in"]!;
         var links = new JsonObject();
         var linkIds = new Dictionary<string, string>();
         foreach (var state in new[] { "Confirmed", "Suggested" })
@@ -90,8 +113,8 @@ public sealed class DemoFixtureGenerator
 
             links[state.ToLowerInvariant()] = new JsonArray(items
                 .OrderBy(i => i["kind"]!.GetValue<string>(), StringComparer.Ordinal)
-                .ThenBy(i => i["out"]!["date"]!.GetValue<string>(), StringComparer.Ordinal)
-                .ThenBy(i => i["out"]!["transactionId"]!.GetValue<string>(), StringComparer.Ordinal)
+                .ThenBy(i => Side(i)["date"]!.GetValue<string>(), StringComparer.Ordinal)
+                .ThenBy(i => Side(i)["transactionId"]!.GetValue<string>(), StringComparer.Ordinal)
                 .Select(i =>
                 {
                     var newId = DemoSeed.FixtureLinkId(linkIds.Count + 1).ToString();

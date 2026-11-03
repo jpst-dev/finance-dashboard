@@ -97,16 +97,43 @@ public sealed class DemoFixturesTests(PostgresFixture postgres)
         var links = JsonNode.Parse(files["links.json"])!;
         var confirmed = links["confirmed"]!.AsArray();
         var suggested = links["suggested"]!.AsArray();
-        Assert.Equal(new[] { "InvoicePayment", "OwnTransfer" }, confirmed.Select(l => l!["kind"]!.GetValue<string>()).Order().ToArray());
-        Assert.Equal(new[] { "OwnTransfer" }, suggested.Select(l => l!["kind"]!.GetValue<string>()).ToArray());
-        Assert.All(confirmed, l => Assert.Equal("Auto", l!["origin"]!.GetValue<string>()));
+        Assert.Equal(new[] { "InvoicePayment", "InvoicePayment", "OwnTransfer", "OwnTransfer", "PixCredit" },
+            confirmed.Select(l => l!["kind"]!.GetValue<string>()).ToArray());
+        Assert.Equal(new[] { "OwnTransfer", "OwnTransfer" }, suggested.Select(l => l!["kind"]!.GetValue<string>()).ToArray());
+
+        // Two-sided pairs are Auto; the one-sided Confirmed ones were marked by the user ("é meu", "sem contrapartida").
+        var oneSided = confirmed.Where(l => l!["out"] is null || l["in"] is null).ToList();
+        Assert.Equal(new[] { "InvoicePayment", "OwnTransfer" }, oneSided.Select(l => l!["kind"]!.GetValue<string>()).ToArray());
+        Assert.All(oneSided, l => { Assert.Equal("User", l!["origin"]!.GetValue<string>()); Assert.True(l["external"]!.GetValue<bool>()); });
+        Assert.All(confirmed.Except(oneSided), l => Assert.Equal("Auto", l!["origin"]!.GetValue<string>()));
+        Assert.Single(suggested, l => l!["out"] is null || l["in"] is null);
 
         // Ids are the deterministic fixture ids and the lines' badge points at the same link.
         var ids = confirmed.Concat(suggested).Select(l => l!["id"]!.GetValue<string>()).ToList();
-        Assert.Equal(Enumerable.Range(1, 3).Select(n => DemoSeed.FixtureLinkId(n).ToString()), ids);
+        Assert.Equal(Enumerable.Range(1, 7).Select(n => DemoSeed.FixtureLinkId(n).ToString()), ids);
         var badges = JsonNode.Parse(files["transactions.json"])!.AsArray()
             .Where(t => t!["link"] is not null).Select(t => t!["link"]!["id"]!.GetValue<string>()).Distinct().Order(StringComparer.Ordinal).ToList();
         Assert.Equal(ids.Order(StringComparer.Ordinal).ToList(), badges);
+    }
+
+    [Fact]
+    public async Task Generated_lines_carry_pairing_and_leave_boleto_and_third_party_pix_unlinked()
+    {
+        var files = await DemoFixtureGenerator.GenerateAsync(postgres);
+        var txs = JsonNode.Parse(files["transactions.json"])!.AsArray().Select(t => t!).ToList();
+
+        Assert.Equal(new[] { "InvoicePayment", "OwnTransfer", "PixCredit" },
+            txs.Select(t => t["pairing"]?.GetValue<string>()).OfType<string>().Distinct().Order().ToArray());
+
+        var boleto = txs.Single(t => t["description"]!.GetValue<string>() == "Boleto Condomínio Exemplo");
+        var third = txs.Single(t => t["description"]!.GetValue<string>() == "Pix para Fornecedor Fictício");
+        Assert.All(new[] { boleto, third }, t =>
+        {
+            Assert.Equal("Normal", t["state"]!.GetValue<string>());
+            Assert.Null(t["link"]);
+        });
+        Assert.Null(boleto["pairing"]);
+        Assert.Equal("OwnTransfer", third["pairing"]!.GetValue<string>());
     }
 
     [Fact]

@@ -58,7 +58,7 @@ public sealed class ImportOverridesTests(PostgresFixture postgres)
         var income = await CreateCategoryAsync(c, "Pix recebido", "Income");
         var batchId = await PreviewAsync(c, acc, ThreeLines().Build());
 
-        // Fit2 is PendingClassification by the Nubank rules.
+        // Fit2 (a Pix) is Normal by the Nubank rules since S3(b); the override also sets its category.
         var r = await ConfirmWithAsync(c, batchId, new { sourceKey = Fit2, state = "Normal", categoryId = income });
 
         Assert.Equal(HttpStatusCode.OK, r.StatusCode);
@@ -72,12 +72,14 @@ public sealed class ImportOverridesTests(PostgresFixture postgres)
         Assert.Equal(TransactionState.Normal, line.State);
         Assert.Equal(income, line.CategoryId);
         Assert.Equal(c.UserId, line.UserId);
+        // Same state as the rules (the Pix is Normal since S3(b)): not an edit.
         Assert.False(line.EditedByUser);
         // Lines without an override keep the rules' classification.
         var others = await db.Transactions.Where(t => t.SourceKey != Fit2).OrderBy(t => t.Date).ToListAsync();
         Assert.Equal(TransactionState.Normal, others[0].State);
         Assert.Equal(TransactionState.PendingClassification, others[1].State);
         Assert.All(others, t => Assert.Null(t.CategoryId));
+        Assert.All(others, t => Assert.False(t.EditedByUser));
     }
 
     [Fact]
@@ -259,6 +261,17 @@ public sealed class ImportOverridesTests(PostgresFixture postgres)
         Assert.Equal((TransactionState.Normal, (Guid?)null), (byKey[Fit2].State, byKey[Fit2].CategoryId));
         Assert.Equal((TransactionState.PendingClassification, cat), (byKey[Fit3].State, byKey[Fit3].CategoryId));
         Assert.Equal((TransactionState.PendingClassification, (Guid?)null), (byKey[fit4].State, byKey[fit4].CategoryId));
+        // Only a state chosen against the rules marks the line as edited (so reclassification never reverts it).
+        Assert.True(byKey[fit4].EditedByUser);
+        Assert.False(byKey[Fit1].EditedByUser);
+        Assert.False(byKey[Fit3].EditedByUser);
+
+        // The reconciliation (here: a later import) keeps the user's Pending.
+        Assert.Equal(HttpStatusCode.OK, (await ImportTestApi.ConfirmWithAsync(c, await PreviewAsync(c, acc, OfxTestFile.Checking()
+            .Line("20261026000000[-3:BRT]", "-7.00", "Compra no debito - Outra Banca").Build()), ack: true)).StatusCode);
+        await using var after = PersistenceTestSupport.Create(f.ConnectionString, c.UserId);
+        Assert.Equal(TransactionState.PendingClassification,
+            (await after.Transactions.AsNoTracking().SingleAsync(t => t.SourceKey == fit4)).State);
     }
 
     [Fact]
@@ -288,7 +301,7 @@ public sealed class ImportOverridesTests(PostgresFixture postgres)
 
         await using var db = PersistenceTestSupport.Create(f.ConnectionString, c.UserId);
         var lines = await db.Transactions.Where(t => t.AccountId == acc).OrderBy(t => t.Date).ToListAsync();
-        Assert.Equal([TransactionState.Normal, TransactionState.PendingClassification, TransactionState.PendingClassification],
+        Assert.Equal([TransactionState.Normal, TransactionState.Normal, TransactionState.PendingClassification],
             lines.Select(t => t.State));
         Assert.All(await db.Transactions.ToListAsync(), t => Assert.Null(t.CategoryId));
     }

@@ -260,10 +260,11 @@ Regras:
 
 Pagamentos de fatura e transferências entre contas próprias aparecem como duas linhas pendentes (uma em cada conta). A conciliação liga as duas pontas (valores opostos iguais, contas diferentes, até 3 dias de diferença) e roda sozinha na confirmação de cada importação.
 
-- **Vincula sozinho**: pares sem ambiguidade; pagamento de fatura só dentro do mesmo banco (conta e cartão do Nubank, ou do Itaú) e transferência entre contas correntes com no máximo 1 dia de diferença.
+- **Vincula sozinho**: pares sem ambiguidade; pagamento de fatura só dentro do mesmo banco (conta e cartão do Nubank, ou do Itaú) e transferência entre contas correntes com no máximo 1 dia de diferença e nomes coerentes.
 - **Fica como sugestão ou pendente**: pares ambíguos, transferências com 2 ou 3 dias de diferença, fatura paga por outro banco e pagamentos parciais.
 - **Na tela Pendências**: confirme ou rejeite as sugestões; em Vinculados, desfaça um vínculo (ele não será sugerido de novo). Linhas vinculadas saem da fila e não mudam saldos nem receitas/despesas.
-- **Banco já existente**: depois de atualizar, a próxima importação (ou `POST /api/links/reconcile`) vincula as pendências mais antigas; não há botão na tela para isso.
+- **Banco já existente**: em Pendências, o botão **Reconciliar pendências** vincula as pendências antigas e move para Lançamentos o que hoje é Normal (Pix e boleto); ele roda sozinho a cada importação.
+- **Pix e boleto** entram como Normal. **É meu** (Pix para a própria conta) vincula a linha como transferência mesmo sem a outra ponta e aprende o nome como *sugestão* para as próximas; **Sem contrapartida** faz o mesmo para pagamento de fatura sem extrato da conta. **Pix no crédito** (`CREDITO LIBERAD` + `PIX CARTAO`/`EST CRED`) é ligado como par neutro na mesma conta (o gasto só aparece quando a fatura do cartão é importada). Decisões em [ADR 0008](docs/adr/0008-pendencias-residuais.md).
 - **API** (`/api/links`): `GET /` (lista, filtro por estado), `POST /reconcile`, `POST /{id}/confirm`, `POST /{id}/reject` e `DELETE /{id}` (desfaz).
 - O demo público mostra vínculos de exemplo (somente leitura). Decisões em [ADR 0007](docs/adr/0007-vinculos-e-neutralidade-derivada.md).
 

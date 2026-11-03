@@ -13,6 +13,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -29,6 +30,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -39,14 +41,15 @@
     "statementDate": null,
     "amount": "350.00",
     "description": "Pix recebido da Conta Corrente Exemplo",
-    "originalDescription": "Transferência recebida pelo Pix",
+    "originalDescription": "Transferência recebida pelo Pix - PESSOA EXEMPLO - ***.000.000-** - BANCO EXEMPLO",
     "categoryId": null,
-    "state": "PendingClassification",
+    "state": "Normal",
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": "Pessoa Exemplo",
+    "pairing": "OwnTransfer",
     "link": {
-      "id": "0000001e-0000-4000-8000-000000000002",
+      "id": "0000001e-0000-4000-8000-000000000004",
       "kind": "OwnTransfer",
       "state": "Confirmed",
       "counterpartTransactionId": "00000007-0000-4000-8000-00000000004c"
@@ -62,12 +65,13 @@
     "description": "Pix para Conta Digital Exemplo",
     "originalDescription": "PIX TRANSF PESSOA EXEMPLO",
     "categoryId": null,
-    "state": "PendingClassification",
+    "state": "Normal",
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": "OwnTransfer",
     "link": {
-      "id": "0000001e-0000-4000-8000-000000000002",
+      "id": "0000001e-0000-4000-8000-000000000004",
       "kind": "OwnTransfer",
       "state": "Confirmed",
       "counterpartTransactionId": "00000007-0000-4000-8000-00000000004d"
@@ -87,6 +91,24 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
+    "link": null
+  },
+  {
+    "id": "00000007-0000-4000-8000-000000000056",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-11",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-64.90",
+    "description": "Pix para Fornecedor Fictício",
+    "originalDescription": "PIX TRANSF FORNECEDOR FICTICIO11 10",
+    "categoryId": null,
+    "state": "Normal",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "pairing": "OwnTransfer",
     "link": null
   },
   {
@@ -103,8 +125,9 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": "InvoicePayment",
     "link": {
-      "id": "0000001e-0000-4000-8000-000000000001",
+      "id": "0000001e-0000-4000-8000-000000000002",
       "kind": "InvoicePayment",
       "state": "Confirmed",
       "counterpartTransactionId": "00000007-0000-4000-8000-00000000004a"
@@ -124,6 +147,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -140,11 +164,56 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": "InvoicePayment",
     "link": {
-      "id": "0000001e-0000-4000-8000-000000000001",
+      "id": "0000001e-0000-4000-8000-000000000002",
       "kind": "InvoicePayment",
       "state": "Confirmed",
       "counterpartTransactionId": "00000007-0000-4000-8000-00000000004b"
+    }
+  },
+  {
+    "id": "00000007-0000-4000-8000-000000000053",
+    "accountId": "0000000a-0000-4000-8000-000000000004",
+    "date": "2026-10-09",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "95.00",
+    "description": "Pix recebido de Conta Reserva Exemplo",
+    "originalDescription": "Transferência recebida pelo Pix - CONTA RESERVA EXEMPLO - ***.000.000-** - BANCO EXEMPLO",
+    "categoryId": null,
+    "state": "Normal",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": "Conta Reserva Exemplo",
+    "pairing": "OwnTransfer",
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000007",
+      "kind": "OwnTransfer",
+      "state": "Suggested",
+      "counterpartTransactionId": null
+    }
+  },
+  {
+    "id": "00000007-0000-4000-8000-000000000052",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-09",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-220.00",
+    "description": "Pix para Conta Reserva (exemplo)",
+    "originalDescription": "PIX TRANSF CONTA RESERVA09 10",
+    "categoryId": null,
+    "state": "Normal",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "pairing": "OwnTransfer",
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000003",
+      "kind": "OwnTransfer",
+      "state": "Confirmed",
+      "counterpartTransactionId": null
     }
   },
   {
@@ -161,6 +230,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -171,14 +241,15 @@
     "statementDate": null,
     "amount": "180.00",
     "description": "Pix recebido da Conta Corrente Exemplo (reserva)",
-    "originalDescription": "Transferência recebida pelo Pix",
+    "originalDescription": "Transferência recebida pelo Pix - PESSOA EXEMPLO - ***.000.000-** - BANCO EXEMPLO",
     "categoryId": null,
-    "state": "PendingClassification",
+    "state": "Normal",
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": "Pessoa Exemplo",
+    "pairing": "OwnTransfer",
     "link": {
-      "id": "0000001e-0000-4000-8000-000000000003",
+      "id": "0000001e-0000-4000-8000-000000000006",
       "kind": "OwnTransfer",
       "state": "Suggested",
       "counterpartTransactionId": "00000007-0000-4000-8000-00000000004e"
@@ -198,7 +269,52 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
+  },
+  {
+    "id": "00000007-0000-4000-8000-000000000051",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-07",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-640.00",
+    "description": "Pix no crédito (exemplo)",
+    "originalDescription": "PIX CARTAO Exemplo20 08",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "pairing": "PixCredit",
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000005",
+      "kind": "PixCredit",
+      "state": "Confirmed",
+      "counterpartTransactionId": "00000007-0000-4000-8000-000000000050"
+    }
+  },
+  {
+    "id": "00000007-0000-4000-8000-000000000050",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-07",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "640.00",
+    "description": "Crédito liberado via Pix (exemplo)",
+    "originalDescription": "CREDITO LIBERAD PIX 1234",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "pairing": "PixCredit",
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000005",
+      "kind": "PixCredit",
+      "state": "Confirmed",
+      "counterpartTransactionId": "00000007-0000-4000-8000-000000000051"
+    }
   },
   {
     "id": "00000007-0000-4000-8000-00000000004e",
@@ -210,12 +326,13 @@
     "description": "Pix para Conta Digital Exemplo (reserva)",
     "originalDescription": "PIX TRANSF OUTRA EXEMPLO",
     "categoryId": null,
-    "state": "PendingClassification",
+    "state": "Normal",
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": "OwnTransfer",
     "link": {
-      "id": "0000001e-0000-4000-8000-000000000003",
+      "id": "0000001e-0000-4000-8000-000000000006",
       "kind": "OwnTransfer",
       "state": "Suggested",
       "counterpartTransactionId": "00000007-0000-4000-8000-00000000004f"
@@ -235,6 +352,24 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
+    "link": null
+  },
+  {
+    "id": "00000007-0000-4000-8000-000000000055",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-04",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-512.30",
+    "description": "Boleto Condomínio Exemplo",
+    "originalDescription": "PAG BOLETO CONDOMINIO EXEMPLO",
+    "categoryId": null,
+    "state": "Normal",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -251,7 +386,30 @@
     "origin": "Imported",
     "editedByUser": true,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
+  },
+  {
+    "id": "00000007-0000-4000-8000-000000000054",
+    "accountId": "0000000a-0000-4000-8000-000000000001",
+    "date": "2026-10-02",
+    "purchaseDate": null,
+    "statementDate": null,
+    "amount": "-1180.25",
+    "description": "Pagamento de fatura de outro cartão (exemplo)",
+    "originalDescription": "FATURA PAGA CARTAO EXTERNO EXEMPLO",
+    "categoryId": null,
+    "state": "PendingClassification",
+    "origin": "Imported",
+    "editedByUser": false,
+    "counterpartyName": null,
+    "pairing": "InvoicePayment",
+    "link": {
+      "id": "0000001e-0000-4000-8000-000000000001",
+      "kind": "InvoicePayment",
+      "state": "Confirmed",
+      "counterpartTransactionId": null
+    }
   },
   {
     "id": "00000007-0000-4000-8000-000000000046",
@@ -267,6 +425,7 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -283,6 +442,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -299,6 +459,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -315,6 +476,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -331,6 +493,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -347,6 +510,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -363,6 +527,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -379,6 +544,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -395,6 +561,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -411,6 +578,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -427,6 +595,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -443,6 +612,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -459,6 +629,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -475,6 +646,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -491,6 +663,7 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -507,6 +680,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -523,6 +697,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -539,6 +714,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -555,6 +731,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -571,6 +748,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -587,6 +765,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -603,6 +782,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -619,6 +799,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -635,6 +816,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -651,6 +833,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -667,6 +850,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -683,6 +867,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -699,6 +884,7 @@
     "origin": "Imported",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -715,6 +901,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -731,6 +918,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -747,6 +935,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -763,6 +952,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -779,6 +969,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -795,6 +986,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -811,6 +1003,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -827,6 +1020,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -843,6 +1037,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -859,6 +1054,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -875,6 +1071,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -891,6 +1088,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -907,6 +1105,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -923,6 +1122,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -939,6 +1139,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -955,6 +1156,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -971,6 +1173,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -987,6 +1190,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1003,6 +1207,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1019,6 +1224,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1035,6 +1241,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1051,6 +1258,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1067,6 +1275,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1083,6 +1292,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1099,6 +1309,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1115,6 +1326,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1131,6 +1343,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1147,6 +1360,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1163,6 +1377,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1179,6 +1394,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1195,6 +1411,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1211,6 +1428,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1227,6 +1445,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1243,6 +1462,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1259,6 +1479,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1275,6 +1496,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   },
   {
@@ -1291,6 +1513,7 @@
     "origin": "Manual",
     "editedByUser": false,
     "counterpartyName": null,
+    "pairing": null,
     "link": null
   }
 ]

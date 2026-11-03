@@ -41,7 +41,7 @@ export type LinkResponse = S["LinkResponse"];
 export type TransactionLink = S["TransactionLink"];
 export type LinkPage = Omit<IntFields<S["LinkPage"], "page" | "size" | "total">, "items"> & { items: LinkResponse[] };
 export type LinkQuery = { state?: LinkState; page?: number; size?: number };
-export type ReconcileResult = IntFields<S["ReconcileResult"], "linked" | "suggested">;
+export type ReconcileResult = IntFields<S["ReconcileResult"], "linked" | "suggested" | "reclassified">;
 
 export type Transaction = S["TransactionResponse"];
 export type NewTransaction = S["CreateTransactionRequest"];

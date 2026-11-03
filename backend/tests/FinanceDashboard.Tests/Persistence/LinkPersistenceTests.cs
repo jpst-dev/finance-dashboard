@@ -142,6 +142,140 @@ public sealed class LinkPersistenceTests(PostgresFixture postgres)
         Assert.Single(await a2.Links.ToListAsync());
     }
 
+    private static Link OpenOut(Transaction o, LinkState state = LinkState.Confirmed) => new()
+    {
+        Id = Guid.NewGuid(), Kind = LinkKind.PixCredit, State = state, OutTransactionId = o.Id,
+        InTransactionId = null, Origin = LinkOrigin.User, CreatedAt = DateTimeOffset.UtcNow,
+    };
+
+    private static Link OpenIn(Transaction i, LinkState state = LinkState.Confirmed) => new()
+    {
+        Id = Guid.NewGuid(), Kind = LinkKind.PixCredit, State = state, OutTransactionId = null,
+        InTransactionId = i.Id, Origin = LinkOrigin.User, CreatedAt = DateTimeOffset.UtcNow,
+    };
+
+    [Fact]
+    public async Task Open_link_with_null_side_is_saved()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var (_, t) = await SeedAsync(db, 2);
+        db.Links.Add(OpenOut(t[0]));
+        db.Links.Add(OpenIn(t[1], LinkState.Suggested));
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        var links = await db.Links.ToListAsync();
+        Assert.Equal(2, links.Count);
+        Assert.Contains(links, l => l.InTransactionId is null && l.OutTransactionId == t[0].Id);
+        Assert.Contains(links, l => l.OutTransactionId is null && l.InTransactionId == t[1].Id);
+    }
+
+    [Theory]
+    [InlineData(LinkState.Suggested, LinkState.Suggested)]
+    [InlineData(LinkState.Suggested, LinkState.Confirmed)]
+    [InlineData(LinkState.Confirmed, LinkState.Suggested)]
+    [InlineData(LinkState.Confirmed, LinkState.Confirmed)]
+    public async Task Two_live_open_links_on_same_line_violate_unique(LinkState first, LinkState second)
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var (_, t) = await SeedAsync(db, 2);
+        db.Links.Add(OpenOut(t[0], first));
+        db.Links.Add(OpenIn(t[1], first));
+        await db.SaveChangesAsync();
+
+        db.Links.Add(OpenOut(t[0], second));
+        await AssertUniqueViolationAsync(db);
+        db.ChangeTracker.Clear();
+
+        db.Links.Add(OpenIn(t[1], second));
+        await AssertUniqueViolationAsync(db);
+    }
+
+    [Fact]
+    public async Task Rejected_open_link_does_not_block_new_one()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var (_, t) = await SeedAsync(db, 2);
+        db.Links.Add(OpenOut(t[0], LinkState.Rejected));
+        db.Links.Add(OpenOut(t[0], LinkState.Rejected));
+        db.Links.Add(OpenIn(t[1], LinkState.Rejected));
+        await db.SaveChangesAsync();
+
+        db.Links.Add(OpenOut(t[0], LinkState.Suggested));
+        db.Links.Add(OpenIn(t[1], LinkState.Confirmed));
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        Assert.Equal(5, await db.Links.CountAsync());
+    }
+
+    [Fact]
+    public async Task Open_link_coexists_with_pair_link_on_same_line()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var (_, t) = await SeedAsync(db, 2);
+        db.Links.Add(OpenOut(t[0]));
+        db.Links.Add(NewLink(t[0], t[1], LinkState.Suggested));
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        Assert.Equal(2, await db.Links.CountAsync());
+    }
+
+    [Fact]
+    public async Task Open_confirmed_blocks_second_confirmed_on_same_line()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var (_, t) = await SeedAsync(db, 2);
+        db.Links.Add(OpenOut(t[0]));
+        await db.SaveChangesAsync();
+
+        db.Links.Add(NewLink(t[0], t[1], LinkState.Confirmed));
+        await AssertUniqueViolationAsync(db);
+    }
+
+    [Fact]
+    public async Task Link_with_both_sides_null_is_rejected_by_check()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        db.Links.Add(new Link
+        {
+            Id = Guid.NewGuid(), Kind = LinkKind.PixCredit, State = LinkState.Suggested,
+            Origin = LinkOrigin.Auto, CreatedAt = DateTimeOffset.UtcNow,
+        });
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        Assert.Equal("23514", Assert.IsType<PostgresException>(ex.InnerException).SqlState);
+    }
+
+    [Fact]
+    public async Task WithoutConfirmedLink_excludes_open_confirmed_lines()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var (_, t) = await SeedAsync(db, 3);
+        db.Links.Add(OpenOut(t[0]));
+        db.Links.Add(OpenIn(t[1]));
+        await db.SaveChangesAsync();
+
+        var ids = await db.Transactions.WithoutConfirmedLink(db).Select(x => x.Id).ToListAsync();
+        Assert.Equal([t[2].Id], ids);
+    }
+
+    [Fact]
+    public async Task WithoutPairedLink_keeps_lines_with_only_open_confirmed_link()
+    {
+        await using var db = PersistenceTestSupport.Create(await NewDbAsync(), "user-a");
+        var (_, t) = await SeedAsync(db, 5);
+        db.Links.Add(OpenOut(t[0]));
+        db.Links.Add(NewLink(t[2], t[3], LinkState.Confirmed));
+        db.Links.Add(NewLink(t[4], t[1], LinkState.Suggested));
+        await db.SaveChangesAsync();
+
+        var ids = (await db.Transactions.WithoutPairedLink(db).Select(x => x.Id).ToListAsync()).ToHashSet();
+        Assert.Contains(t[0].Id, ids);
+        Assert.Contains(t[1].Id, ids);
+        Assert.Contains(t[4].Id, ids);
+        Assert.DoesNotContain(t[2].Id, ids);
+        Assert.DoesNotContain(t[3].Id, ids);
+    }
+
     [Fact]
     public async Task WithoutConfirmedLink_excludes_both_sides_only_when_confirmed()
     {

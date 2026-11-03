@@ -18,6 +18,8 @@ export function tx(over: Partial<Transaction> = {}): Transaction {
     origin: "Manual",
     editedByUser: false,
     counterpartyName: null,
+    pairing: null,
+    link: null,
     ...over,
   };
 }

@@ -190,9 +190,31 @@ describe("demo estático: interface real somente leitura", () => {
     expect(qa("[data-test=suggestion]")).toHaveLength(f.links.suggested.length);
     expect(q("[data-test=linked-pairs]")).not.toBeNull();
     expect(qa("[data-test=linked]")).toHaveLength(f.links.confirmed.length);
-    for (const l of [...f.links.suggested, ...f.links.confirmed]) expect(bodyText()).toContain(l.out.description);
+    for (const l of [...f.links.suggested, ...f.links.confirmed]) expect(bodyText()).toContain((l.out ?? l.in)!.description);
+    // Vínculos de lado vazio: aviso de contraparte fora do sistema, na sugestão e nos vinculados.
+    expect(qa("[data-test=suggestions] [data-test=link-external]")).toHaveLength(f.links.suggested.filter((l) => l.external).length);
+    expect(qa("[data-test=linked-pairs] [data-test=link-external]")).toHaveLength(f.links.confirmed.filter((l) => l.external).length);
+    expect(qa("[data-test=tx-no-counterpart]").length).toBeLessThanOrEqual(PENDING.filter((t) => t.pairing === "InvoicePayment" && !t.link).length);
     // As ações são somente leitura (o afterEach confirma que nada foi à rede).
     await click(q("[data-test=link-confirm]"));
+    expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);
+  });
+
+  it("transactions_show_link_badges_and_mark_actions_without_network", async () => {
+    const { router } = await boot();
+    await visit(router, "/transactions");
+    const rows = qa("[data-test=tx-row]");
+    const shown = f.transactions.slice(0, rows.length);
+    // Selos de vínculo confirmado (inclusive PixCredit) e o aviso "sem contrapartida" dos vínculos de lado vazio.
+    expect(qa("[data-test=tx-link]")).toHaveLength(shown.filter((t) => t.link?.state === "Confirmed").length);
+    expect(shown.some((t) => t.link?.kind === "PixCredit")).toBe(true);
+    expect(qa("[data-test=tx-link-external]")).toHaveLength(
+      shown.filter((t) => t.link?.state === "Confirmed" && t.link.counterpartTransactionId === null).length,
+    );
+    expect(qa("[data-test=tx-link-external]").length).toBeGreaterThan(0);
+    // "É meu" nas linhas Pix sem vínculo: somente leitura (o afterEach confirma que nada foi à rede).
+    expect(qa("[data-test=tx-own]").length).toBeGreaterThan(0);
+    await click(q("[data-test=tx-own]"));
     expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);
   });
 

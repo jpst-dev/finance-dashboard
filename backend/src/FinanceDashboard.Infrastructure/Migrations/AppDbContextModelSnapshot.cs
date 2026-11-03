@@ -219,7 +219,7 @@ namespace FinanceDashboard.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("DecidedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("InTransactionId")
+                    b.Property<Guid?>("InTransactionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Kind")
@@ -232,7 +232,7 @@ namespace FinanceDashboard.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<Guid>("OutTransactionId")
+                    b.Property<Guid?>("OutTransactionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("State")
@@ -246,20 +246,57 @@ namespace FinanceDashboard.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("InTransactionId")
-                        .IsUnique()
-                        .HasFilter("\"State\" = 'Confirmed'");
-
-                    b.HasIndex("OutTransactionId")
-                        .IsUnique()
-                        .HasFilter("\"State\" = 'Confirmed'");
-
                     b.HasIndex("OutTransactionId", "InTransactionId")
                         .IsUnique();
 
                     b.HasIndex("UserId", "State");
 
-                    b.ToTable("Links");
+                    b.HasIndex(new[] { "InTransactionId" }, "IX_Links_InTransactionId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 'Confirmed'");
+
+                    b.HasIndex(new[] { "InTransactionId" }, "IX_Links_InTransactionId_LiveOpen")
+                        .IsUnique()
+                        .HasFilter("\"OutTransactionId\" IS NULL AND \"State\" <> 'Rejected'");
+
+                    b.HasIndex(new[] { "OutTransactionId" }, "IX_Links_OutTransactionId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 'Confirmed'");
+
+                    b.HasIndex(new[] { "OutTransactionId" }, "IX_Links_OutTransactionId_LiveOpen")
+                        .IsUnique()
+                        .HasFilter("\"InTransactionId\" IS NULL AND \"State\" <> 'Rejected'");
+
+                    b.ToTable("Links", t =>
+                        {
+                            t.HasCheckConstraint("CK_Links_AtLeastOneSide", "\"OutTransactionId\" IS NOT NULL OR \"InTransactionId\" IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("FinanceDashboard.Domain.OwnAlias", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Fragment")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Fragment")
+                        .IsUnique();
+
+                    b.ToTable("OwnAliases");
                 });
 
             modelBuilder.Entity("FinanceDashboard.Domain.Transaction", b =>
@@ -589,14 +626,12 @@ namespace FinanceDashboard.Infrastructure.Migrations
                     b.HasOne("FinanceDashboard.Domain.Transaction", null)
                         .WithMany()
                         .HasForeignKey("InTransactionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("FinanceDashboard.Domain.Transaction", null)
                         .WithMany()
                         .HasForeignKey("OutTransactionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("FinanceDashboard.Domain.Transaction", b =>

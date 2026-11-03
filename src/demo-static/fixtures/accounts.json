@@ -24,7 +24,7 @@
     "institution": "Banco Exemplo",
     "externalIdentifier": null,
     "isArchived": false,
-    "balance": "20727.98"
+    "balance": "18750.53"
   },
   {
     "id": "0000000a-0000-4000-8000-000000000004",
@@ -33,6 +33,6 @@
     "institution": "Banco Digital Exemplo",
     "externalIdentifier": null,
     "isArchived": false,
-    "balance": "1330.00"
+    "balance": "1425.00"
   }
 ]

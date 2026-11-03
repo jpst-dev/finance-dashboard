@@ -70,12 +70,12 @@ public sealed class ItauIdempotencyTests(PostgresFixture postgres)
         var transfers = preview.GetProperty("lines").EnumerateArray()
             .Where(l => l.GetProperty("description").GetString() == "PIX TRANSF FULANO FICTICIO").ToList();
         Assert.Equal([0, 1], transfers.Select(l => l.GetProperty("ordinal").GetInt32()));
-        Assert.All(transfers, l => Assert.Equal("PendingClassification", l.GetProperty("state").GetString()));
+        Assert.All(transfers, l => Assert.Equal("Normal", l.GetProperty("state").GetString()));
         var key = transfers[0].GetProperty("sourceKey").GetString()!;
         Assert.Equal(key, transfers[1].GetProperty("sourceKey").GetString());
 
         // Override only ordinal 1: the twin at ordinal 0 must keep the reader's state.
-        var first = await ConfirmWithAsync(c, BatchOf(preview), false, new { sourceKey = key, ordinal = 1, state = "Normal" });
+        var first = await ConfirmWithAsync(c, BatchOf(preview), false, new { sourceKey = key, ordinal = 1, state = "PendingClassification" });
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(4, Created(await JsonOf(first)));
         var before = await SnapshotAsync(f, c);
@@ -84,7 +84,7 @@ public sealed class ItauIdempotencyTests(PostgresFixture postgres)
         {
             var twins = await db.Transactions.Where(t => t.SourceKey == key).OrderBy(t => t.Ordinal).ToListAsync();
             Assert.Equal([0, 1], twins.Select(t => t.Ordinal));
-            Assert.Equal([TransactionState.PendingClassification, TransactionState.Normal], twins.Select(t => t.State));
+            Assert.Equal([TransactionState.Normal, TransactionState.PendingClassification], twins.Select(t => t.State));
         }
 
         Assert.Equal(HttpStatusCode.NoContent, (await UndoAsync(c, BatchOf(preview))).StatusCode);
@@ -95,7 +95,7 @@ public sealed class ItauIdempotencyTests(PostgresFixture postgres)
         Assert.Equal(4, again.GetProperty("newCount").GetInt32());
         Assert.DoesNotContain(Warnings(again), w => w.GetProperty("code").GetString() == "AlreadyImported");
         Assert.All(again.GetProperty("lines").EnumerateArray(), l => Assert.False(l.GetProperty("existing").GetBoolean()));
-        var second = await ConfirmWithAsync(c, BatchOf(again), false, new { sourceKey = key, ordinal = 1, state = "Normal" });
+        var second = await ConfirmWithAsync(c, BatchOf(again), false, new { sourceKey = key, ordinal = 1, state = "PendingClassification" });
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
         Assert.Equal(4, Created(await JsonOf(second)));
 
@@ -344,10 +344,10 @@ public sealed class ItauIdempotencyTests(PostgresFixture postgres)
         Assert.Equal(4, Created(await ConfirmOkAsync(c, BatchOf(preview))));
 
         var october = await JsonOf(await c.GetAsync("/api/summary?month=2026-10"));
-        Assert.Equal("3000.00", october.GetProperty("income").GetString());
+        Assert.Equal("3200.00", october.GetProperty("income").GetString());
         Assert.Equal("-12.30", october.GetProperty("expenses").GetString());
-        Assert.Equal("2987.70", october.GetProperty("net").GetString());
-        Assert.Equal(2, october.GetProperty("pending").GetProperty("count").GetInt32());
-        Assert.Equal("-300.00", october.GetProperty("pending").GetProperty("total").GetString());
+        Assert.Equal("3187.70", october.GetProperty("net").GetString());
+        Assert.Equal(1, october.GetProperty("pending").GetProperty("count").GetInt32());
+        Assert.Equal("-500.00", october.GetProperty("pending").GetProperty("total").GetString());
     }
 }

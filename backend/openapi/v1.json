@@ -509,6 +509,108 @@
         }
       }
     },
+    "/api/transactions/{id}/own-transfer": {
+      "post": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Mark a transfer line as mine (open Confirmed link, no counterpart)",
+        "operationId": "MarkOwnTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
+    "/api/transactions/{id}/no-counterpart": {
+      "post": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Mark a pending invoice payment as having no counterpart in the app",
+        "operationId": "MarkNoCounterpart",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        }
+      }
+    },
     "/api/transactions/{id}": {
       "put": {
         "tags": [
@@ -2012,10 +2114,22 @@
           }
         }
       },
+      "LinkErrorResponse": {
+        "required": [
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
       "LinkKind": {
         "enum": [
           "InvoicePayment",
-          "OwnTransfer"
+          "OwnTransfer",
+          "PixCredit"
         ],
         "type": "string"
       },
@@ -2106,6 +2220,7 @@
           "origin",
           "out",
           "in",
+          "external",
           "createdAt"
         ],
         "type": "object",
@@ -2124,10 +2239,27 @@
             "$ref": "#/components/schemas/LinkOrigin"
           },
           "out": {
-            "$ref": "#/components/schemas/LinkLine"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LinkLine"
+              }
+            ]
           },
           "in": {
-            "$ref": "#/components/schemas/LinkLine"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LinkLine"
+              }
+            ]
+          },
+          "external": {
+            "type": "boolean"
           },
           "createdAt": {
             "type": "string",
@@ -2182,7 +2314,8 @@
       "ReconcileResult": {
         "required": [
           "linked",
-          "suggested"
+          "suggested",
+          "reclassified"
         ],
         "type": "object",
         "properties": {
@@ -2195,6 +2328,14 @@
             "format": "int32"
           },
           "suggested": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reclassified": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -2261,7 +2402,10 @@
             "$ref": "#/components/schemas/LinkState"
           },
           "counterpartTransactionId": {
-            "type": "string",
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "uuid"
           }
         }
@@ -2314,6 +2458,14 @@
           }
         }
       },
+      "TransactionPairing": {
+        "enum": [
+          "OwnTransfer",
+          "InvoicePayment",
+          "PixCredit"
+        ],
+        "type": "string"
+      },
       "TransactionResponse": {
         "required": [
           "id",
@@ -2328,7 +2480,9 @@
           "state",
           "origin",
           "editedByUser",
-          "counterpartyName"
+          "counterpartyName",
+          "pairing",
+          "link"
         ],
         "type": "object",
         "properties": {
@@ -2388,6 +2542,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "pairing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TransactionPairing"
+              }
             ]
           },
           "link": {

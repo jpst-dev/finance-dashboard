@@ -241,7 +241,7 @@ public static class DemoSeed
             NewCount = batchLines.Count, ExistingCount = 0,
         };
 
-        var linkBatches = AddLinkCandidates(Add, confirmed.DeclaredTotal!.Value);
+        var (linkBatches, ownPix, noCounterpart) = AddLinkCandidates(Add, confirmed.DeclaredTotal!.Value);
 
         // Preview of an Itaú checking statement: 3 lines already imported, 2 new normal, 1 new pending.
         var existing = lines.Where(t => t.AccountId == CheckingId && t.Origin == TransactionOrigin.Imported && t.BatchId is null)
@@ -285,9 +285,25 @@ public static class DemoSeed
 
         // The pairs come from the real matcher (LinkService), not hand-made rows.
         var reconciled = await new LinkService(db, f.Services.GetRequiredService<TimeProvider>()).ReconcileAsync(ct);
-        if (reconciled.Linked != 2 || reconciled.Suggested != 1)
+        if (reconciled.Linked != 3 || reconciled.Suggested != 1)
         {
             throw new InvalidOperationException($"Demo links drifted: {reconciled.Linked} linked, {reconciled.Suggested} suggested.");
+        }
+
+        // One-sided links come from the real marking actions: "é meu" (also learns the alias that then suggests the
+        // other bank's line) and "sem contrapartida" on an invoice payment.
+        var linkService = new LinkService(db, f.Services.GetRequiredService<TimeProvider>());
+        if ((await linkService.MarkOwnAsync(ownPix, ct)).Outcome != LinkOutcome.Ok
+            || (await linkService.MarkNoCounterpartAsync(noCounterpart, ct)).Outcome != LinkOutcome.Ok)
+        {
+            throw new InvalidOperationException("Demo one-sided links could not be created.");
+        }
+
+        var open = await db.Links.AsNoTracking().Where(l => l.OutTransactionId == null || l.InTransactionId == null).ToListAsync(ct);
+        if (open.Count(l => l.State == LinkState.Confirmed) != 2 || open.Count(l => l.State == LinkState.Suggested) != 1)
+        {
+            throw new InvalidOperationException(
+                "Demo one-sided links drifted: " + string.Join(", ", open.Select(l => $"{l.Kind}/{l.State}")) + ".");
         }
 
         var before = await db.Categories.CountAsync(ct);
@@ -304,13 +320,15 @@ public static class DemoSeed
     /// rules turn into: an invoice payment and an own transfer (both auto-confirmed) and an own transfer 2 days apart
     /// (suggested). Amounts are distinct so no line has two candidates.
     /// </summary>
-    private static ImportBatch[] AddLinkCandidates(
+    private static (ImportBatch[] Batches, Guid OwnPix, Guid NoCounterpart) AddLinkCandidates(
         Func<Guid, DateOnly, decimal, string, string?, TransactionState, Transaction> add, decimal invoiceTotal)
     {
-        void Line(Guid account, Guid batch, string keyPrefix, DateOnly date, decimal amount, string original,
-            string description, string slug, string? counterparty = null, bool card = false)
+        // State follows the real importers: Pix and boleto are Normal; invoice payment and PixCredit lines are Pendente.
+        Transaction Line(Guid account, Guid batch, string keyPrefix, DateOnly date, decimal amount, string original,
+            string description, string slug, string? counterparty = null, bool card = false,
+            TransactionState state = TransactionState.PendingClassification)
         {
-            var t = add(account, date, amount, original, null, TransactionState.PendingClassification);
+            var t = add(account, date, amount, original, null, state);
             t.NormalizedDescription = description;
             t.Origin = TransactionOrigin.Imported;
             t.BatchId = batch;
@@ -321,6 +339,8 @@ public static class DemoSeed
                 t.CardSuffix = "0000";
                 t.CardKind = CardKind.Physical;
             }
+
+            return t;
         }
 
         // Invoice payment: both sides inside the 3-day window, same amount.
@@ -329,17 +349,41 @@ public static class DemoSeed
         Line(CardId, ItauCardLinksBatchId, "demo-itau-cartao", new DateOnly(2026, 10, 11), invoiceTotal,
             "PAGAMENTO EFETUADO EXEMPLO", "Pagamento recebido (exemplo)", "pagamento-efetuado-exemplo", card: true);
 
-        // Own transfer, same day: auto-confirmed.
+        // Own transfer, same day, coherent names (PESSOA EXEMPLO on both sides): auto-confirmed.
         Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 12), -350.00m,
-            "PIX TRANSF PESSOA EXEMPLO", "Pix para Conta Digital Exemplo", "pix-transf-pessoa-exemplo");
+            "PIX TRANSF PESSOA EXEMPLO", "Pix para Conta Digital Exemplo", "pix-transf-pessoa-exemplo", state: TransactionState.Normal);
         Line(DigitalId, DigitalLinksBatchId, "demo-digital-cc", new DateOnly(2026, 10, 12), 350.00m,
-            "Transferência recebida pelo Pix", "Pix recebido da Conta Corrente Exemplo", "pix-recebido-350", "Pessoa Exemplo");
+            "Transferência recebida pelo Pix - PESSOA EXEMPLO - ***.000.000-** - BANCO EXEMPLO", "Pix recebido da Conta Corrente Exemplo", "pix-recebido-350", "Pessoa Exemplo", state: TransactionState.Normal);
 
         // Own transfer 2 days apart: only suggested.
         Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 6), -180.00m,
-            "PIX TRANSF OUTRA EXEMPLO", "Pix para Conta Digital Exemplo (reserva)", "pix-transf-outra-exemplo");
+            "PIX TRANSF OUTRA EXEMPLO", "Pix para Conta Digital Exemplo (reserva)", "pix-transf-outra-exemplo", state: TransactionState.Normal);
         Line(DigitalId, DigitalLinksBatchId, "demo-digital-cc", new DateOnly(2026, 10, 8), 180.00m,
-            "Transferência recebida pelo Pix", "Pix recebido da Conta Corrente Exemplo (reserva)", "pix-recebido-180", "Pessoa Exemplo");
+            "Transferência recebida pelo Pix - PESSOA EXEMPLO - ***.000.000-** - BANCO EXEMPLO", "Pix recebido da Conta Corrente Exemplo (reserva)", "pix-recebido-180", "Pessoa Exemplo", state: TransactionState.Normal);
+
+        // PixCredit pair (loan credit and its card-limit debit): same account, same day and amount, auto-confirmed.
+        Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 7), 640.00m,
+            "CREDITO LIBERAD PIX 1234", "Crédito liberado via Pix (exemplo)", "credito-liberad-pix-1234");
+        Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 7), -640.00m,
+            "PIX CARTAO Exemplo20 08", "Pix no crédito (exemplo)", "pix-cartao-exemplo20-08");
+
+        // Own Pix marked "é meu" (one-sided Confirmed, learns the alias CONTA RESERVA) ...
+        var ownPix = Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 9), -220.00m,
+            "PIX TRANSF CONTA RESERVA09 10", "Pix para Conta Reserva (exemplo)", "pix-transf-conta-reserva", state: TransactionState.Normal);
+        // ... and, in the other bank, a line whose name starts with that alias: one-sided Suggested.
+        Line(DigitalId, DigitalLinksBatchId, "demo-digital-cc", new DateOnly(2026, 10, 9), 95.00m,
+            "Transferência recebida pelo Pix - CONTA RESERVA EXEMPLO - ***.000.000-** - BANCO EXEMPLO",
+            "Pix recebido de Conta Reserva Exemplo", "pix-recebido-95", "Conta Reserva Exemplo", state: TransactionState.Normal);
+
+        // Invoice payment whose card side is not in the system: marked "sem contrapartida".
+        var noCounterpart = Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 2), -1180.25m,
+            "FATURA PAGA CARTAO EXTERNO EXEMPLO", "Pagamento de fatura de outro cartão (exemplo)", "fatura-paga-cartao-externo-exemplo");
+
+        // A boleto and a Pix to a third party: Normal and never linked.
+        Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 4), -512.30m,
+            "PAG BOLETO CONDOMINIO EXEMPLO", "Boleto Condomínio Exemplo", "pag-boleto-condominio-exemplo", state: TransactionState.Normal);
+        Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 11), -64.90m,
+            "PIX TRANSF FORNECEDOR FICTICIO11 10", "Pix para Fornecedor Fictício", "pix-transf-fornecedor-ficticio", state: TransactionState.Normal);
 
         ImportBatch Batch(Guid id, Guid account, ImportSource source, string label, DateOnly end, int count) => new()
         {
@@ -348,12 +392,12 @@ public static class DemoSeed
             CreatedAt = new DateTimeOffset(2026, 10, 14, 10, 0, 0, TimeSpan.Zero), NewCount = count, ExistingCount = 0,
         };
 
-        return
+        return (
         [
-            Batch(ItauCheckingLinksBatchId, CheckingId, ImportSource.ItauChecking, "demo-extrato-conta-vinculos-2026-10", new DateOnly(2026, 10, 12), 3),
+            Batch(ItauCheckingLinksBatchId, CheckingId, ImportSource.ItauChecking, "demo-extrato-conta-vinculos-2026-10", new DateOnly(2026, 10, 12), 9),
             Batch(ItauCardLinksBatchId, CardId, ImportSource.ItauCard, "demo-fatura-cartao-vinculos-2026-10", new DateOnly(2026, 10, 11), 1),
-            Batch(DigitalLinksBatchId, DigitalId, ImportSource.NubankChecking, "demo-extrato-digital-2026-10", new DateOnly(2026, 10, 12), 2),
-        ];
+            Batch(DigitalLinksBatchId, DigitalId, ImportSource.NubankChecking, "demo-extrato-digital-2026-10", new DateOnly(2026, 10, 12), 3),
+        ], ownPix.Id, noCounterpart.Id);
     }
 
     private static string Slug(string description) =>

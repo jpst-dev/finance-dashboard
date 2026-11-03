@@ -49,7 +49,10 @@ const btn = "rounded px-3 py-1.5 focus-visible:outline focus-visible:outline-2 f
     <div v-if="store.result" class="mt-4 rounded border border-emerald-700 p-3" role="status" aria-live="polite" data-test="result">
       <h2 class="font-semibold">{{ t("real.import.resultTitle") }}</h2>
       <p class="mt-1">{{ t("real.import.result", { created: store.result.created, skipped: store.result.skipped }) }}</p>
-      <p class="mt-1" data-test="result-links">{{ t("real.import.resultLinks", { linked: store.result.linked, suggested: store.result.suggested }) }}</p>
+      <p class="mt-1" data-test="result-links">{{ t("real.import.resultLinks", {
+          linked: t("real.plural.pairs", { n: store.result.linked }, store.result.linked),
+          suggested: t("real.plural.suggestions", { n: store.result.suggested }, store.result.suggested),
+        }) }}</p>
       <div class="mt-2 flex flex-wrap gap-3">
         <RouterLink to="/transactions" :class="[btn, 'border border-gray-600']">{{ t("real.import.goTransactions") }}</RouterLink>
         <RouterLink to="/pending" :class="[btn, 'border border-gray-600']">{{ t("real.import.goPending") }}</RouterLink>

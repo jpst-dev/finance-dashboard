@@ -3,8 +3,8 @@ import { useI18n } from "vue-i18n";
 import type { Transaction } from "../api/types";
 import Money from "../money/Money.vue";
 
-defineProps<{ items: Transaction[]; accountName: (id: string) => string; categoryName: (id: string | null) => string }>();
-const emit = defineEmits<{ edit: [t: Transaction]; remove: [t: Transaction] }>();
+defineProps<{ items: Transaction[]; accountName: (id: string) => string; categoryName: (id: string | null) => string; busy?: boolean }>();
+const emit = defineEmits<{ edit: [t: Transaction]; remove: [t: Transaction]; own: [t: Transaction]; noCounterpart: [t: Transaction] }>();
 const { t } = useI18n();
 
 /** "YYYY-MM-DD" -> "dd/mm/yyyy" por TEXTO (sem Date: sem deslocamento de fuso). */
@@ -51,8 +51,17 @@ const btn =
             >
               {{ t(`real.transactions.linkBadge.${tx.link.kind}`) }}
             </span>
+            <span
+              v-if="tx.link?.state === 'Confirmed' && tx.link.counterpartTransactionId === null"
+              class="ml-1 rounded bg-gray-800 px-2 py-0.5 text-xs text-gray-300"
+              data-test="tx-link-external"
+            >
+              {{ t(`real.links.external.${tx.link.kind}`) }}
+            </span>
           </td>
           <td class="whitespace-nowrap">
+            <button v-if="tx.pairing === 'OwnTransfer' && !tx.link" type="button" :class="[btn, 'mr-1']" data-test="tx-own" :disabled="busy" :aria-label="t('real.transactions.ownRow', { description: tx.description })" @click="emit('own', tx)">{{ t("real.transactions.own") }}</button>
+            <button v-if="tx.pairing === 'InvoicePayment' && !tx.link && tx.state === 'PendingClassification'" type="button" :class="[btn, 'mr-1']" data-test="tx-no-counterpart" :disabled="busy" :aria-label="t('real.transactions.noCounterpartRow', { description: tx.description })" @click="emit('noCounterpart', tx)">{{ t("real.transactions.noCounterpart") }}</button>
             <button type="button" :class="btn" data-test="tx-edit" :aria-label="t('real.transactions.editRow', { description: tx.description })" @click="emit('edit', tx)">{{ t("real.transactions.edit") }}</button>
             <button type="button" :class="[btn, 'ml-1']" data-test="tx-delete" :aria-label="t('real.transactions.deleteRow', { description: tx.description })" @click="emit('remove', tx)">{{ t("real.transactions.delete") }}</button>
           </td>

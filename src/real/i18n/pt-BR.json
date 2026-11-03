@@ -128,7 +128,8 @@
       "invalid_cell": "A planilha tem uma célula com valor inválido e não pode ser importada.",
       "one_file": "Envie um arquivo por vez.",
       "invalid_account": "Escolha uma conta corrente ou de cartão de crédito ativa.",
-      "link_conflict": "O vínculo mudou enquanto você olhava. A lista foi atualizada."
+      "link_conflict": "O vínculo mudou enquanto você olhava. A lista foi atualizada.",
+      "not_applicable": "Esta linha não se aplica a essa ação. A lista foi atualizada."
     },
     "import": {
       "help": "Envie o extrato ou a fatura (.ofx do Nubank ou do Itaú; fatura do Itaú em .xlsx), um arquivo por vez, até 5 MB. Nada é gravado antes de você confirmar.",
@@ -233,7 +234,7 @@
         "deletedKeys": "Linhas que você excluiu e que pertencem a outras importações continuam ocupando a chave e não voltam ao reimportar; as excluídas desta importação voltam se você importar o arquivo de novo.",
         "undone": "Importação desfeita."
       },
-      "resultLinks": "{linked} pares vinculados, {suggested} sugestões"
+      "resultLinks": "{linked}, {suggested}"
     },
     "pagination": {
       "label": "Paginação",
@@ -245,7 +246,9 @@
       "help": "Lançamentos aguardando classificação. Ajuste o estado e a categoria diretamente na linha.",
       "empty": "Nenhum lançamento pendente",
       "saved": "Lançamento atualizado.",
-      "badge": "pendentes"
+      "badge": "pendentes",
+      "reconcileResult": "{linked}, {suggested}, {reclassified}",
+      "reconcile": "Reconciliar pendências"
     },
     "transactions": {
       "filters": "Filtros",
@@ -287,8 +290,13 @@
       "empty": "Nenhum lançamento encontrado.",
       "linkBadge": {
         "OwnTransfer": "Transferência",
-        "InvoicePayment": "Pagamento de fatura"
-      }
+        "InvoicePayment": "Pagamento de fatura",
+        "PixCredit": "Pix no crédito"
+      },
+      "own": "É meu",
+      "noCounterpart": "Sem contrapartida",
+      "ownRow": "É meu: {description}",
+      "noCounterpartRow": "Sem contrapartida: {description}"
     },
     "overview": {
       "accounts": "Contas",
@@ -331,8 +339,20 @@
       "undo": "Desfazer",
       "kind": {
         "OwnTransfer": "Transferência",
-        "InvoicePayment": "Pagamento de fatura"
+        "InvoicePayment": "Pagamento de fatura",
+        "PixCredit": "Pix no crédito"
+      },
+      "external": {
+        "OwnTransfer": "conta fora do app",
+        "InvoicePayment": "sem extrato",
+        "PixCredit": "sem contrapartida"
       }
+    },
+    "plural": {
+      "pairs": "nenhum par vinculado | 1 par vinculado | {n} pares vinculados",
+      "suggestions": "nenhuma sugestão | 1 sugestão | {n} sugestões",
+      "linked": "nenhuma ligada | 1 ligada | {n} ligadas",
+      "reclassified": "nenhuma reclassificada | 1 reclassificada | {n} reclassificadas"
     }
   }
 }

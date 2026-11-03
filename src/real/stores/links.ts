@@ -1,20 +1,13 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { getApi } from "../api/context";
-import { ApiError } from "../api/errors";
-import type { LinkResponse } from "../api/types";
-import { errorCodeOf } from "./errorCode";
+import type { LinkResponse, ReconcileResult } from "../api/types";
+import { linkErrorCodeOf } from "./errorCode";
 import { useTransactionsStore } from "./transactions";
 
 /** Quantidade de pares recentes mostrados em "Vinculados". */
 export const CONFIRMED_SIZE = 10;
 const SUGGESTED_SIZE = 50;
-
-/** 409 = o vínculo mudou de estado (ou uma linha já tem outro vínculo): recarregar e avisar. */
-function linkErrorCode(e: unknown): string {
-  if (e instanceof ApiError && e.status === 409) return "link_conflict";
-  return errorCodeOf(e);
-}
 
 export const useLinksStore = defineStore("fd-links", () => {
   const suggested = ref<LinkResponse[]>([]);
@@ -23,6 +16,8 @@ export const useLinksStore = defineStore("fd-links", () => {
   const busy = ref(false);
   /** Código do último erro; a tela traduz com `real.errors.<code>`. */
   const error = ref<string | null>(null);
+  /** Resumo da última reconciliação (null até rodar uma). */
+  const lastReconcile = ref<ReconcileResult | null>(null);
   let seq = 0;
 
   async function load(): Promise<void> {
@@ -34,11 +29,12 @@ export const useLinksStore = defineStore("fd-links", () => {
         getApi().links.list({ state: "Confirmed", page: 1, size: CONFIRMED_SIZE }),
       ]);
       if (mine !== seq) return;
+      // Vínculos de lado vazio também aparecem (uma linha só); nada é filtrado.
       suggested.value = s.items;
       confirmed.value = c.items;
       error.value = null;
     } catch (e) {
-      if (mine === seq) error.value = linkErrorCode(e);
+      if (mine === seq) error.value = linkErrorCodeOf(e);
     } finally {
       if (mine === seq) loading.value = false;
     }
@@ -49,17 +45,18 @@ export const useLinksStore = defineStore("fd-links", () => {
     await Promise.all([t.load(), t.loadPendingCount()]);
   }
 
-  async function act(fn: () => Promise<unknown>): Promise<boolean> {
-    if (busy.value) return false;
+  async function act<T>(fn: () => Promise<T>): Promise<{ ok: boolean; value: T | null }> {
+    if (busy.value) return { ok: false, value: null };
     busy.value = true;
     error.value = null;
+    let value: T | null = null;
     let ok = true;
     let code: string | null = null;
     try {
-      await fn();
+      value = await fn();
     } catch (e) {
       ok = false;
-      code = linkErrorCode(e);
+      code = linkErrorCodeOf(e);
     }
     try {
       await Promise.all([load(), refreshPending()]);
@@ -67,12 +64,19 @@ export const useLinksStore = defineStore("fd-links", () => {
       busy.value = false;
     }
     if (code) error.value = code; // load() zera/atribui o erro; o da ação prevalece
-    return ok;
+    return { ok, value };
   }
 
-  const confirm = (id: string) => act(() => getApi().links.confirm(id));
-  const reject = (id: string) => act(() => getApi().links.reject(id));
-  const undo = (id: string) => act(() => getApi().links.undo(id));
+  const confirm = async (id: string) => (await act(() => getApi().links.confirm(id))).ok;
+  const reject = async (id: string) => (await act(() => getApi().links.reject(id))).ok;
+  const undo = async (id: string) => (await act(() => getApi().links.undo(id))).ok;
 
-  return { suggested, confirmed, loading, busy, error, load, confirm, reject, undo };
+  /** Roda a reconciliação das pendências; devolve o resumo (ou null em erro) e recarrega vínculos e pendentes. */
+  async function reconcile(): Promise<ReconcileResult | null> {
+    const r = await act(() => getApi().links.reconcile());
+    if (r.value) lastReconcile.value = r.value;
+    return r.value;
+  }
+
+  return { suggested, confirmed, loading, busy, error, lastReconcile, load, confirm, reject, undo, reconcile };
 });

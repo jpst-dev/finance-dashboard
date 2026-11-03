@@ -1,5 +1,7 @@
 using System.Net;
 using FinanceDashboard.Domain;
+using FinanceDashboard.Infrastructure;
+using FinanceDashboard.Infrastructure.Linking;
 using FinanceDashboard.Tests.Importing;
 using FinanceDashboard.Tests.Infrastructure;
 using FinanceDashboard.Tests.Persistence;
@@ -277,6 +279,154 @@ public sealed class ImportLinkingTests(PostgresFixture postgres)
         Assert.Equal(LinkState.Confirmed, confirmed.State);
         Assert.Equal(links.Count, links.Select(l => l.OutTransactionId).Distinct().Count());
         Assert.Equal(links.Count, links.Select(l => l.InTransactionId).Distinct().Count());
+    }
+
+    // ---- S3(b) ----
+
+    private static string NuPix(string direction, string name) =>
+        $"Transferência {direction} pelo Pix - {name} - ***.123.456-** - BANCO X";
+
+    private static async Task<List<Transaction>> LinesAsync(ApiFactory f, AuthedClient c)
+    {
+        await using var db = PersistenceTestSupport.Create(f.ConnectionString, c.UserId);
+        return await db.Transactions.AsNoTracking().ToListAsync();
+    }
+
+    /// <summary>Lines that still count as income/expense/pending: not on any Confirmed link.</summary>
+    private static async Task<HashSet<Guid>> CountedAsync(ApiFactory f, AuthedClient c)
+    {
+        await using var db = PersistenceTestSupport.Create(f.ConnectionString, c.UserId);
+        return (await db.Transactions.AsNoTracking().WithoutConfirmedLink(db).Select(t => t.Id).ToListAsync()).ToHashSet();
+    }
+
+    private static async Task<Guid> LineIdAsync(ApiFactory f, AuthedClient c, Guid account)
+    {
+        await using var db = PersistenceTestSupport.Create(f.ConnectionString, c.UserId);
+        return await db.Transactions.Where(t => t.AccountId == account).Select(t => t.Id).SingleAsync();
+    }
+
+    private static async Task<LinkResult> MarkOwnAsync(ApiFactory f, AuthedClient c, Guid transactionId)
+    {
+        await using var db = PersistenceTestSupport.Create(f.ConnectionString, c.UserId);
+        return await new LinkService(db, TimeProvider.System).MarkOwnAsync(transactionId);
+    }
+
+    [Fact]
+    public async Task Normal_pix_pair_with_coherent_names_is_confirmed_and_both_leave_summary_inputs()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        var nu = await AccountAsync(c, "Nu conta", "Checking");
+
+        Assert.Equal((0, 0), Counts(await ImportAsync(c, itau, ItauChecking("PIX TRANSF MARIA L10 10", "-800.00", 10))));
+        var second = await ImportAsync(c, nu, NuChecking(NuPix("recebida", "MARIA LUISA SANTOS"), "800.00", 10));
+
+        Assert.Equal((1, 0), Counts(second));
+        var link = Assert.Single(await LinksAsync(f, c));
+        Assert.Equal((LinkKind.OwnTransfer, LinkState.Confirmed, LinkOrigin.Auto), (link.Kind, link.State, link.Origin));
+        var lines = await LinesAsync(f, c);
+        Assert.All(lines, t => Assert.Equal(TransactionState.Normal, t.State));
+        Assert.Empty(await CountedAsync(f, c));
+    }
+
+    [Fact]
+    public async Task Pix_third_party_same_amount_incoherent_names_stays_suggested_and_normal()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        var nu = await AccountAsync(c, "Nu conta", "Checking");
+
+        await ImportAsync(c, itau, ItauChecking("PIX TRANSF ALUGUEL10 10", "-1500.00", 10)); // rent paid
+        var second = await ImportAsync(c, nu, NuChecking(NuPix("recebida", "CLIENTE FICTICIO"), "1500.00", 10)); // freelance
+
+        Assert.Equal((0, 1), Counts(second));
+        var link = Assert.Single(await LinksAsync(f, c));
+        Assert.Equal((LinkState.Suggested, LinkOrigin.Auto), (link.State, link.Origin));
+        var lines = await LinesAsync(f, c);
+        Assert.Equal(2, lines.Count);
+        Assert.All(lines, t => Assert.Equal(TransactionState.Normal, t.State));
+        Assert.Equal(lines.Select(t => t.Id).ToHashSet(), await CountedAsync(f, c));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MarkOwn_then_counterpart_import_pairs_and_replaces_open_link(bool itauFirst)
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        var nu = await AccountAsync(c, "Nu conta", "Checking");
+        var itauFile = ItauChecking("PIX TRANSF MARIA L10 10", "-300.00", 10);
+        var nuFile = NuChecking(NuPix("recebida", "MARIA LUISA SANTOS"), "300.00", 10);
+
+        await ImportAsync(c, itauFirst ? itau : nu, itauFirst ? itauFile : nuFile);
+        var first = await LineIdAsync(f, c, itauFirst ? itau : nu);
+        Assert.Equal(LinkOutcome.Ok, (await MarkOwnAsync(f, c, first)).Outcome);
+
+        var second = await ImportAsync(c, itauFirst ? nu : itau, itauFirst ? nuFile : itauFile);
+
+        Assert.Equal((1, 0), Counts(second));
+        var link = Assert.Single(await LinksAsync(f, c));
+        Assert.Equal((LinkState.Confirmed, LinkOrigin.Auto), (link.State, link.Origin));
+        Assert.False(link.IsOpen);
+        Assert.Empty(await CountedAsync(f, c));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MarkOwn_then_incoherent_counterpart_keeps_open_link_and_suggests_pair(bool itauFirst)
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        var nu = await AccountAsync(c, "Nu conta", "Checking");
+        var itauFile = ItauChecking("PIX TRANSF ALUGUEL10 10", "-300.00", 10);
+        var nuFile = NuChecking(NuPix("recebida", "CLIENTE FICTICIO"), "300.00", 10);
+
+        await ImportAsync(c, itauFirst ? itau : nu, itauFirst ? itauFile : nuFile);
+        var marked = await LineIdAsync(f, c, itauFirst ? itau : nu);
+        var mark = await MarkOwnAsync(f, c, marked);
+        Assert.Equal(LinkOutcome.Ok, mark.Outcome);
+
+        var second = await ImportAsync(c, itauFirst ? nu : itau, itauFirst ? nuFile : itauFile);
+
+        // The new line never counts silently: it sits on a suggested pair with the marked one.
+        Assert.Equal((0, 1), Counts(second));
+        var links = await LinksAsync(f, c);
+        Assert.Equal(2, links.Count);
+        var open = Assert.Single(links, l => l.IsOpen);
+        Assert.Equal((mark.LinkId, LinkState.Confirmed), (open.Id, open.State));
+        var pair = Assert.Single(links, l => !l.IsOpen);
+        Assert.Equal(LinkState.Suggested, pair.State);
+        var other = await LineIdAsync(f, c, itauFirst ? nu : itau);
+        Assert.True(pair.OutTransactionId == other || pair.InTransactionId == other);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PixCredit_pair_via_import_in_both_orders(bool creditFirst)
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        var credit = ItauChecking("CREDITO LIBERAD PIX 1234", "200.00", 10);
+        var debit = ItauChecking("PIX CARTAO LOJA FIC10 10", "-200.00", 10);
+
+        Assert.Equal((0, 0), Counts(await ImportAsync(c, itau, creditFirst ? credit : debit, "a.ofx")));
+        var second = await ImportAsync(c, itau, creditFirst ? debit : credit, "b.ofx");
+
+        Assert.Equal((1, 0), Counts(second));
+        var link = Assert.Single(await LinksAsync(f, c));
+        Assert.Equal((LinkKind.PixCredit, LinkState.Confirmed, LinkOrigin.Auto), (link.Kind, link.State, link.Origin));
+        var lines = await LinesAsync(f, c);
+        Assert.Equal(2, lines.Count);
+        Assert.All(lines, t => Assert.Equal(TransactionState.PendingClassification, t.State));
+        Assert.Empty(await CountedAsync(f, c));
     }
 
     [Fact]

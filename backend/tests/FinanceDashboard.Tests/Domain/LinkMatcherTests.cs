@@ -17,20 +17,26 @@ public class LinkMatcherTests
     static int _n;
     static Guid NewId() => new(Interlocked.Increment(ref _n), 0, 0, 0, 0, 0, 0, 0, 0, 0, 1);
 
-    static PairingCandidate Out(ImportSource src, PairingRole role, int day, decimal amount = 100m, Guid? account = null) =>
-        new(NewId(), account ?? Accounts[src], src, role, new DateOnly(2026, 3, day), -Math.Abs(amount));
+    static PairingCandidate Out(ImportSource src, PairingRole role, int day, decimal amount = 100m, Guid? account = null, string? name = null) =>
+        new(NewId(), account ?? Accounts[src], src, role, new DateOnly(2026, 3, day), -Math.Abs(amount), name);
 
-    static PairingCandidate In(ImportSource src, PairingRole role, int day, decimal amount = 100m, Guid? account = null) =>
-        new(NewId(), account ?? Accounts[src], src, role, new DateOnly(2026, 3, day), Math.Abs(amount));
+    static PairingCandidate In(ImportSource src, PairingRole role, int day, decimal amount = 100m, Guid? account = null, string? name = null) =>
+        new(NewId(), account ?? Accounts[src], src, role, new DateOnly(2026, 3, day), Math.Abs(amount), name);
+
+    const string Coherent = "JOSE LUIS DA SILVA";
 
     static PairingCandidate InvAcc(int day, decimal amount = 100m) =>
         Out(ImportSource.NubankChecking, PairingRole.InvoiceAccountSide, day, amount);
     static PairingCandidate InvCard(int day, decimal amount = 100m) =>
         In(ImportSource.NubankCard, PairingRole.InvoiceCardSide, day, amount);
     static PairingCandidate TrOut(int day, decimal amount = 100m) =>
-        Out(ImportSource.NubankChecking, PairingRole.Transfer, day, amount);
+        Out(ImportSource.NubankChecking, PairingRole.Transfer, day, amount, name: Coherent);
     static PairingCandidate TrIn(int day, decimal amount = 100m) =>
-        In(ImportSource.ItauChecking, PairingRole.Transfer, day, amount);
+        In(ImportSource.ItauChecking, PairingRole.Transfer, day, amount, name: Coherent);
+    static PairingCandidate PxCredit(int day, decimal amount = 100m, Guid? account = null) =>
+        In(ImportSource.ItauChecking, PairingRole.PixCreditCredit, day, amount, account);
+    static PairingCandidate PxDebit(int day, decimal amount = 100m, Guid? account = null) =>
+        Out(ImportSource.ItauChecking, PairingRole.PixCreditDebit, day, amount, account);
 
     static IReadOnlyList<ProposedLink> Match(params PairingCandidate[] c) => LinkMatcher.Match(c, NoRejected);
 
@@ -152,6 +158,78 @@ public class LinkMatcherTests
         Assert.Equal(a, b);
     }
 
+    [Fact]
+    public void PixCredit_same_account_single_pair_is_auto_confirmed()
+    {
+        var c = PxCredit(10); var d = PxDebit(10);
+        var p = Assert.Single(Match(c, d));
+        Assert.Equal(new ProposedLink(d.Id, c.Id, LinkKind.PixCredit, true), p);
+    }
+
+    [Fact]
+    public void PixCredit_estorno_pairs_credit_with_EST_CRED_same_day()
+    {
+        var p = Assert.Single(Match(PxCredit(12, 55.50m), PxDebit(12, 55.50m)));
+        Assert.Equal(LinkKind.PixCredit, p.Kind);
+        Assert.True(p.AutoConfirm);
+    }
+
+    [Fact]
+    public void PixCredit_different_accounts_do_not_match()
+    {
+        Assert.Empty(Match(PxCredit(10, account: Guid.NewGuid()), PxDebit(10, account: Guid.NewGuid())));
+    }
+
+    [Fact]
+    public void PixCredit_outside_window_does_not_match()
+    {
+        Assert.Empty(Match(PxCredit(10), PxDebit(12)));
+        Assert.Single(Match(PxCredit(10), PxDebit(11)));
+    }
+
+    [Fact]
+    public void PixCredit_two_debits_one_credit_suggests_both()
+    {
+        var r = Match(PxCredit(10), PxDebit(10), PxDebit(11));
+        Assert.Equal(2, r.Count);
+        Assert.All(r, p => Assert.False(p.AutoConfirm));
+        Assert.All(r, p => Assert.Equal(LinkKind.PixCredit, p.Kind));
+    }
+
+    [Fact]
+    public void OwnTransfer_with_incoherent_names_is_suggested_not_auto()
+    {
+        var o = Out(ImportSource.ItauChecking, PairingRole.Transfer, 10, name: "ALUGUEL");
+        var i = In(ImportSource.NubankChecking, PairingRole.Transfer, 10, name: "CLIENTE X");
+        var p = Assert.Single(Match(o, i));
+        Assert.Equal(LinkKind.OwnTransfer, p.Kind);
+        Assert.False(p.AutoConfirm);
+    }
+
+    [Fact]
+    public void OwnTransfer_with_coherent_names_is_auto_confirmed()
+    {
+        var o = Out(ImportSource.NubankChecking, PairingRole.Transfer, 10, name: "MARIA LUISA SANTOS");
+        var i = In(ImportSource.ItauChecking, PairingRole.Transfer, 10, name: "MARIA L");
+        Assert.True(Assert.Single(Match(o, i)).AutoConfirm);
+    }
+
+    [Fact]
+    public void OwnTransfer_without_name_is_suggested()
+    {
+        var o = Out(ImportSource.NubankChecking, PairingRole.Transfer, 10);
+        var i = In(ImportSource.ItauChecking, PairingRole.Transfer, 10);
+        Assert.False(Assert.Single(Match(o, i)).AutoConfirm);
+    }
+
+    [Fact]
+    public void OwnTransfer_name_shorter_than_7_is_not_coherent()
+    {
+        var o = Out(ImportSource.NubankChecking, PairingRole.Transfer, 10, name: "MARIA L");
+        var i = In(ImportSource.ItauChecking, PairingRole.Transfer, 10, name: "MARIA");
+        Assert.False(Assert.Single(Match(o, i)).AutoConfirm);
+    }
+
     public static IEnumerable<object[]> Seeds() => Enumerable.Range(1, 20).Select(s => new object[] { s });
 
     [Theory]
@@ -167,10 +245,18 @@ public class LinkMatcherTests
             var src = sources[rng.Next(sources.Length)];
             var role = src is ImportSource.NubankCard or ImportSource.ItauCard
                 ? PairingRole.InvoiceCardSide
-                : (rng.Next(2) == 0 ? PairingRole.InvoiceAccountSide : PairingRole.Transfer);
+                : (rng.Next(3) switch
+                {
+                    0 => PairingRole.InvoiceAccountSide,
+                    1 => PairingRole.Transfer,
+                    _ => src == ImportSource.ItauChecking ? PairingRole.PixCreditCredit : PairingRole.Transfer,
+                });
             int day = rng.Next(1, 8);
             decimal amt = rng.Next(1, 4) * 10m;
-            list.Add(rng.Next(2) == 0 ? Out(src, role, day, amt) : In(src, role, day, amt));
+            var nm = rng.Next(2) == 0 ? Coherent : null;
+            bool isOut = rng.Next(2) == 0;
+            if (role == PairingRole.PixCreditCredit && isOut) role = PairingRole.PixCreditDebit;
+            list.Add(isOut ? Out(src, role, day, amt, name: nm) : In(src, role, day, amt, name: nm));
         }
         var first = LinkMatcher.Match(list, NoRejected);
         var shuffled = list.OrderBy(_ => rng.Next()).ToList();

@@ -301,9 +301,9 @@
   },
   "2026-10": {
     "month": "2026-10",
-    "income": "5375.00",
-    "expenses": "-2449.42",
-    "net": "2925.58",
+    "income": "5650.00",
+    "expenses": "-3206.62",
+    "net": "2443.38",
     "byCategory": [
       {
         "categoryId": "0000000c-0000-4000-8000-000000000001",
@@ -329,10 +329,15 @@
         "categoryId": "0000000c-0000-4000-8000-00000000000b",
         "categoryName": "Salário",
         "total": "5375.00"
+      },
+      {
+        "categoryId": null,
+        "categoryName": null,
+        "total": "-482.20"
       }
     ],
     "pending": {
-      "count": 4,
+      "count": 2,
       "total": "-195.40"
     }
   }

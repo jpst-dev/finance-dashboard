@@ -45,6 +45,20 @@ async function setState(id: string, e: Event) {
 async function setCategory(id: string, categoryId: string | null) {
   if (await store.classify(id, { categoryId })) status.value = t("real.pending.saved");
 }
+const reconcileSummary = ref("");
+async function reconcile() {
+  reconcileSummary.value = "";
+  const r = await links.reconcile();
+  if (r) {
+    reconcileSummary.value = t("real.pending.reconcileResult", {
+      linked: t("real.plural.linked", { n: r.linked }, r.linked),
+      suggested: t("real.plural.suggestions", { n: r.suggested }, r.suggested),
+      reclassified: t("real.plural.reclassified", { n: r.reclassified }, r.reclassified),
+    });
+  }
+}
+const btn =
+  "rounded border border-gray-600 px-2 py-1 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300";
 const field =
   "rounded border border-gray-600 bg-gray-800 px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400";
 </script>
@@ -55,6 +69,19 @@ const field =
     <p class="mt-1 text-sm text-gray-400">{{ t("real.pending.help") }}</p>
     <p class="sr-only" role="status" aria-live="polite">{{ status }}</p>
     <p v-if="errorText" class="mt-2 text-sm text-red-400" role="alert" data-test="error">{{ errorText }}</p>
+
+    <div class="mt-3 flex flex-wrap items-center gap-3">
+      <button
+        type="button"
+        class="rounded border border-gray-600 px-3 py-1 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300 disabled:opacity-50"
+        :disabled="links.busy"
+        data-test="reconcile"
+        @click="reconcile"
+      >
+        {{ t("real.pending.reconcile") }}
+      </button>
+      <p class="text-sm text-gray-300" role="status" aria-live="polite" data-test="reconcile-result">{{ reconcileSummary }}</p>
+    </div>
 
     <LinkSuggestions />
     <LinkedPairs />
@@ -82,6 +109,8 @@ const field =
             <label :for="`pc-${tx.id}`" class="mb-1 block text-sm">{{ t("real.transactions.category") }}</label>
             <CategorySelect :id="`pc-${tx.id}`" :model-value="tx.categoryId" :amount="tx.amount" @update:model-value="setCategory(tx.id, $event)" />
           </div>
+          <button v-if="tx.pairing === 'OwnTransfer' && !tx.link" type="button" :class="btn" data-test="tx-own" :disabled="store.busy" :aria-label="t('real.transactions.ownRow', { description: tx.description })" @click="store.markOwn(tx.id)">{{ t("real.transactions.own") }}</button>
+          <button v-if="tx.pairing === 'InvoicePayment' && !tx.link && tx.state === 'PendingClassification'" type="button" :class="btn" data-test="tx-no-counterpart" :disabled="store.busy" :aria-label="t('real.transactions.noCounterpartRow', { description: tx.description })" @click="store.markNoCounterpart(tx.id)">{{ t("real.transactions.noCounterpart") }}</button>
         </div>
       </li>
     </ul>

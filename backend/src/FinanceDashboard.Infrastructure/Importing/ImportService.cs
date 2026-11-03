@@ -528,7 +528,8 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time, Li
     }
 
     /// <summary>One INSERT … ON CONFLICT DO NOTHING over arrays; returns how many lines were actually created.</summary>
-    /// <remarks>Overrides ride along per line; rows skipped by ON CONFLICT (existing lines) never get theirs.</remarks>
+    /// <remarks>Overrides ride along per line; rows skipped by ON CONFLICT (existing lines) never get theirs. A state
+    /// override that differs from the rules' state sets <c>EditedByUser</c>.</remarks>
     private Task<int> InsertLinesAsync(
         ImportBatch batch, IReadOnlyList<StoredPreviewLine> lines,
         IReadOnlyDictionary<(string Key, int Ordinal), ImportLineOverride> overrides,
@@ -543,11 +544,12 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time, Li
                 "CardSuffix", "CardKind", "IsDeleted", "EditedByUser")
             SELECT l.id, @user, @account, l.date, l.purchase, l.amount, l.original, l.normalized, l.state, l.category,
                 @origin, @batch, l.key, l.ordinal, l.name, l.document, l.statement, l.installment, l.installments,
-                l.suffix, l.kind, FALSE, FALSE
+                l.suffix, l.kind, FALSE, l.edited
             FROM unnest(@ids, @dates, @purchases, @amounts, @originals, @normalized, @states, @categories, @keys,
-                    @ordinals, @names, @documents, @statements, @installment_numbers, @installment_totals, @suffixes, @kinds)
+                    @ordinals, @names, @documents, @statements, @installment_numbers, @installment_totals, @suffixes, @kinds,
+                    @edited)
                 WITH ORDINALITY AS l(id, date, purchase, amount, original, normalized, state, category, key, ordinal,
-                    name, document, statement, installment, installments, suffix, kind, n)
+                    name, document, statement, installment, installments, suffix, kind, edited, n)
             ORDER BY l.n
             ON CONFLICT ("AccountId", "SourceKey", "Ordinal") WHERE "SourceKey" IS NOT NULL DO NOTHING
             """;
@@ -565,6 +567,9 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time, Li
             new NpgsqlParameter("originals", lines.Select(l => Cut(l.Memo, MaxDescription)).ToArray()),
             new NpgsqlParameter("normalized", lines.Select(l => Cut(NormalizeDescription(l.Memo), MaxDescription)).ToArray()),
             new NpgsqlParameter("states", lines.Select(l => (Override(l)?.State ?? l.State).ToString()).ToArray()),
+            // A state chosen against the rules is the user's decision: marked as edited so the reconciliation's
+            // reclassification (LinkService) never reverts it. Same state or category-only overrides are not edits.
+            new NpgsqlParameter("edited", lines.Select(l => Override(l)?.State is { } s && s != l.State).ToArray()),
             new NpgsqlParameter("categories", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Uuid)
             {
                 Value = lines.Select(l => Override(l)?.CategoryId).ToArray(),

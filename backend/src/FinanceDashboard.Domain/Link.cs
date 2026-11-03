@@ -1,6 +1,6 @@
 namespace FinanceDashboard.Domain;
 
-public enum LinkKind { InvoicePayment, OwnTransfer }
+public enum LinkKind { InvoicePayment, OwnTransfer, PixCredit }
 public enum LinkState { Suggested, Confirmed, Rejected }
 public enum LinkOrigin { Auto, User }
 
@@ -10,8 +10,9 @@ public class Link : IUserOwned
     public string UserId { get; set; } = "";
     public LinkKind Kind { get; set; }
     public LinkState State { get; set; }
-    public Guid OutTransactionId { get; set; }
-    public Guid InTransactionId { get; set; }
+    public Guid? OutTransactionId { get; set; }
+    public Guid? InTransactionId { get; set; }
+    public bool IsOpen => OutTransactionId is null || InTransactionId is null;
     public LinkOrigin Origin { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? DecidedAt { get; set; }

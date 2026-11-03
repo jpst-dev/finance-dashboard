@@ -8,9 +8,9 @@ public static class ItauRules
     private static readonly (string Prefix, TransactionState State)[] CheckingPrefixes =
     [
         ("FATURA PAGA", TransactionState.PendingClassification),
-        ("PIX TRANSF", TransactionState.PendingClassification),
+        ("PIX TRANSF", TransactionState.Normal),
         ("PIX CARTAO", TransactionState.PendingClassification),
-        ("PAG BOLETO", TransactionState.PendingClassification),
+        ("PAG BOLETO", TransactionState.Normal),
         ("CREDITO LIBERAD", TransactionState.PendingClassification),
         ("EST CRED", TransactionState.PendingClassification),
         ("CREDITO CONSIGNADO", TransactionState.PendingClassification),

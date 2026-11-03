@@ -155,7 +155,7 @@ describe("Import page", () => {
     const res = w.find("[data-test=result]");
     expect(res.attributes("aria-live")).toBe("polite");
     expect(res.text()).toContain("3 lançamentos criados, 1 pulados (já existiam).");
-    expect(res.find("[data-test=result-links]").text()).toBe("2 pares vinculados, 1 sugestões");
+    expect(res.find("[data-test=result-links]").text()).toBe("2 pares vinculados, 1 sugestão");
     expect(w.find("a[href='/transactions']").exists()).toBe(true);
     expect(w.find("a[href='/pending']").exists()).toBe(true);
   });

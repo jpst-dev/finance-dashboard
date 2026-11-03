@@ -9,14 +9,20 @@ public class NubankRulesTests
     [InlineData("Pagamento de fatura")]
     [InlineData("pagamento de fatura")]
     [InlineData("Pagamento recebido")]
-    [InlineData("TRANSFERENCIA ENVIADA pelo Pix - FULANO")]
-    [InlineData("Transferência enviada pelo Pix - FULANO")]
-    [InlineData("Transferência recebida pelo Pix - FULANA")]
     [InlineData("Pix no Credito - FULANO")]
     [InlineData("Pix no Crédito - FULANO")]
     public void Classifies_prefixes_ignoring_case_and_accents(string memo)
     {
         Assert.Equal(TransactionState.PendingClassification, NubankRules.Classify(ImportSource.NubankChecking, memo));
+    }
+
+    [Theory]
+    [InlineData("TRANSFERENCIA ENVIADA pelo Pix - FULANO")]
+    [InlineData("Transferência enviada pelo Pix - FULANO")]
+    [InlineData("Transferência recebida pelo Pix - FULANA")]
+    public void Pix_transfers_are_normal(string memo)
+    {
+        Assert.Equal(TransactionState.Normal, NubankRules.Classify(ImportSource.NubankChecking, memo));
     }
 
     [Theory]

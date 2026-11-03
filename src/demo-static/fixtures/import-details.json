@@ -38,7 +38,7 @@
     ],
     "checkpoint": {
       "date": "2026-10-14",
-      "amount": "21013.08"
+      "amount": "19035.63"
     },
     "lines": [
       {
@@ -138,7 +138,7 @@
     "state": "Confirmed",
     "periodStart": "2026-10-01",
     "periodEnd": "2026-10-12",
-    "newCount": 3,
+    "newCount": 9,
     "existingCount": 0,
     "warnings": [],
     "checkpoint": null,
@@ -172,7 +172,7 @@
     "state": "Confirmed",
     "periodStart": "2026-10-01",
     "periodEnd": "2026-10-12",
-    "newCount": 2,
+    "newCount": 3,
     "existingCount": 0,
     "warnings": [],
     "checkpoint": null,

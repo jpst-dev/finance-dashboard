@@ -162,6 +162,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/transactions/{id}/own-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a transfer line as mine (open Confirmed link, no counterpart) */
+        post: operations["MarkOwnTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transactions/{id}/no-counterpart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a pending invoice payment as having no counterpart in the app */
+        post: operations["MarkNoCounterpart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transactions/{id}": {
         parameters: {
             query?: never;
@@ -598,8 +632,11 @@ export interface components {
             /** @default true */
             overridable: boolean;
         };
+        LinkErrorResponse: {
+            error: string;
+        };
         /** @enum {string} */
-        LinkKind: "InvoicePayment" | "OwnTransfer";
+        LinkKind: "InvoicePayment" | "OwnTransfer" | "PixCredit";
         LinkLine: {
             /** Format: uuid */
             transactionId: string;
@@ -627,8 +664,9 @@ export interface components {
             kind: components["schemas"]["LinkKind"];
             state: components["schemas"]["LinkState"];
             origin: components["schemas"]["LinkOrigin"];
-            out: components["schemas"]["LinkLine"];
-            in: components["schemas"]["LinkLine"];
+            out: null | components["schemas"]["LinkLine"];
+            in: null | components["schemas"]["LinkLine"];
+            external: boolean;
             /** Format: date-time */
             createdAt: string;
         };
@@ -648,6 +686,8 @@ export interface components {
             linked: number | string;
             /** Format: int32 */
             suggested: number | string;
+            /** Format: int32 */
+            reclassified: number | string;
         };
         SummaryResponse: {
             month: string;
@@ -663,7 +703,7 @@ export interface components {
             kind: components["schemas"]["LinkKind"];
             state: components["schemas"]["LinkState"];
             /** Format: uuid */
-            counterpartTransactionId: string;
+            counterpartTransactionId: null | string;
         };
         /** @enum {string} */
         TransactionOrigin: "Manual" | "Imported";
@@ -676,6 +716,8 @@ export interface components {
             /** Format: int32 */
             total: number | string;
         };
+        /** @enum {string} */
+        TransactionPairing: "OwnTransfer" | "InvoicePayment" | "PixCredit";
         TransactionResponse: {
             /** Format: uuid */
             id: string;
@@ -696,7 +738,8 @@ export interface components {
             origin: components["schemas"]["TransactionOrigin"];
             editedByUser: boolean;
             counterpartyName: null | string;
-            link?: null | components["schemas"]["TransactionLink"];
+            pairing: null | components["schemas"]["TransactionPairing"];
+            link: null | components["schemas"]["TransactionLink"];
         };
         /** @enum {string} */
         TransactionState: "Normal" | "PendingClassification";
@@ -1230,6 +1273,110 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    MarkOwnTransfer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkErrorResponse"];
+                };
+            };
+        };
+    };
+    MarkNoCounterpart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkErrorResponse"];
+                };
             };
         };
     };

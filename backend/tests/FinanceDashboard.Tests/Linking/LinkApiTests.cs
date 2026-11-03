@@ -259,15 +259,17 @@ public sealed class LinkApiTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Suggested_link_shows_on_pending_lines_that_stay_in_the_queue()
+    public async Task Suggested_link_shows_on_pix_lines_that_are_normal_now()
     {
         await using var f = await NewFactoryAsync();
         using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
         await SuggestedTransferAsync(c);
 
-        var pending = await TransactionsAsync(c, "?state=PendingClassification");
-        Assert.Equal(2, pending.Count);
-        Assert.All(pending, p => Assert.Equal("Suggested", p.GetProperty("link").GetProperty("state").GetString()));
+        // Pix is Normal since S3(b): the pair is no longer in the pending queue, but its lines carry the suggestion.
+        Assert.Empty(await TransactionsAsync(c, "?state=PendingClassification"));
+        var all = await TransactionsAsync(c);
+        Assert.Equal(2, all.Count);
+        Assert.All(all, p => Assert.Equal("Suggested", p.GetProperty("link").GetProperty("state").GetString()));
     }
 
     [Fact]
@@ -351,5 +353,244 @@ public sealed class LinkApiTests(PostgresFixture postgres)
         foreach (var key in new[] { "income", "expenses", "net" })
             Assert.Equal(summaryLinked.GetProperty(key).GetString(), summaryUnlinked.GetProperty(key).GetString());
         Assert.Equal("-20.00", summaryLinked.GetProperty("expenses").GetString());
+    }
+
+    private const string Boleto = "BOLETO PAGO ENERGIA FICTICIA";
+
+    private static async Task<Guid> SingleItauPixAsync(AuthedClient c, string amount = "-800.00", string desc = ItauPix)
+    {
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        await ImportAsync(c, itau, OfxTestFile.Itau().Line(Ofx(10), amount, desc).Build());
+        return ByAccount(await TransactionsAsync(c), itau).GetProperty("id").GetGuid();
+    }
+
+    [Fact]
+    public async Task Own_transfer_endpoint_creates_open_confirmed_link_and_summary_drops_the_line()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var id = await SingleItauPixAsync(c);
+        var accountsBefore = await (await c.GetAsync("/api/accounts")).Content.ReadAsStringAsync();
+        var before = await SummaryAsync(c);
+        Assert.Equal("-800.00", before.GetProperty("expenses").GetString());
+
+        var r = await c.PostAsync($"/api/transactions/{id}/own-transfer");
+
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var body = await JsonOf(r);
+        Assert.Equal("OwnTransfer", body.GetProperty("kind").GetString());
+        Assert.Equal("Confirmed", body.GetProperty("state").GetString());
+        Assert.Equal("User", body.GetProperty("origin").GetString());
+        Assert.True(body.GetProperty("external").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("in").ValueKind);
+        Assert.Equal(id, body.GetProperty("out").GetProperty("transactionId").GetGuid());
+
+        var after = await SummaryAsync(c);
+        Assert.Equal("0.00", after.GetProperty("expenses").GetString());
+        Assert.Equal("0.00", after.GetProperty("income").GetString());
+        Assert.Equal("0.00", after.GetProperty("net").GetString());
+        Assert.Empty(after.GetProperty("byCategory").EnumerateArray());
+        Assert.Equal(accountsBefore, await (await c.GetAsync("/api/accounts")).Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task No_counterpart_endpoint_on_pending_invoice_payment()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var checking = await AccountAsync(c, "Nu conta", "Checking");
+        await ImportAsync(c, checking, OfxTestFile.Checking().Line(Ofx(10), "-500.00", Pay).Build());
+        var id = ByAccount(await TransactionsAsync(c), checking).GetProperty("id").GetGuid();
+        Assert.Equal(1, (await SummaryAsync(c)).GetProperty("pending").GetProperty("count").GetInt32());
+
+        var r = await c.PostAsync($"/api/transactions/{id}/no-counterpart");
+
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var body = await JsonOf(r);
+        Assert.Equal("InvoicePayment", body.GetProperty("kind").GetString());
+        Assert.Equal("Confirmed", body.GetProperty("state").GetString());
+        Assert.True(body.GetProperty("external").GetBoolean());
+        Assert.Empty(await TransactionsAsync(c, "?state=PendingClassification"));
+        Assert.Equal(0, (await SummaryAsync(c)).GetProperty("pending").GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task Mark_endpoints_report_404_409_422_401_and_antiforgery()
+    {
+        await using var f = await NewFactoryAsync();
+        using var a = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        using var b = await AuthedClient.CreateAsync(f, "b@example.com", Password);
+        var id = await SingleItauPixAsync(a);
+
+        foreach (var target in new[] { id, Guid.NewGuid() })
+        {
+            Assert.Equal(HttpStatusCode.NotFound, (await b.PostAsync($"/api/transactions/{target}/own-transfer")).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await b.PostAsync($"/api/transactions/{target}/no-counterpart")).StatusCode);
+        }
+
+        // Not applicable: a Pix line is not an invoice payment.
+        var notApplicable = await a.PostAsync($"/api/transactions/{id}/no-counterpart");
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, notApplicable.StatusCode);
+        Assert.Equal("not_applicable", (await JsonOf(notApplicable)).GetProperty("error").GetString());
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.Raw.PostAsync($"/api/transactions/{id}/own-transfer", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.Raw.PostAsync($"/api/transactions/{id}/no-counterpart", null)).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await a.PostAsync($"/api/transactions/{id}/own-transfer")).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await a.PostAsync($"/api/transactions/{id}/own-transfer")).StatusCode);
+
+        using var anon = f.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await anon.PostAsync($"/api/transactions/{id}/own-transfer", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await anon.PostAsync($"/api/transactions/{id}/no-counterpart", null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Reconcile_endpoint_reports_reclassified()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        await SingleItauPixAsync(c);
+
+        var r = await c.PostAsync("/api/links/reconcile");
+
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var body = await JsonOf(r);
+        Assert.Equal(0, body.GetProperty("linked").GetInt32());
+        Assert.Equal(0, body.GetProperty("suggested").GetInt32());
+        Assert.Equal(0, body.GetProperty("reclassified").GetInt32());
+    }
+
+    [Fact]
+    public async Task Summary_excludes_normal_lines_with_confirmed_open_link_and_pair_link()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var (checking, _) = await ConfirmedInvoiceAsync(c); // Pending pair, Confirmed
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        var nu = await AccountAsync(c, "Nu conta 2", "Checking");
+        await ImportAsync(c, itau, OfxTestFile.Itau()
+            .Line(Ofx(10), "-100.00", ItauPix).Line(Ofx(11), "-800.00", "PIX TRANSF OUTRA PESSOA").Build());
+        await ImportAsync(c, nu, OfxTestFile.Checking().Line(Ofx(10), "100.00", NuPixIn).Build());
+        var other = (await TransactionsAsync(c)).Single(i => i.GetProperty("description").GetString()!.Contains("OUTRA"));
+        var manual = await c.PostAsync("/api/transactions",
+            new { accountId = checking, date = "2026-10-12", amount = "-20.00", description = "Padaria" });
+        Assert.Equal(HttpStatusCode.Created, manual.StatusCode);
+        Assert.Equal(HttpStatusCode.OK,
+            (await c.PostAsync($"/api/transactions/{other.GetProperty("id").GetGuid()}/own-transfer")).StatusCode);
+
+        var s = await SummaryAsync(c);
+
+        Assert.Equal("-20.00", s.GetProperty("expenses").GetString());
+        Assert.Equal("0.00", s.GetProperty("income").GetString());
+        Assert.Equal(0, s.GetProperty("pending").GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task Undo_open_link_brings_line_back_to_summary()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var id = await SingleItauPixAsync(c);
+        var link = (await JsonOf(await c.PostAsync($"/api/transactions/{id}/own-transfer"))).GetProperty("id").GetGuid();
+        Assert.Equal("0.00", (await SummaryAsync(c)).GetProperty("expenses").GetString());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await c.DeleteAsync($"/api/links/{link}")).StatusCode);
+
+        Assert.Equal("-800.00", (await SummaryAsync(c)).GetProperty("expenses").GetString());
+    }
+
+    [Fact]
+    public async Task Transaction_response_pairing_values()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var itau = await AccountAsync(c, "Itau conta", "Checking");
+        await ImportAsync(c, itau, OfxTestFile.Itau()
+            .Line(Ofx(10), "-100.00", ItauPix)
+            .Line(Ofx(11), "-30.00", Boleto)
+            .Line(Ofx(12), "250.00", "CREDITO LIBERAD PIX PARC").Build());
+        var checking = await AccountAsync(c, "Nu conta", "Checking");
+        await ImportAsync(c, checking, OfxTestFile.Checking().Line(Ofx(13), "-500.00", Pay).Build());
+
+        var items = await TransactionsAsync(c);
+        string? Pairing(string amount)
+        {
+            var p = items.Single(i => i.GetProperty("amount").GetString() == amount).GetProperty("pairing");
+            return p.ValueKind == JsonValueKind.Null ? null : p.GetString();
+        }
+
+        Assert.Equal("OwnTransfer", Pairing("-100.00"));
+        Assert.Null(Pairing("-30.00"));
+        Assert.Equal("PixCredit", Pairing("250.00"));
+        Assert.Equal("InvoicePayment", Pairing("-500.00"));
+
+        var manual = await c.PostAsync("/api/transactions",
+            new { accountId = itau, date = "2026-10-14", amount = "-1.00", description = "PIX TRANSF MANUAL" });
+        Assert.Equal(JsonValueKind.Null, (await JsonOf(manual)).GetProperty("pairing").ValueKind);
+    }
+
+    [Fact]
+    public async Task Links_list_shows_external_flag_and_null_side()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        await ConfirmedInvoiceAsync(c);
+        var id = await SingleItauPixAsync(c);
+        await c.PostAsync($"/api/transactions/{id}/own-transfer");
+
+        var items = (await LinksAsync(c)).GetProperty("items").EnumerateArray().ToList();
+
+        Assert.Equal(2, items.Count);
+        var open = items.Single(i => i.GetProperty("external").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, open.GetProperty("in").ValueKind);
+        Assert.Equal("-800.00", open.GetProperty("out").GetProperty("amount").GetString());
+        Assert.NotEqual(JsonValueKind.Null, items.Single(i => !i.GetProperty("external").GetBoolean()).GetProperty("in").ValueKind);
+    }
+
+    [Fact]
+    public async Task Confirm_of_open_suggestion_answers_with_the_link()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var id = await SingleItauPixAsync(c);
+        await c.PostAsync($"/api/transactions/{id}/own-transfer"); // records the alias
+        var itau2 = await AccountAsync(c, "Itau 2", "Checking");
+        await ImportAsync(c, itau2, OfxTestFile.Itau().Line(Ofx(20), "-55.00", ItauPix).Build());
+        var suggested = await LinksAsync(c, "?state=Suggested");
+        var link = Assert.Single(suggested.GetProperty("items").EnumerateArray());
+        Assert.True(link.GetProperty("external").GetBoolean());
+
+        var r = await c.PostAsync($"/api/links/{link.GetProperty("id").GetGuid()}/confirm");
+
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        Assert.Equal("Confirmed", (await JsonOf(r)).GetProperty("state").GetString());
+    }
+
+    [Fact]
+    public async Task Update_value_keeps_user_open_link_but_state_normal_on_invoice_role_removes_it()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var pix = await SingleItauPixAsync(c);
+        await c.PostAsync($"/api/transactions/{pix}/own-transfer");
+        var checking = await AccountAsync(c, "Nu conta", "Checking");
+        await ImportAsync(c, checking, OfxTestFile.Checking().Line(Ofx(13), "-500.00", Pay).Build());
+        var inv = ByAccount(await TransactionsAsync(c), checking).GetProperty("id").GetGuid();
+        await c.PostAsync($"/api/transactions/{inv}/no-counterpart");
+        Assert.Equal(2, (await LinksAsync(c, "?state=Confirmed")).GetProperty("total").GetInt32());
+
+        var put = await c.PutAsync($"/api/transactions/{pix}",
+            new { date = "2026-10-11", amount = "-801.00", description = "Pix editado" });
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        Assert.Equal(2, (await LinksAsync(c, "?state=Confirmed")).GetProperty("total").GetInt32());
+
+        var put2 = await c.PutAsync($"/api/transactions/{inv}",
+            new { date = "2026-10-13", amount = "-500.00", description = Pay, state = "Normal" });
+        Assert.Equal(HttpStatusCode.OK, put2.StatusCode);
+        var confirmed = (await LinksAsync(c, "?state=Confirmed")).GetProperty("items").EnumerateArray().ToList();
+        Assert.Single(confirmed);
+        Assert.Equal(pix, confirmed[0].GetProperty("out").GetProperty("transactionId").GetGuid());
     }
 }

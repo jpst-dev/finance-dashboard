@@ -136,8 +136,10 @@ public sealed class ImportIdentityTests(PostgresFixture postgres)
     {
         var acc = await NewAccountAsync();
         var pending = TransactionState.PendingClassification;
+        const string Memo = "APLICACAO CDB FICTICIA";
         var preview = await PreviewAsync(acc,
-            Statement(Line(0, state: pending), Line(1, state: pending), Line(2, state: pending)));
+            // A memo the rules keep Pending (reconcile reclassifies Pending lines whose rule says Normal).
+            Statement(Line(0, memo: Memo, state: pending), Line(1, memo: Memo, state: pending), Line(2, memo: Memo, state: pending)));
 
         var outcome = await ConfirmAsync(preview.BatchId, [new ImportLineOverride(Key, TransactionState.Normal, Ordinal: 1)]);
 
