@@ -85,7 +85,8 @@ describe("Pending page S3(b)", () => {
     await w.find("[data-test=reconcile]").trigger("click");
     await flushPromises();
     expect(w.find("[data-test=error]").exists()).toBe(true);
-    expect(w.find("[data-test=reconcile-result]").exists()).toBe(false);
+    expect(w.find("[data-test=reconcile-result]").text()).toBe("");
+    expect(w.find("[data-test=reconcile-result]").attributes("role")).toBe("status");
   });
 
   it("pending_row_actions_follow_pairing_and_call_api", async () => {

@@ -80,7 +80,7 @@ const field =
       >
         {{ t("real.pending.reconcile") }}
       </button>
-      <p v-if="reconcileSummary" class="text-sm text-gray-300" role="status" data-test="reconcile-result">{{ reconcileSummary }}</p>
+      <p class="text-sm text-gray-300" role="status" aria-live="polite" data-test="reconcile-result">{{ reconcileSummary }}</p>
     </div>
 
     <LinkSuggestions />
@@ -109,8 +109,8 @@ const field =
             <label :for="`pc-${tx.id}`" class="mb-1 block text-sm">{{ t("real.transactions.category") }}</label>
             <CategorySelect :id="`pc-${tx.id}`" :model-value="tx.categoryId" :amount="tx.amount" @update:model-value="setCategory(tx.id, $event)" />
           </div>
-          <button v-if="tx.pairing === 'OwnTransfer' && !tx.link" type="button" :class="btn" data-test="tx-own" :aria-label="t('real.transactions.ownRow', { description: tx.description })" @click="store.markOwn(tx.id)">{{ t("real.transactions.own") }}</button>
-          <button v-if="tx.pairing === 'InvoicePayment' && !tx.link && tx.state === 'PendingClassification'" type="button" :class="btn" data-test="tx-no-counterpart" :aria-label="t('real.transactions.noCounterpartRow', { description: tx.description })" @click="store.markNoCounterpart(tx.id)">{{ t("real.transactions.noCounterpart") }}</button>
+          <button v-if="tx.pairing === 'OwnTransfer' && !tx.link" type="button" :class="btn" data-test="tx-own" :disabled="store.busy" :aria-label="t('real.transactions.ownRow', { description: tx.description })" @click="store.markOwn(tx.id)">{{ t("real.transactions.own") }}</button>
+          <button v-if="tx.pairing === 'InvoicePayment' && !tx.link && tx.state === 'PendingClassification'" type="button" :class="btn" data-test="tx-no-counterpart" :disabled="store.busy" :aria-label="t('real.transactions.noCounterpartRow', { description: tx.description })" @click="store.markNoCounterpart(tx.id)">{{ t("real.transactions.noCounterpart") }}</button>
         </div>
       </li>
     </ul>

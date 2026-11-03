@@ -134,6 +134,7 @@ const stateOptions: TransactionState[] = ["Normal", "PendingClassification"];
       :items="store.items"
       :account-name="accountName"
       :category-name="categoryName"
+      :busy="store.busy"
       @edit="startEdit"
       @remove="confirming = $event"
       @own="store.markOwn($event.id)"

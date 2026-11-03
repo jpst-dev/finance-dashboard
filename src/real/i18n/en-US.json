@@ -295,8 +295,8 @@
       },
       "own": "It is mine",
       "noCounterpart": "No counterpart",
-      "ownRow": "Mark {description} as a transfer to my account outside the app",
-      "noCounterpartRow": "Mark {description} as an invoice payment with no counterpart"
+      "ownRow": "It is mine: {description}",
+      "noCounterpartRow": "No counterpart: {description}"
     },
     "overview": {
       "accounts": "Accounts",

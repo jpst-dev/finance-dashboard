@@ -50,4 +50,20 @@ describe("Transactions page S3(b)", () => {
     expect(w.find("[data-test=error]").text()).toContain("não se aplica");
     expect(w.find("[data-test=tx-desc] b").exists()).toBe(false);
   });
+
+  it("mark_buttons_are_disabled_while_busy_and_have_accessible_names_starting_with_visible_text", async () => {
+    const { w, transactions } = await setup();
+    const own = w.find("[data-test=tx-own]");
+    expect(own.attributes("aria-label")).toMatch(/^É meu: /);
+    expect(w.find("[data-test=tx-no-counterpart]").attributes("aria-label")).toMatch(/^Sem contrapartida: /);
+    let release!: () => void;
+    transactions.markOwn.mockImplementationOnce(() => new Promise((r) => { release = () => r(oneSided({ state: "Confirmed" })); }));
+    await own.trigger("click");
+    await flushPromises();
+    expect(w.find("[data-test=tx-own]").attributes("disabled")).toBeDefined();
+    expect(w.find("[data-test=tx-no-counterpart]").attributes("disabled")).toBeDefined();
+    release();
+    await flushPromises();
+    expect(w.find("[data-test=tx-own]").attributes("disabled")).toBeUndefined();
+  });
 });

@@ -180,6 +180,7 @@ export const useTransactionsStore = defineStore("fd-transactions", () => {
    * mesmo em erro (404/409 = tela velha); o código do erro sobrevive ao recarregamento.
    */
   async function mark(call: () => Promise<unknown>): Promise<boolean> {
+    if (busy.value) return false;
     const ok = (await run(async () => (await call(), true), linkErrorCodeOf)) === true;
     const code = error.value;
     await Promise.all([reloadAll(), useLinksStore().load()]);

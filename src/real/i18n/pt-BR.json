@@ -295,8 +295,8 @@
       },
       "own": "É meu",
       "noCounterpart": "Sem contrapartida",
-      "ownRow": "Marcar {description} como transferência para conta minha fora do app",
-      "noCounterpartRow": "Marcar {description} como pagamento de fatura sem contrapartida"
+      "ownRow": "É meu: {description}",
+      "noCounterpartRow": "Sem contrapartida: {description}"
     },
     "overview": {
       "accounts": "Contas",

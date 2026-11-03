@@ -57,6 +57,22 @@ describe("transactions store markOwn / markNoCounterpart", () => {
     expect(api.links.list).toHaveBeenCalled();
   });
 
+  it("mark_returns_false_without_calling_api_while_busy", async () => {
+    const api = fakeLinksApi();
+    let release!: () => void;
+    api.transactions.markOwn.mockImplementationOnce(() => new Promise((r) => { release = () => r(undefined as never); }));
+    const t = useTransactionsStore();
+    const first = t.markOwn("t1");
+    expect(t.busy).toBe(true);
+    expect(await t.markNoCounterpart("t2")).toBe(false);
+    expect(await t.markOwn("t3")).toBe(false);
+    expect(api.transactions.markOwn).toHaveBeenCalledTimes(1);
+    expect(api.transactions.markNoCounterpart).not.toHaveBeenCalled();
+    release();
+    expect(await first).toBe(true);
+    expect(t.busy).toBe(false);
+  });
+
   it.each([
     [404, undefined, "not_found"],
     [409, undefined, "link_conflict"],
