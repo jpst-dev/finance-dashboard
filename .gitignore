@@ -44,3 +44,6 @@ private/
 
 # Exemplo versionado (precisa vir depois de .env*)
 !.env.example
+
+# Ledger local do fluxo de agentes
+.superpowers/
