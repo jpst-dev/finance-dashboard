@@ -5,5 +5,5 @@ import "./assets/main.css";
 if (import.meta.env.VITE_APP_MODE === "real") {
   import("./real/boot").then((m) => m.bootReal());
 } else {
-  import("./demo/boot").then((m) => m.bootDemo());
+  import("./demo-static/boot").then((m) => m.bootDemo());
 }
