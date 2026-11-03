@@ -24,7 +24,8 @@ jobs:
       - name: Build
         run: dotnet build backend/FinanceDashboard.sln --configuration Release
       # Os testes criam o próprio Postgres via Testcontainers (Docker do runner).
-      - name: Test
+      # UPDATE_DEMO_FIXTURES nunca é definido na CI: a deriva vira falha, não regeneração.
+      - name: Test (inclui deriva do OpenAPI e das fixtures do demo)
         run: dotnet test backend/FinanceDashboard.sln --configuration Release --no-build
 
   frontend:
