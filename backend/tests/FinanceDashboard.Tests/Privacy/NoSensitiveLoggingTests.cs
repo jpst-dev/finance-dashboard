@@ -15,7 +15,12 @@ public sealed class NoSensitiveLoggingTests(PostgresFixture postgres)
     public async Task Import_flow_logs_never_contain_descriptions_amounts_names_or_body()
     {
         var logs = new CapturingLoggerProvider();
-        await using var f = new ApiFactory(await postgres.CreateDatabaseAsync()) { LoggerProvider = logs };
+        await using var f = new ApiFactory(await postgres.CreateDatabaseAsync(), new Dictionary<string, string?>
+        {
+            ["Logging:LogLevel:Default"] = "Trace",
+            ["Logging:LogLevel:Microsoft.AspNetCore"] = "Trace",
+            ["Logging:LogLevel:Microsoft.EntityFrameworkCore"] = "Trace",
+        }) { LoggerProvider = logs };
         using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
 
         const string memoMarker = "MEMOMARKER-QZ91";
