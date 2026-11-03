@@ -93,6 +93,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
 
         b.Entity<Link>(e =>
         {
+            // Invariant "at most one Confirmed link per line" is enforced per column by the two partial unique
+            // indexes below. The cross-column case (same line as Out in one Confirmed link and as In in another)
+            // is not coverable by a DB constraint: it is prevented by the sign rule (Out < 0, In > 0) and by
+            // LinkService, which must reject a Confirm when the line already appears in any Confirmed link on
+            // either side.
+            // FKs use Cascade (unlike the Restrict used by other entities) because undoing an import batch
+            // uses ExecuteDelete on Transactions, where EF's client-side cascade does not run.
             e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32);
