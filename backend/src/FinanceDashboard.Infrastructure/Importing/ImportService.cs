@@ -1,8 +1,10 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using FinanceDashboard.Domain;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace FinanceDashboard.Infrastructure.Importing;
 
@@ -23,7 +25,8 @@ public sealed record ImportPreviewView(
     ImportCheckpointView? Checkpoint,
     IReadOnlyList<ImportLineView> Lines,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? ExpiresAt);
+    DateTimeOffset? ExpiresAt,
+    int EditedCount);
 
 public sealed record ImportBatchSummary(
     Guid BatchId,
@@ -79,10 +82,44 @@ public sealed record PreviewOutcome(ImportPreviewView? Preview, PreviewError? Er
     public static PreviewOutcome Fail(PreviewError error, string? kind = null) => new(null, error, kind);
 }
 
-/// <summary>Upload → preview. Writes only the <see cref="ImportBatch"/> (state Preview); never transactions or checkpoints.</summary>
-public sealed class ImportService(AppDbContext db, TimeProvider time)
+public sealed record ConfirmResult(Guid BatchId, int Created, int Skipped);
+
+public enum ConfirmError
+{
+    NotFound,
+    Expired,
+    AlreadyConfirmed,
+    AlreadyUndone,
+    AlreadyImported,
+    AccountArchived,
+    BlockingWarnings,
+    UnsupportedAmountPrecision,
+    UnsupportedLine,
+}
+
+public sealed record ConfirmOutcome(ConfirmResult? Result, ConfirmError? Error, IReadOnlyList<ImportWarning> Warnings)
+{
+    public static ConfirmOutcome Ok(ConfirmResult result) => new(result, null, []);
+    public static ConfirmOutcome Fail(ConfirmError error, IReadOnlyList<ImportWarning>? warnings = null) =>
+        new(null, error, warnings ?? []);
+}
+
+public enum UndoError { NotFound, AlreadyUndone }
+
+/// <summary>
+/// Upload → preview (writes only the <see cref="ImportBatch"/> in state Preview), confirm (lines + checkpoint in one
+/// database transaction) and undo (removes what the batch created and frees its file hash).
+/// </summary>
+public sealed partial class ImportService(AppDbContext db, TimeProvider time)
 {
     public static readonly TimeSpan PreviewLifetime = TimeSpan.FromHours(24);
+
+    private const int MaxDescription = 500;     // Transactions.OriginalDescription / NormalizedDescription
+    private const int MaxSourceKey = 200;       // Transactions.SourceKey
+    private const int MaxCounterpartyName = 200;
+    private const int MaxCounterpartyDocument = 64;
+    private const decimal MaxAbsAmount = 10_000_000_000_000_000m; // numeric(18,2)
+    private const string HashIndex = "IX_ImportBatches_UserId_FileHash";
 
     public async Task<PreviewOutcome> CreatePreviewAsync(Guid accountId, byte[] content, CancellationToken ct = default)
     {
@@ -195,8 +232,239 @@ public sealed class ImportService(AppDbContext db, TimeProvider time)
         var batch = await db.ImportBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id, ct);
         if (batch is null) return null;
         var stored = StoredPreview.Deserialize(batch.PreviewJson);
-        return ToView(batch, StoredPreview.DeserializeWarnings(batch.WarningsJson), stored?.Checkpoint, stored?.Lines ?? []);
+        // Lets the client warn before an undo, which also removes the lines the user edited.
+        var edited = await db.Transactions.CountAsync(t => t.BatchId == batch.Id && t.EditedByUser, ct);
+        return ToView(batch, StoredPreview.DeserializeWarnings(batch.WarningsJson), stored?.Checkpoint, stored?.Lines ?? [],
+            edited);
     }
+
+    /// <summary>
+    /// Records the stored preview of a batch. Re-validates against the current state; inserts only lines whose
+    /// (account, FITID, 0) key is free — existing lines (edited or soft-deleted included) are never touched.
+    /// Races are settled by the database: the conditional state change serializes confirms of the same batch,
+    /// the partial unique hash index rejects a second confirm of the same file, and
+    /// <c>ON CONFLICT DO NOTHING</c> on the (account, key, ordinal) index skips lines another confirm just wrote.
+    /// </summary>
+    public async Task<ConfirmOutcome> ConfirmAsync(Guid batchId, bool acknowledgeBlockingWarnings, CancellationToken ct = default)
+    {
+        var batch = await db.ImportBatches.AsNoTracking().FirstOrDefaultAsync(b => b.Id == batchId, ct);
+        if (batch is null) return ConfirmOutcome.Fail(ConfirmError.NotFound);
+        if (batch.State != ImportBatchState.Preview) return ConfirmOutcome.Fail(StateError(batch.State));
+        if (batch.ExpiresAt is { } expires && expires <= time.GetUtcNow()) return ConfirmOutcome.Fail(ConfirmError.Expired);
+
+        var stored = StoredPreview.Deserialize(batch.PreviewJson);
+        if (stored is null) return ConfirmOutcome.Fail(ConfirmError.NotFound);
+        var account = await db.Accounts.AsNoTracking().FirstOrDefaultAsync(a => a.Id == batch.AccountId, ct);
+        if (account is null) return ConfirmOutcome.Fail(ConfirmError.NotFound);
+        if (account.IsArchived) return ConfirmOutcome.Fail(ConfirmError.AccountArchived);
+
+        // Values the columns cannot hold exactly refuse the whole file: never rounded or cut silently.
+        var amounts = stored.Lines.Select(l => l.Amount).ToList();
+        if (stored.Checkpoint is not null) amounts.Add(stored.Checkpoint.Amount);
+        if (amounts.Any(a => a != decimal.Round(a, 2))) return ConfirmOutcome.Fail(ConfirmError.UnsupportedAmountPrecision);
+        if (amounts.Any(a => Math.Abs(a) >= MaxAbsAmount) || stored.Lines.Any(l => l.FitId.Length > MaxSourceKey))
+        {
+            return ConfirmOutcome.Fail(ConfirmError.UnsupportedLine);
+        }
+
+        // Another batch of the same file (this one may have been confirmed since it was read: decided by the claim below).
+        if (await db.ImportBatches.AnyAsync(
+                b => b.Id != batch.Id && b.State == ImportBatchState.Confirmed && b.FileHash == batch.FileHash, ct))
+        {
+            return ConfirmOutcome.Fail(ConfirmError.AlreadyImported);
+        }
+
+        var blocking = await BlockingWarningsAsync(account, stored, ct);
+        if (blocking.Count > 0 && !acknowledgeBlockingWarnings) return ConfirmOutcome.Fail(ConfirmError.BlockingWarnings, blocking);
+
+        // One row per FITID; sorted so concurrent confirms take the key locks in the same order (no deadlock).
+        var lines = stored.Lines.DistinctBy(l => l.FitId, StringComparer.Ordinal)
+            .OrderBy(l => l.FitId, StringComparer.Ordinal).ToList();
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        int claimed;
+        try
+        {
+            claimed = await db.ImportBatches
+                .Where(b => b.Id == batch.Id && b.State == ImportBatchState.Preview)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.State, ImportBatchState.Confirmed)
+                    .SetProperty(b => b.PreviewJson, (string?)null)
+                    .SetProperty(b => b.ExpiresAt, (DateTimeOffset?)null), ct);
+        }
+        catch (Exception e) when (IsUniqueViolation(e, HashIndex))
+        {
+            return ConfirmOutcome.Fail(ConfirmError.AlreadyImported); // another batch of the same file won the race
+        }
+
+        if (claimed == 0)
+        {
+            await tx.RollbackAsync(ct);
+            var state = await db.ImportBatches.AsNoTracking()
+                .Where(b => b.Id == batch.Id).Select(b => (ImportBatchState?)b.State).FirstOrDefaultAsync(ct);
+            return ConfirmOutcome.Fail(state is { } s2 ? StateError(s2) : ConfirmError.NotFound);
+        }
+
+        var created = await InsertLinesAsync(batch, lines, ct);
+        if (stored.Checkpoint is { } checkpoint) await AddCheckpointAsync(batch, checkpoint, ct);
+
+        var skipped = stored.Lines.Count - created;
+        await db.ImportBatches.Where(b => b.Id == batch.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.NewCount, created).SetProperty(b => b.ExistingCount, skipped), ct);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return ConfirmOutcome.Ok(new ConfirmResult(batch.Id, created, skipped));
+    }
+
+    /// <summary>
+    /// Confirmed batch: removes for real every line it created (hidden and user-edited ones included) and its
+    /// checkpoint, and marks it Undone, which frees the file hash. Preview batch: removes the batch.
+    /// </summary>
+    public async Task<UndoError?> UndoAsync(Guid batchId, CancellationToken ct = default)
+    {
+        var state = await db.ImportBatches.AsNoTracking()
+            .Where(b => b.Id == batchId).Select(b => (ImportBatchState?)b.State).FirstOrDefaultAsync(ct);
+        if (state is null) return UndoError.NotFound;
+        if (state == ImportBatchState.Undone) return UndoError.AlreadyUndone;
+
+        if (state == ImportBatchState.Preview)
+        {
+            var removed = await db.ImportBatches
+                .Where(b => b.Id == batchId && b.State == ImportBatchState.Preview).ExecuteDeleteAsync(ct);
+            if (removed == 1) return null;
+            // Confirmed in the meantime: undo that instead.
+        }
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var claimed = await db.ImportBatches
+            .Where(b => b.Id == batchId && b.State == ImportBatchState.Confirmed)
+            .ExecuteUpdateAsync(s => s.SetProperty(b => b.State, ImportBatchState.Undone), ct);
+        if (claimed == 0)
+        {
+            await tx.RollbackAsync(ct);
+            var now = await db.ImportBatches.AsNoTracking().AnyAsync(b => b.Id == batchId, ct);
+            return now ? UndoError.AlreadyUndone : UndoError.NotFound;
+        }
+
+        // No Visible(): soft-deleted lines of the batch go too.
+        await db.Transactions.Where(t => t.BatchId == batchId).ExecuteDeleteAsync(ct);
+        await db.Checkpoints.Where(c => c.BatchId == batchId).ExecuteDeleteAsync(ct);
+        await tx.CommitAsync(ct);
+        return null;
+    }
+
+    private static ConfirmError StateError(ImportBatchState state) => state switch
+    {
+        ImportBatchState.Confirmed => ConfirmError.AlreadyConfirmed,
+        ImportBatchState.Undone => ConfirmError.AlreadyUndone,
+        _ => ConfirmError.NotFound,
+    };
+
+    /// <summary>The blocking checks of the preview, recomputed against the current state.</summary>
+    private async Task<List<ImportWarning>> BlockingWarningsAsync(Account account, StoredPreview stored, CancellationToken ct)
+    {
+        var warnings = new List<ImportWarning>();
+        if (!string.IsNullOrWhiteSpace(account.ExternalIdentifier) && !string.IsNullOrWhiteSpace(stored.AccountExternalId)
+            && !string.Equals(account.ExternalIdentifier.Trim(), stored.AccountExternalId.Trim(), StringComparison.Ordinal))
+        {
+            warnings.Add(ImportWarning.AccountIdentifierMismatch());
+        }
+
+        var fitIds = stored.Lines.Select(l => l.FitId).Distinct().ToList();
+        var inOtherAccounts = await db.Transactions.AsNoTracking()
+            .Where(t => t.AccountId != account.Id && t.SourceKey != null && fitIds.Contains(t.SourceKey))
+            .Select(t => t.SourceKey!).Distinct().CountAsync(ct);
+        if (inOtherAccounts > 0) warnings.Add(ImportWarning.FitidInOtherAccount(inOtherAccounts));
+        return warnings;
+    }
+
+    /// <summary>One INSERT … ON CONFLICT DO NOTHING over arrays; returns how many lines were actually created.</summary>
+    private Task<int> InsertLinesAsync(ImportBatch batch, IReadOnlyList<StoredPreviewLine> lines, CancellationToken ct)
+    {
+        if (lines.Count == 0) return Task.FromResult(0);
+
+        const string sql = """
+            INSERT INTO "Transactions" ("Id", "UserId", "AccountId", "Date", "PurchaseDate", "Amount",
+                "OriginalDescription", "NormalizedDescription", "State", "Origin", "BatchId", "SourceKey", "Ordinal",
+                "CounterpartyName", "CounterpartyDocument", "IsDeleted", "EditedByUser")
+            SELECT l.id, @user, @account, l.date, l.date, l.amount, l.original, l.normalized, l.state, @origin, @batch,
+                l.key, 0, l.name, l.document, FALSE, FALSE
+            FROM unnest(@ids, @dates, @amounts, @originals, @normalized, @states, @keys, @names, @documents)
+                WITH ORDINALITY AS l(id, date, amount, original, normalized, state, key, name, document, n)
+            ORDER BY l.n
+            ON CONFLICT ("AccountId", "SourceKey", "Ordinal") WHERE "SourceKey" IS NOT NULL DO NOTHING
+            """;
+
+        object[] parameters =
+        [
+            new NpgsqlParameter("user", batch.UserId),
+            new NpgsqlParameter("account", batch.AccountId),
+            new NpgsqlParameter("origin", nameof(TransactionOrigin.Imported)),
+            new NpgsqlParameter("batch", batch.Id),
+            new NpgsqlParameter("ids", lines.Select(_ => Guid.NewGuid()).ToArray()),
+            new NpgsqlParameter("dates", lines.Select(l => l.Date).ToArray()),
+            new NpgsqlParameter("amounts", lines.Select(l => l.Amount).ToArray()),
+            new NpgsqlParameter("originals", lines.Select(l => Cut(l.Memo, MaxDescription)).ToArray()),
+            new NpgsqlParameter("normalized", lines.Select(l => Cut(NormalizeDescription(l.Memo), MaxDescription)).ToArray()),
+            new NpgsqlParameter("states", lines.Select(l => l.State.ToString()).ToArray()),
+            new NpgsqlParameter("keys", lines.Select(l => l.FitId).ToArray()),
+            new NpgsqlParameter("names", lines.Select(l => CutOrNull(l.CounterpartyName, MaxCounterpartyName)).ToArray()),
+            new NpgsqlParameter("documents", lines.Select(l => CutOrNull(l.CounterpartyDocument, MaxCounterpartyDocument)).ToArray()),
+        ];
+        return db.Database.ExecuteSqlRawAsync(sql, parameters, ct);
+    }
+
+    /// <summary>LEDGERBAL checkpoint, unless the account already has one with the same date and amount.</summary>
+    private async Task AddCheckpointAsync(ImportBatch batch, ImportCheckpointView checkpoint, CancellationToken ct)
+    {
+        // Serializes the exists-check per account across concurrent confirms (released at commit/rollback).
+        var lockKey = BitConverter.ToInt64(batch.AccountId.ToByteArray(), 0);
+        await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(@key)", [new NpgsqlParameter("key", lockKey)], ct);
+
+        var exists = await db.Checkpoints.AnyAsync(
+            c => c.AccountId == batch.AccountId && c.Date == checkpoint.Date && c.Amount == checkpoint.Amount, ct);
+        if (exists) return;
+
+        db.Checkpoints.Add(new BalanceCheckpoint
+        {
+            Id = Guid.NewGuid(),
+            AccountId = batch.AccountId,
+            Date = checkpoint.Date,
+            Amount = checkpoint.Amount,
+            Origin = CheckpointOrigin.LedgerBal,
+            BatchId = batch.Id,
+            CreatedAt = time.GetUtcNow(),
+        });
+    }
+
+    private static bool IsUniqueViolation(Exception e, string constraint)
+    {
+        for (var current = e; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg && pg.ConstraintName == constraint)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Trim + runs of whitespace collapsed to one space.</summary>
+    private static string NormalizeDescription(string text) => WhitespaceRun().Replace(text.Trim(), " ");
+
+    private static string? CutOrNull(string? text, int max) => text is null ? null : Cut(text, max);
+
+    /// <summary>At most <paramref name="max"/> UTF-16 units, never splitting a surrogate pair.</summary>
+    private static string Cut(string text, int max)
+    {
+        if (text.Length <= max) return text;
+        var end = char.IsHighSurrogate(text[max - 1]) ? max - 1 : max;
+        return text[..end];
+    }
+
+    [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 500)]
+    private static partial Regex WhitespaceRun();
 
     public async Task<IReadOnlyList<ImportBatchSummary>> ListAsync(CancellationToken ct = default)
     {
@@ -249,9 +517,9 @@ public sealed class ImportService(AppDbContext db, TimeProvider time)
 
     private static ImportPreviewView ToView(
         ImportBatch batch, IReadOnlyList<ImportWarning> warnings, ImportCheckpointView? checkpoint,
-        IReadOnlyList<StoredPreviewLine> lines) =>
+        IReadOnlyList<StoredPreviewLine> lines, int editedCount = 0) =>
         new(batch.Id, batch.AccountId, batch.Source, batch.State, batch.PeriodStart, batch.PeriodEnd,
             batch.NewCount, batch.ExistingCount, warnings, checkpoint,
             lines.Select(l => new ImportLineView(l.Date, l.Amount, l.Memo, l.State, l.Existing)).ToList(),
-            batch.CreatedAt, batch.ExpiresAt);
+            batch.CreatedAt, batch.ExpiresAt, editedCount);
 }

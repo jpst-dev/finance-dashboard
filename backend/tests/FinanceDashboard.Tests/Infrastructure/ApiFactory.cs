@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Npgsql;
 
 namespace FinanceDashboard.Tests.Infrastructure;
 
@@ -18,6 +19,17 @@ public sealed class ApiFactory(string connectionString, Dictionary<string, strin
 
     /// <summary>Optional clock override (e.g. a FakeTimeProvider) replacing TimeProvider.System.</summary>
     public TimeProvider? TimeProvider { get; init; }
+
+    /// <summary>
+    /// Every test owns a database, so every test leaves an Npgsql pool of idle connections behind; release them
+    /// so the suite stays under the container's max_connections (concurrency tests open many at once).
+    /// </summary>
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await using var connection = new NpgsqlConnection(connectionString);
+        NpgsqlConnection.ClearPool(connection);
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

@@ -6,6 +6,10 @@ namespace FinanceDashboard.Api.Imports;
 
 public sealed record ImportErrorResponse(string Error);
 
+public sealed record ConfirmImportRequest(bool AcknowledgeBlockingWarnings = false);
+
+public sealed record BlockingWarningsResponse(string Error, IReadOnlyList<ImportWarning> Warnings);
+
 public static class ImportEndpoints
 {
     /// <summary>Whole multipart request: the 5 MB file plus a small envelope (boundaries, accountId).</summary>
@@ -51,8 +55,59 @@ public static class ImportEndpoints
             .Produces<ImportErrorResponse>(StatusCodes.Status413PayloadTooLarge)
             .Produces<ImportErrorResponse>(StatusCodes.Status422UnprocessableEntity);
 
+        group.MapPost("/{id:guid}/confirm", ConfirmAsync)
+            .AddEndpointFilter(AntiforgeryFilter.ValidateAsync)
+            .WithName("ConfirmImport")
+            .WithSummary("Record a preview's new lines and checkpoint; blocking warnings need acknowledgeBlockingWarnings=true")
+            .Produces<ConfirmResult>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<BlockingWarningsResponse>(StatusCodes.Status409Conflict)
+            .Produces<ImportErrorResponse>(StatusCodes.Status410Gone)
+            .Produces<ImportErrorResponse>(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapPost("/{id:guid}/undo", UndoAsync)
+            .AddEndpointFilter(AntiforgeryFilter.ValidateAsync)
+            .WithName("UndoImport")
+            .WithSummary("Undo a confirmed batch (removes its lines, edited and hidden ones included, and its checkpoint) or drop a preview")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ImportErrorResponse>(StatusCodes.Status409Conflict);
+
         return app;
     }
+
+    private static async Task<IResult> ConfirmAsync(
+        Guid id, ConfirmImportRequest? request, ImportService imports, CancellationToken ct)
+    {
+        var outcome = await imports.ConfirmAsync(id, request?.AcknowledgeBlockingWarnings ?? false, ct);
+        return outcome.Error switch
+        {
+            null => Results.Ok(outcome.Result),
+            ConfirmError.NotFound => Results.NotFound(),
+            ConfirmError.Expired => Error("preview_expired", StatusCodes.Status410Gone),
+            ConfirmError.AlreadyConfirmed => Error("already_confirmed", StatusCodes.Status409Conflict),
+            ConfirmError.AlreadyUndone => Error("already_undone", StatusCodes.Status409Conflict),
+            ConfirmError.AlreadyImported => Error("already_imported", StatusCodes.Status409Conflict),
+            ConfirmError.AccountArchived => Error("account_archived", StatusCodes.Status409Conflict),
+            ConfirmError.BlockingWarnings => Results.Conflict(new BlockingWarningsResponse("blocking_warnings", outcome.Warnings)),
+            ConfirmError.UnsupportedAmountPrecision => Error("unsupported_amount_precision", StatusCodes.Status422UnprocessableEntity),
+            _ => Error("unsupported_line", StatusCodes.Status422UnprocessableEntity),
+        };
+    }
+
+    private static async Task<IResult> UndoAsync(Guid id, ImportService imports, CancellationToken ct) =>
+        await imports.UndoAsync(id, ct) switch
+        {
+            null => Results.NoContent(),
+            UndoError.AlreadyUndone => Error("already_undone", StatusCodes.Status409Conflict),
+            _ => Results.NotFound(),
+        };
+
+    private static IResult Error(string error, int status) => Results.Json(new ImportErrorResponse(error), statusCode: status);
 
     private static async ValueTask<object?> RejectOversizedAsync(
         EndpointFilterInvocationContext ctx, EndpointFilterDelegate next) =>
