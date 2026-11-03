@@ -1,3 +1,4 @@
+using System.Globalization;
 using FinanceDashboard.Domain;
 using FinanceDashboard.Infrastructure.Installments;
 
@@ -38,7 +39,7 @@ public static class InstallmentEndpoints
         return Results.Ok(new InstallmentsResponse(
             p.TotalCommitted,
             p.Accounts.Select(a => new InstallmentAccountResponse(a.AccountId, a.AccountName, a.BasedOn)).ToList(),
-            p.Months.Select(m => new InstallmentMonthResponse($"{m.Month:yyyy-MM}", m.Total,
+            p.Months.Select(m => new InstallmentMonthResponse(m.Month.ToString("yyyy-MM", CultureInfo.InvariantCulture), m.Total,
                 m.Items.Select(i => new InstallmentItemResponse(i.AccountId, i.Description, i.CardSuffix,
                     i.InstallmentNumber, i.InstallmentTotal, i.Amount)).ToList())).ToList(),
             p.Groups.Select(g => new InstallmentGroupResponse(g.AccountId, g.AccountName, g.CardSuffix, g.Description,

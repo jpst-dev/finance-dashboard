@@ -15,6 +15,18 @@ public class InstallmentProjectorTests
     private static readonly DateOnly Today = new(2026, 10, 15);
 
     [Fact]
+    public void Real_base_newer_than_every_installment_line_projects_nothing_but_reports_basedOn()
+    {
+        var nov10 = new DateOnly(2026, 11, 10);
+        var bases = new Dictionary<Guid, DateOnly> { [AccA] = nov10 };
+        var p = InstallmentProjector.Project([Line(Oct10, 3, 4)], Today, bases);
+        Assert.Equal(0m, p.TotalCommitted);
+        Assert.Empty(p.Groups);
+        Assert.Empty(p.Months);
+        Assert.Equal(nov10, Assert.Single(p.Accounts).BasedOn);
+    }
+
+    [Fact]
     public void Project_three_of_ten_gives_seven_remaining_in_the_month_the_line_would_fall()
     {
         var p = InstallmentProjector.Project([Line(Oct10, 3, 10)], Today);

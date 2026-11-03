@@ -99,6 +99,10 @@ public sealed class InstallmentApiTests(PostgresFixture postgres)
         Assert.Equal("100.00", item.GetProperty("amount").GetString());
         Assert.Equal("1234", item.GetProperty("cardSuffix").GetString());
         Assert.Equal("2026-12", months[1].GetProperty("month").GetString());
+        Assert.Equal("100.00", months[1].GetProperty("total").GetString());
+        var last = Assert.Single(months[1].GetProperty("items").EnumerateArray());
+        Assert.Equal(4, last.GetProperty("installmentNumber").GetInt32());
+        Assert.Equal(4, last.GetProperty("installmentTotal").GetInt32());
 
         var g = Assert.Single(body.GetProperty("groups").EnumerateArray());
         Assert.Equal(2, g.GetProperty("remaining").GetInt32());
@@ -170,6 +174,38 @@ public sealed class InstallmentApiTests(PostgresFixture postgres)
         Assert.Equal("0.00", theirs.GetProperty("totalCommitted").GetString());
         Assert.Equal(0, theirs.GetProperty("groups").GetArrayLength());
         Assert.Equal(0, theirs.GetProperty("accounts").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Newer_invoice_without_installments_is_the_base_and_projects_nothing()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var w = new World(f, c.UserId);
+        var card = await w.AccountAsync("Cartao Exemplo");
+        await w.LineAsync(card, "LOJA EXEMPLO 03/04", -100m, new DateOnly(2026, 10, 10), 3, 4);
+        await w.LineAsync(card, "Compra a vista Exemplo", -40m, Stmt);
+
+        var body = await GetOkAsync(c);
+        Assert.Equal("0.00", body.GetProperty("totalCommitted").GetString());
+        Assert.Equal("2026-11-10", Assert.Single(body.GetProperty("accounts").EnumerateArray()).GetProperty("basedOn").GetString());
+        Assert.Equal(0, body.GetProperty("groups").GetArrayLength());
+        Assert.Equal(0, body.GetProperty("months").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Deleted_line_on_a_newer_invoice_does_not_move_the_base()
+    {
+        await using var f = await NewFactoryAsync();
+        using var c = await AuthedClient.CreateAsync(f, "a@example.com", Password);
+        var w = new World(f, c.UserId);
+        var card = await w.AccountAsync("Cartao Exemplo");
+        await w.LineAsync(card, "LOJA EXEMPLO 02/04", -100m, Stmt, 2, 4);
+        await w.LineAsync(card, "Compra apagada", -40m, new DateOnly(2026, 12, 10), deleted: true);
+
+        var body = await GetOkAsync(c);
+        Assert.Equal("2026-11-10", Assert.Single(body.GetProperty("accounts").EnumerateArray()).GetProperty("basedOn").GetString());
+        Assert.Equal("200.00", body.GetProperty("totalCommitted").GetString());
     }
 
     [Fact]

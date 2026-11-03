@@ -28,23 +28,31 @@ public static class InstallmentProjector
 
     private sealed record Bucket(InstallmentLine Line, List<Projected> Items);
 
-    public static InstallmentProjection Project(IReadOnlyList<InstallmentLine> lines, DateOnly today)
+    /// <param name="bases">Optional real base invoice per account (the newest invoice, with or without installments);
+    /// when an account is absent, its base is the newest invoice among <paramref name="lines"/>.</param>
+    public static InstallmentProjection Project(IReadOnlyList<InstallmentLine> lines, DateOnly today,
+        IReadOnlyDictionary<Guid, DateOnly>? bases = null)
     {
         var cut = new DateOnly(today.Year, today.Month, 1);
         var valid = lines.Where(l => l.Amount < 0 && l.Total >= 2 && l.Number >= 1 && l.Number <= l.Total).ToList();
 
-        var bases = valid
+        var baseOf = valid
             .GroupBy(l => l.AccountId)
-            .Select(g => new { g.Key, Base = g.Max(l => l.StatementDate), Name = g.Select(l => l.AccountName).OrderBy(n => n, StringComparer.Ordinal).First() })
+            .Select(g => new
+            {
+                g.Key,
+                Base = bases is not null && bases.TryGetValue(g.Key, out var real) ? real : g.Max(l => l.StatementDate),
+                Name = g.Select(l => l.AccountName).OrderBy(n => n, StringComparer.Ordinal).First(),
+            })
             .ToDictionary(x => x.Key);
 
-        var accounts = bases.Values
+        var accounts = baseOf.Values
             .Select(x => new AccountBase(x.Key, x.Name, x.Base))
             .OrderBy(a => a.AccountName, StringComparer.Ordinal).ThenBy(a => a.AccountId)
             .ToList();
 
         // Every installment is computed from the base date, never chained (day 31 must not drift to 28).
-        var baseLines = valid.Where(l => l.StatementDate == bases[l.AccountId].Base).ToList();
+        var baseLines = valid.Where(l => l.StatementDate == baseOf[l.AccountId].Base).ToList();
         var buckets = new List<Bucket>();
         foreach (var l in baseLines)
         {
