@@ -46,7 +46,29 @@ builder.Services.AddHealthChecks()
     .AddCheck<TimeZoneHealthCheck>("timezone");
 
 // Health checks are middleware-style endpoints, invisible to API Explorer: describe them by hand.
-builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+builder.Services.AddOpenApi(options =>
+{
+    // The wire contract: money is a decimal STRING (DecimalStringConverter), enums are string names.
+    options.AddSchemaTransformer((schema, context, _) =>
+    {
+        var type = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) ?? context.JsonTypeInfo.Type;
+        if (type == typeof(decimal))
+        {
+            var nullable = Nullable.GetUnderlyingType(context.JsonTypeInfo.Type) is not null
+                || (schema.Type is { } t && t.HasFlag(JsonSchemaType.Null));
+            schema.Type = nullable ? JsonSchemaType.String | JsonSchemaType.Null : JsonSchemaType.String;
+            schema.Format = null;
+            schema.Pattern = @"^-?[0-9]{1,16}(\.[0-9]{1,2})?$";
+        }
+        else if (type.IsEnum)
+        {
+            schema.Type = JsonSchemaType.String;
+            schema.Format = null;
+            schema.Enum = Enum.GetNames(type).Select(n => (System.Text.Json.Nodes.JsonNode)System.Text.Json.Nodes.JsonValue.Create(n)!).ToList();
+        }
+        return Task.CompletedTask;
+    });
+    options.AddDocumentTransformer((document, _, _) =>
 {
     document.Info.Title = "Finance Dashboard API";
     document.Paths ??= [];
@@ -72,7 +94,8 @@ builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document,
             },
         };
     }
-}));
+});
+});
 
 var app = builder.Build();
 

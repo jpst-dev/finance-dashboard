@@ -210,6 +210,12 @@ dotnet test backend/FinanceDashboard.sln
 
 Os testes de integração usam Postgres real via Testcontainers, então o **Docker precisa estar rodando**. A CI (`.github/workflows/ci.yml`) roda backend, front e gitleaks.
 
+O contrato OpenAPI fica versionado em `backend/openapi/v1.json` e um teste falha se ele divergir da API. Depois de mudar endpoints ou DTOs, regenere o arquivo (o front gera os tipos a partir dele):
+
+```bash
+UPDATE_OPENAPI_SNAPSHOT=1 dotnet test backend/FinanceDashboard.sln --filter "FullyQualifiedName~OpenApiSnapshot"
+```
+
 ### Backup e restauração
 
 ```powershell
