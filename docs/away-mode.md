@@ -45,3 +45,6 @@ O João usou a S3(a) com dados reais (rebuild do Compose, vínculos apareceram) 
 
 ## Novo escopo ausente (definido pelo João em 2026-11-03, depois da S3(b))
 O João revisou a S3(b) ("parece estar OK") e pediu para continuar em modo ausente. Escopo desta fatia, escolhido pelo Claude (registrado no away-log): **S3(c) = regras de categoria** (categorização automática de lançamentos sem categoria, com regras criadas pelo usuário e atalho "criar regra a partir desta linha"; nunca sobrescreve categoria já definida). **Recorrências, Pix parcelado/juros e aplicação/resgate ficam para uma S3(d)** e aguardam o João. Mesmas travas de sempre; depois da S3(c), parar.
+
+## Novo escopo ausente (definido pelo João em 2026-11-03, depois da S3(c) e do smoke com amostras)
+O João perguntou o que sugeria e autorizou continuar em modo ausente "como achar melhor". Escolha do Claude (registrada no away-log): **S3(d) = parcelas comprometidas** (projeção das parcelas futuras do cartão Itaú, tela "Parcelas" e cartão na Visão geral; sem entidade nem migração, derivado das linhas). Ficam fora e esperam o João: recorrências/assinaturas, juros do Pix parcelado, aplicação/resgate (precisa das posições da S4) e a S4. Mesmas travas; depois da S3(d), parar.
