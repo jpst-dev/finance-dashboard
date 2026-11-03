@@ -1,29 +1,23 @@
 # Finance Dashboard
 
-Dashboard de finanças pessoais em Vue 3 + TypeScript: transações, metas e carteira de criptomoedas com preços em tempo real (CoinGecko). Na primeira visita o app já abre com dados de exemplo, salvos só no navegador; dá para limpar tudo e começar do zero.
+Dashboard de finanças pessoais em Vue 3 + TypeScript, com backend em .NET 10 + PostgreSQL para uso real. O site público é um **demo estático**: a mesma interface do uso real, alimentada por dados fictícios gerados pelo próprio backend e congelados em arquivos JSON. É somente leitura, não pede login e não faz nenhuma chamada ao servidor.
 
 > 🔗 **[finance.jteixeira.dev](https://finance.jteixeira.dev)**
 
-![Visão geral](docs/screenshots/visao-geral.png)
-
-![Portfólio](docs/screenshots/portfolio.png)
+> Os screenshots do app antigo foram removidos junto com ele; um screenshot do demo novo ainda precisa ser tirado.
 
 ## 🚀 Funcionalidades
 
-### Dashboard Principal
-- Visualização do saldo total
-- Acompanhamento de receitas e despesas mensais
-- Gráfico de visão geral mensal
-- Gráfico de despesas por categoria
-- Lista de transações recentes
+O demo e o modo real compartilham as mesmas telas (`src/real/`):
 
-### Portfólio de Criptomoedas
-- Acompanhamento em tempo real do valor total do portfólio
-- Visualização de lucros/perdas
-- Gráfico de alocação de ativos
-- Histórico de performance do portfólio
-- Gerenciamento detalhado de investimentos em criptomoedas
-- Rastreamento de preços de múltiplas criptomoedas
+- **Visão geral**: resumo do mês (receitas, despesas, saldo), gráfico dos últimos seis meses, despesas por categoria e lançamentos recentes, tudo calculado no servidor
+- **Lançamentos**: lista paginada e filtrável por conta, mês, categoria e estado
+- **Pendentes de classificação**: pagamentos de fatura, transferências e similares que ficam fora do resumo até serem reclassificados
+- **Contas**: contas correntes e cartões com saldos e checkpoints
+- **Importar**: extratos OFX (Nubank, Itaú) e fatura xlsx (Itaú), com prévia, confirmação e desfazer pelo histórico
+- **Esconder valores** e idioma pt-BR/en-US
+
+No demo, os dados são fictícios (data de referência fixa: 15/10/2026, com movimento de maio a outubro de 2026), qualquer alteração responde "somente leitura" e a tela Importar mostra uma prévia de exemplo sem ler o arquivo escolhido. Metas, carteira de criptomoedas (CoinGecko) e investimentos do app antigo saíram do site público e voltam, se voltarem, na S4/v2.1; o código antigo continua na tag `demo-legado`.
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -32,10 +26,12 @@ Dashboard de finanças pessoais em Vue 3 + TypeScript: transações, metas e car
 - **Tailwind CSS** - Framework CSS utilitário
 - **Pinia** - Gerenciamento de estado
 - **Vue Router** - Roteamento da aplicação
-- **Chart.js** - Biblioteca de gráficos
+- **vue-i18n** - Internacionalização (pt-BR/en-US)
+- **Chart.js** (com vue-chartjs) - Biblioteca de gráficos
 - **Vite** - Build tool e dev server
-- **Vitest** - Testes dos dados de exemplo
-- **Axios** - Cliente HTTP
+- **Vitest** - Testes do front
+- **openapi-typescript** - Tipos do front gerados do OpenAPI do backend
+- **.NET 10 + PostgreSQL** - Backend (veja [v2 · Backend](#-v2--backend))
 
 ## 📦 Instalação
 
@@ -58,16 +54,19 @@ npm run dev
 ## 🔧 Scripts Disponíveis
 
 - `npm run dev` - Inicia o servidor de desenvolvimento
-- `npm run build` - Compila o projeto para produção
+- `npm run build` - Compila o demo estático (`dist/`)
+- `npm run build:real` - Compila o modo real (`dist-real/`)
+- `npm run dev:real` - Dev server do modo real, com `/api` encaminhado para a API local
 - `npm run preview` - Visualiza a build de produção localmente
+- `npm test` - Roda os testes do front
+- `npm run api:types` - Regenera os tipos a partir do OpenAPI
 
 ## 📱 Recursos da Interface
 
 - Design responsivo
-- Modo escuro/claro
+- Tema escuro
 - Gráficos interativos
-- Interface intuitiva e moderna
-- Componentes reutilizáveis
+- Esconder valores e troca de idioma (pt-BR/en-US)
 
 ## 🔒 Ambiente
 
@@ -79,7 +78,7 @@ Para rodar o projeto, você precisará criar um arquivo `.env` na raiz do projet
 
 ## 🧱 v2 · Backend
 
-A v2 adiciona um backend em **.NET 10 + PostgreSQL** (pasta `backend/`) para uso real: login por cookie de sessão, banco de dados e, nas próximas fatias, importação de extratos e patrimônio. O site público na Vercel segue como **demo** (dados de exemplo no navegador, sem login e sem backend); o app real roda localmente pelo Docker Compose, tudo na mesma origem, sem CORS.
+A v2 adiciona um backend em **.NET 10 + PostgreSQL** (pasta `backend/`) para uso real: login por cookie de sessão, banco de dados e, nas próximas fatias, importação de extratos e patrimônio. O site público na Vercel é o **demo estático** (a mesma interface, dados fictícios gerados pelo backend, somente leitura, sem login e sem backend); o app real roda localmente pelo Docker Compose, tudo na mesma origem, sem CORS.
 
 ```mermaid
 flowchart LR
@@ -88,7 +87,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md) e [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md) e [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md), [ADR 0005 (identidade por conteúdo e leitores do Itaú)](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md) e [ADR 0006 (demo estático por adaptador e fixtures geradas)](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md).
 
 ### Rodando localmente
 
@@ -131,10 +130,10 @@ O mesmo código-fonte gera **dois builds**, escolhidos em tempo de build pela va
 
 | Build | Comando | Saída | Uso |
 | --- | --- | --- | --- |
-| `demo` (padrão) | `npm run build` | `dist/` | Vercel: dados de exemplo no navegador, sem login e sem backend |
+| `demo` (padrão) | `npm run build` | `dist/` | Vercel: a interface real com um adaptador estático (fixtures JSON geradas pelo backend), somente leitura, sem login e sem backend |
 | `real` | `npm run build:real` (usa `.env.real`, `VITE_APP_MODE=real`) | `dist-real/` | Imagem Docker do `web` (nginx), falando com a API na mesma origem |
 
-Só o valor exato `real` ativa o modo real; qualquer outro (ou ausente) cai no `demo`, então a Vercel continua intacta. Cada bundle não contém código do outro modo (ver [ADR 0004](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md)). O modo real tem login, Visão geral (resumo calculado no servidor), Lançamentos, Pendentes de classificação, Contas e Importar (OFX Nubank com prévia, classificação das pendentes, confirmação e desfazer pelo histórico).
+Só o valor exato `real` ativa o modo real; qualquer outro (ou ausente) cai no `demo`, então a Vercel continua intacta. Cada bundle não contém código do outro modo (ver [ADR 0004](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md) e [ADR 0006](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md)). O modo real tem login, Visão geral (resumo calculado no servidor), Lançamentos, Pendentes de classificação, Contas e Importar (OFX Nubank com prévia, classificação das pendentes, confirmação e desfazer pelo histórico).
 
 **Como rodar (Compose):**
 
@@ -167,9 +166,19 @@ UPDATE_OPENAPI_SNAPSHOT=1 dotnet test backend/FinanceDashboard.sln --filter "Ful
 npm run api:types
 ```
 
-**Checagens na CI:** além dos testes, a CI regenera os tipos e falha se `src/real/api/schema.d.ts` divergir do commit (`git diff --exit-code`), e roda `node scripts/check-bundles.mjs`, que falha se o bundle `dist/` contiver o marcador do modo real ou se `dist-real/` contiver código do modo demo (ou faltar o marcador). O teste `src/real/e2e-smoke.test.ts` percorre o fluxo completo (login, conta, importação com classificação, resumo, esconder valores, desfazer) com uma API simulada.
+**Checagens na CI:** além dos testes, a CI regenera os tipos e falha se `src/real/api/schema.d.ts` divergir do commit (`git diff --exit-code`) e roda `node scripts/check-bundles.mjs`, que falha se: `dist/` (demo) não contiver os marcadores do demo (`data-finance-demo-mode`, `finance-demo-fixtures`) ou contiver o marcador do modo real (`data-finance-real-mode`) ou o cliente HTTP (`/api/auth/csrf`); ou se `dist-real/` não contiver o marcador do modo real ou contiver o marcador do demo ou as fixtures. Pasta ausente ou sem arquivos de bundle também falha. O teste de deriva das fixtures (`Committed_fixtures_match_generator`, no backend) gera as fixtures de novo e falha se o commit divergir. O teste `src/real/e2e-smoke.test.ts` percorre o fluxo completo do modo real (login, conta, importação com classificação, resumo, esconder valores, desfazer) com uma API simulada, e `src/demo-static/e2e-demo.test.ts` faz o mesmo para o demo (somente leitura, sem rede). `src/sources.test.ts` garante que o app antigo não volta e que `src/real/` e `src/demo-static/` só importam o que podem (inclusive pelo alias `@/`).
 
-**Fora desta fatia:** o demo estático com a mesma interface (S1c), o importador do Itaú (S2) e conciliação, investimentos e patrimônio (S3/S4). Metas, criptomoedas e investimentos ficam escondidos no modo real (continuam só no demo).
+### Fixtures do demo
+
+O demo lê `src/demo-static/fixtures/*.json`, gerados pelo backend: um teste xUnit semeia uma base sintética (ids fixos, relógio falso em 2026-10-15), chama os endpoints reais da API e grava o JSON normalizado (LF, ordem estável, cultura invariante). Depois de mudar o contrato da API, os endpoints ou a semente, regenere e commite o resultado:
+
+```bash
+UPDATE_DEMO_FIXTURES=1 dotnet test backend/FinanceDashboard.sln --filter "FullyQualifiedName~Committed_fixtures_match_generator"
+```
+
+Sem a variável, o mesmo teste só compara e falha se o commit divergir. A regeneração é recusada quando `CI` ou `GITHUB_ACTIONS` está definido. As fixtures só têm dados sintéticos.
+
+**Fora desta fatia:** conciliação, investimentos e patrimônio (S3/S4). Metas, criptomoedas e investimentos ficam fora das duas interfaces até lá (o app antigo está na tag `demo-legado`).
 
 ### Importando um extrato Nubank (S1a)
 
@@ -316,7 +325,7 @@ Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos
 
 ### Roteiro
 
-Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real e S2 importadores do Itaú (conta OFX e fatura xlsx). Próximas fatias: S1c demo estático com a nova interface, S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. Próximas fatias: S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
 
 ## 🤝 Contribuindo
 
