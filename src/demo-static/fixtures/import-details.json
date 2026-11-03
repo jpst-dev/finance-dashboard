@@ -6,7 +6,7 @@
     "state": "Confirmed",
     "periodStart": null,
     "periodEnd": null,
-    "newCount": 2,
+    "newCount": 4,
     "existingCount": 0,
     "warnings": [],
     "checkpoint": null,
@@ -16,7 +16,7 @@
     "editedCount": 1,
     "invoice": {
       "dueDate": "2026-10-10",
-      "declaredTotal": "499.65"
+      "declaredTotal": "1014.55"
     }
   },
   "0000001b-0000-4000-8000-000000000002": {
@@ -38,7 +38,7 @@
     ],
     "checkpoint": {
       "date": "2026-10-14",
-      "amount": "19035.63"
+      "amount": "18520.73"
     },
     "lines": [
       {

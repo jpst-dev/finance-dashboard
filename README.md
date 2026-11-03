@@ -279,6 +279,16 @@ Regras "trecho da descrição → categoria" categorizam sozinhas as linhas impo
 - **Excluir**: apagar uma regra não desfaz as categorias já aplicadas; apagar uma categoria apaga as regras dela.
 - O demo público mostra regras de exemplo (somente leitura: criar, excluir e aplicar não salvam). Decisões em [ADR 0009](docs/adr/0009-regras-de-categoria.md).
 
+### Parcelas comprometidas (S3d)
+
+Mostra quanto já está amarrado nos próximos meses por compras parceladas no cartão Itaú. É só uma visão: nada futuro vira lançamento, saldo ou categoria.
+
+- **De onde vem**: das linhas da fatura **mais recente importada de cada conta** que trazem "Parcela N de T" (cobrança, valor negativo). As parcelas `N+1 … T` são projetadas mês a mês a partir do vencimento dessa fatura. Importe a fatura mais recente para atualizar; se a base tiver ficado para trás, a página avisa por conta.
+- **Mês exibido**: o mês em que a parcela vai aparecer no resumo mensal (um mês antes do vencimento da fatura). Só entram parcelas do mês corrente em diante.
+- **Onde ver**: página **Parcelas** (barras por mês e lista de compras com "N de T", restantes, valor e quando termina) e o cartão "Comprometido nos próximos meses" na Visão geral.
+- **API**: `GET /api/installments` (somente leitura; dinheiro como string decimal).
+- **Limitações**: estorno de compra parcelada não cancela o grupo; um vencimento por conta; Nubank não tem parcelas (o OFX não traz); sem antecipação nem edição manual. O demo público mostra duas compras de exemplo (somente leitura). Decisões em [ADR 0010](docs/adr/0010-parcelas-derivadas.md).
+
 ### Desenvolvimento
 
 O `db` do Compose precisa estar rodando (`docker compose up -d db`; fica em `127.0.0.1:5432`). A API local usa a porta 5288 (perfil `http`) e o serviço `api` do Compose não publica porta no host, então não há conflito e não é preciso parar a stack. O Vite encaminha `/api` para `http://localhost:5288`.
@@ -346,7 +356,7 @@ Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos
 
 ### Roteiro
 
-Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. S3(a) conciliação (pagamento de fatura e transferência entre contas próprias), S3(b) pendências residuais e S3(c) regras de categoria entregues. Próximas fatias: S3(d) recorrências, Pix parcelado e aplicação/resgate, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real, S2 importadores do Itaú (conta OFX e fatura xlsx) e S1c demo estático com a nova interface. S3(a) conciliação (pagamento de fatura e transferência entre contas próprias), S3(b) pendências residuais e S3(c) regras de categoria e S3(d) parcelas comprometidas entregues. Próximas fatias: recorrências, juros do Pix parcelado e aplicação/resgate, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
 
 ## 🤝 Contribuindo
 

@@ -213,6 +213,25 @@ describe("demo estático: interface real somente leitura", () => {
     expect(q("[data-test=error]")!.textContent).toBe(PT_READ_ONLY);
   });
 
+  it("installments_page_and_overview_card_show_example_without_network", async () => {
+    const { router } = await boot();
+    // Visão geral: cartão do comprometido com o total do mês corrente + 2 seguintes (fixtures do servidor real).
+    expect(q("[data-test=committed-card]")).not.toBeNull();
+    expect(q("[data-test=committed-total]")!.textContent).toMatch(MONEY_LIKE);
+
+    await visit(router, "/installments");
+    expect(router.currentRoute.value.path).toBe("/installments");
+    expect(q("[data-test=error]")).toBeNull();
+    expect(q("[data-test=empty]")).toBeNull();
+    expect(q("[data-test=stale-base]")).toBeNull();
+    expect(qa("[data-test=group-row]")).toHaveLength(f.installments.groups.length);
+    expect(qa("[data-test=group-description]").map((e) => e.textContent?.trim())).toEqual(
+      f.installments.groups.map((g) => g.description),
+    );
+    expect(f.installments.groups.length).toBeGreaterThan(0);
+    expect(q("[data-test=total]")!.textContent).toMatch(MONEY_LIKE);
+  });
+
   it("transactions_show_link_badges_and_mark_actions_without_network", async () => {
     const { router } = await boot();
     await visit(router, "/transactions");
@@ -299,9 +318,10 @@ describe("demo estático: interface real somente leitura", () => {
       ["/transactions", f.transactions[0].description],
       ["/pending", PENDING[0].description],
       ["/accounts", f.accounts[0].name],
+      ["/installments", f.installments.groups[0].description],
     ];
     // controle positivo: com valores visíveis há dinheiro nas páginas com valores
-    for (const path of ["/", "/transactions", "/pending", "/accounts"]) {
+    for (const path of ["/", "/transactions", "/pending", "/accounts", "/installments"]) {
       await visit(router, path);
       expect(bodyText(), `${path} visível`).toMatch(MONEY_LIKE);
     }

@@ -77,6 +77,20 @@ public static class DemoSeed
     /// <summary>Closing date of the confirmed October card invoice (imported 2026-10-05, due 2026-10-10).</summary>
     private static readonly DateOnly InvoiceClosing = new(2026, 10, 3);
 
+    /// <summary>Due date of the confirmed invoice: the StatementDate of its lines (the real Itaú reader sets it).</summary>
+    private static readonly DateOnly InvoiceDue = new(2026, 10, 10);
+
+    /// <summary>
+    /// Installment purchases with remaining installments on the confirmed invoice (the projection's base). Only their
+    /// current installment is on the invoice; the earlier ones belong to invoices that the demo does not carry.
+    /// Descriptions avoid the demo rule patterns, so the rules keep categorizing exactly what they did.
+    /// </summary>
+    private static readonly (string Description, decimal Amount, int Number, int Total, DateOnly Purchase, string Slug)[] OpenInstallments =
+    [
+        ("Eletrodomésticos Exemplo", -189.90m, 3, 6, new DateOnly(2026, 8, 2), "eletrodomesticos"),
+        ("Móveis Fictícios", -325.00m, 2, 4, new DateOnly(2026, 9, 6), "moveis-ficticios"),
+    ];
+
     private static readonly DateTimeOffset CheckpointCreatedAt = new(2026, 5, 1, 9, 0, 0, TimeSpan.Zero);
 
     /// <summary>A monthly template: account, day, description, amount for month index i (0 = 2026-05), category.</summary>
@@ -203,13 +217,15 @@ public static class DemoSeed
         var purchase = new DateOnly(2026, 7, 28);
         for (var k = 1; k <= 3; k++)
         {
-            var date = new DateOnly(2026, 7 + k, 2);
+            // As the real reader does: installments N>1 are dated one month before the invoice due date (3/3: 2026-09-10).
+            var date = k == 3 ? InvoiceDue.AddMonths(-1) : new DateOnly(2026, 7 + k, 2);
             var description = FormattableString.Invariant($"Loja Eletrônicos Exemplo {k}/3");
             // The last installment (in the confirmed invoice) is left without category: a rule fills it (see below).
             var t = Add(CardId, date, -450.00m, description, k == 3 ? null : "Compras");
             t.PurchaseDate = purchase;
             t.InstallmentNumber = k;
             t.InstallmentTotal = 3;
+            t.CardSuffix = "0000"; // every installment of one purchase carries the same card
             t.Origin = TransactionOrigin.Imported;
             t.SourceKey = CardKey(date, FormattableString.Invariant($"loja-eletronicos-{k}-3"));
             t.OriginalDescription = SourceKeys.NormalizeText(description);
@@ -228,6 +244,7 @@ public static class DemoSeed
             t.Origin = TransactionOrigin.Imported;
             t.CardSuffix = "0000";
             t.CardKind = CardKind.Physical;
+            t.StatementDate = InvoiceDue;
             t.SourceKey ??= CardKey(t.Date, Slug(t.NormalizedDescription));
             if (t.InstallmentNumber is null) t.OriginalDescription = SourceKeys.NormalizeText(t.NormalizedDescription);
         }
@@ -240,14 +257,35 @@ public static class DemoSeed
         var confirmed = new ImportBatch
         {
             Id = ConfirmedBatchId, UserId = UserId, AccountId = CardId, Source = ImportSource.ItauCard,
-            FileHash = Hash("demo-fatura-cartao-2026-10"), DueDate = new DateOnly(2026, 10, 10),
-            // Itaú convention (ItauRules.InvoiceTotalMatches): declared total = −Σ(normal lines), positive.
-            DeclaredTotal = -batchLines.Where(t => t.State == TransactionState.Normal).Sum(t => t.Amount),
+            FileHash = Hash("demo-fatura-cartao-2026-10"), DueDate = InvoiceDue,
+            // Itaú convention (ItauRules.InvoiceTotalMatches): declared total = −Σ(normal lines), positive; includes the
+            // open installment purchases, added below (they are created last to keep the ids of the other lines).
+            DeclaredTotal = -batchLines.Where(t => t.State == TransactionState.Normal).Sum(t => t.Amount)
+                            - OpenInstallments.Sum(p => p.Amount),
             State = ImportBatchState.Confirmed, CreatedAt = new DateTimeOffset(2026, 10, 5, 13, 0, 0, TimeSpan.Zero),
-            NewCount = batchLines.Count, ExistingCount = 0,
+            NewCount = batchLines.Count + OpenInstallments.Length, ExistingCount = 0,
         };
 
         var (linkBatches, ownPix, noCounterpart) = AddLinkCandidates(Add, confirmed.DeclaredTotal!.Value);
+
+        // Two purchases with installments left, on the confirmed invoice (the projection's base). Same card on all
+        // installments, StatementDate = due date, Date = due date − 1 month for N>1 (as the real reader).
+        foreach (var p in OpenInstallments)
+        {
+            var date = InvoiceDue.AddMonths(-1);
+            var description = p.Description; // the group view shows "N de T" from the fields, no suffix in the text
+            var t = Add(CardId, date, p.Amount, description, "Compras");
+            t.PurchaseDate = p.Purchase;
+            t.InstallmentNumber = p.Number;
+            t.InstallmentTotal = p.Total;
+            t.Origin = TransactionOrigin.Imported;
+            t.BatchId = ConfirmedBatchId;
+            t.CardSuffix = "0000";
+            t.CardKind = CardKind.Physical;
+            t.StatementDate = InvoiceDue;
+            t.SourceKey = CardKey(date, FormattableString.Invariant($"{p.Slug}-{p.Number}-{p.Total}"));
+            t.OriginalDescription = SourceKeys.NormalizeText(description);
+        }
 
         // Preview of an Itaú checking statement: 3 lines already imported, 2 new normal, 1 new pending.
         var existing = lines.Where(t => t.AccountId == CheckingId && t.Origin == TransactionOrigin.Imported && t.BatchId is null)

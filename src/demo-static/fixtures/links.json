@@ -26,14 +26,14 @@
         "accountId": "0000000a-0000-4000-8000-000000000001",
         "date": "2026-10-10",
         "description": "Pagamento da fatura do cartão (exemplo)",
-        "amount": "-499.65"
+        "amount": "-1014.55"
       },
       "in": {
         "transactionId": "00000007-0000-4000-8000-00000000004b",
         "accountId": "0000000a-0000-4000-8000-000000000002",
         "date": "2026-10-11",
         "description": "Pagamento recebido (exemplo)",
-        "amount": "499.65"
+        "amount": "1014.55"
       },
       "external": false,
       "createdAt": "2026-10-15T12:00:00+00:00"

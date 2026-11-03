@@ -97,9 +97,8 @@ export function createStaticApi(f: DemoFixtures): ApiClient {
       undo: readOnly,
       reconcile: readOnly,
     },
-    // Task 4 troca por fixtures; por ora, vazio.
     installments: {
-      get: async () => ({ totalCommitted: "0.00", accounts: [], months: [], groups: [] }),
+      get: async () => clone(f.installments),
     },
     categoryRules: {
       list: async () => clone(f.rules),

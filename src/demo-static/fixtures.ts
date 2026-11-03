@@ -8,6 +8,7 @@ import type {
   CurrentUser,
   ImportBatch,
   ImportPreview,
+  Installments,
   LinkResponse,
   Summary,
   Transaction,
@@ -17,6 +18,7 @@ import categories from "./fixtures/categories.json";
 import checkpoints from "./fixtures/checkpoints.json";
 import importDetails from "./fixtures/import-details.json";
 import imports from "./fixtures/imports.json";
+import installments from "./fixtures/installments.json";
 import links from "./fixtures/links.json";
 import meta from "./fixtures/meta.json";
 import rules from "./fixtures/rules.json";
@@ -41,6 +43,8 @@ export interface DemoFixtures {
   links: { confirmed: LinkResponse[]; suggested: LinkResponse[] };
   /** Regras de categoria geradas pelo serviço real (com `matches`). */
   rules: CategoryRule[];
+  /** Parcelas comprometidas calculadas pelo servidor real sob o relógio fixo do demo. */
+  installments: Installments;
 }
 
 export const DEMO_FIXTURES = {
@@ -55,4 +59,5 @@ export const DEMO_FIXTURES = {
   importDetails,
   links,
   rules,
+  installments,
 } as unknown as DemoFixtures;

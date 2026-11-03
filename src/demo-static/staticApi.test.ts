@@ -239,6 +239,16 @@ describe("createStaticApi", () => {
     expect(await a.categoryRules.list()).toEqual(f.rules);
   });
 
+  it("installments_get_returns_fixture_copies", async () => {
+    const a = api();
+    const inst = await a.installments.get();
+    expect(inst).toEqual(f.installments);
+    expect(inst.groups.length).toBeGreaterThan(0);
+    inst.groups.pop();
+    inst.months[0].total = "0.00";
+    expect(await a.installments.get()).toEqual(f.installments);
+  });
+
   it("works_without_structured_clone_and_still_returns_copies", async () => {
     vi.stubGlobal("structuredClone", undefined);
     const a = api();

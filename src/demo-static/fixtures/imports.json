@@ -58,13 +58,13 @@
     "state": "Confirmed",
     "periodStart": null,
     "periodEnd": null,
-    "newCount": 2,
+    "newCount": 4,
     "existingCount": 0,
     "createdAt": "2026-10-05T13:00:00+00:00",
     "expiresAt": null,
     "invoice": {
       "dueDate": "2026-10-10",
-      "declaredTotal": "499.65"
+      "declaredTotal": "1014.55"
     }
   }
 ]
