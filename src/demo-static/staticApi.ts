@@ -8,7 +8,8 @@ const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 const DEFAULT_SIZE = 50;
 const MAX_SIZE = 200;
 
-const clone = <T>(v: T): T => structuredClone(v);
+// Fixtures são JSON puro: clone por JSON (structuredClone não existe nos navegadores do alvo de build, ex.: Safari < 15.4).
+const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
 const readOnly = (): Promise<never> => Promise.reject(new ApiError(403, DEMO_READ_ONLY_CODE));
 

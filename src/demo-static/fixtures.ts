@@ -1,4 +1,4 @@
-// Fixtures sintéticas do demo estático (geradas pelo backend; ver scripts/ e docs da S1c).
+// Fixtures sintéticas do demo estático (geradas pelo backend em backend/tests/FinanceDashboard.Tests/DemoFixtures/; ver a seção "Fixtures do demo" do README).
 // Este módulo é o único ponto que importa os JSON; o cast abaixo é coberto por fixtures.test.ts.
 import type {
   Account,

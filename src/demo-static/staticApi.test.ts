@@ -181,6 +181,20 @@ describe("createStaticApi", () => {
     expect((e as ApiError).code).toBe(DEMO_READ_ONLY_CODE);
   });
 
+  it("works_without_structured_clone_and_still_returns_copies", async () => {
+    vi.stubGlobal("structuredClone", undefined);
+    const a = api();
+    expect(await a.auth.me()).toEqual(f.meta.user);
+    const accs = await a.accounts.list();
+    expect(accs).toEqual(f.accounts);
+    accs[0].name = "mutado";
+    expect((await a.accounts.list())[0].name).toBe(f.accounts[0].name);
+    const s = await a.summary.month("2026-10");
+    expect(s).toEqual(f.summaries["2026-10"]);
+    s.income = "0.00";
+    expect((await a.summary.month("2026-10")).income).toBe(f.summaries["2026-10"].income);
+  });
+
   it("no_network_used", async () => {
     const fetchSpy = vi.fn();
     const xhr = vi.fn();

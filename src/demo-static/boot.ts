@@ -10,7 +10,7 @@ import { useSessionStore } from "../real/stores/session";
 import { DEMO_FIXTURES } from "./fixtures";
 import { createStaticApi } from "./staticApi";
 
-// Marcador exclusivo do bundle do demo estático (a verificação em scripts/check-bundles.mjs é ligada na Task 5).
+// Marcador exclusivo do bundle do demo estático (verificado por scripts/check-bundles.mjs).
 export const DEMO_BUNDLE_MARKER = "data-finance-demo-mode";
 
 export const DEMO_CONFIG: AppConfig = {

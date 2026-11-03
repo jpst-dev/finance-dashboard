@@ -4,8 +4,6 @@ Dashboard de finanças pessoais em Vue 3 + TypeScript, com backend em .NET 10 + 
 
 > 🔗 **[finance.jteixeira.dev](https://finance.jteixeira.dev)**
 
-> Os screenshots do app antigo foram removidos junto com ele; um screenshot do demo novo ainda precisa ser tirado.
-
 ## 🚀 Funcionalidades
 
 O demo e o modo real compartilham as mesmas telas (`src/real/`):
@@ -87,7 +85,7 @@ flowchart LR
     A --> D[(db: PostgreSQL 17)]
 ```
 
-Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md) e [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md), [ADR 0005 (identidade por conteúdo e leitores do Itaú)](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md) e [ADR 0006 (demo estático por adaptador e fixtures geradas)](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md).
+Decisões de arquitetura: [ADR 0001 (.NET + Postgres, monólito modular)](docs/adr/0001-dotnet-postgres-monolito-modular.md), [ADR 0002 (cookie de sessão na mesma origem)](docs/adr/0002-cookie-de-sessao-na-mesma-origem.md), [ADR 0003 (importação idempotente e desfazer)](docs/adr/0003-importacao-idempotente-e-desfazer.md), [ADR 0004 (modo de build e camada de API do front)](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md), [ADR 0005 (identidade por conteúdo e leitores do Itaú)](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md) e [ADR 0006 (demo estático por adaptador e fixtures geradas)](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md).
 
 ### Rodando localmente
 
@@ -133,7 +131,7 @@ O mesmo código-fonte gera **dois builds**, escolhidos em tempo de build pela va
 | `demo` (padrão) | `npm run build` | `dist/` | Vercel: a interface real com um adaptador estático (fixtures JSON geradas pelo backend), somente leitura, sem login e sem backend |
 | `real` | `npm run build:real` (usa `.env.real`, `VITE_APP_MODE=real`) | `dist-real/` | Imagem Docker do `web` (nginx), falando com a API na mesma origem |
 
-Só o valor exato `real` ativa o modo real; qualquer outro (ou ausente) cai no `demo`, então a Vercel continua intacta. Cada bundle não contém código do outro modo (ver [ADR 0004](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md) e [ADR 0006](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md)). O modo real tem login, Visão geral (resumo calculado no servidor), Lançamentos, Pendentes de classificação, Contas e Importar (OFX Nubank com prévia, classificação das pendentes, confirmação e desfazer pelo histórico).
+Só o valor exato `real` ativa o modo real; qualquer outro (ou ausente) cai no `demo`, então a Vercel continua intacta. Cada bundle não contém código do outro modo (ver [ADR 0004](docs/adr/0004-modo-de-build-e-camada-de-api-do-front.md) e [ADR 0006](docs/adr/0006-demo-estatico-por-adaptador-e-fixtures-geradas.md)). O modo real tem login, Visão geral (resumo calculado no servidor), Lançamentos, Pendentes de classificação, Contas e Importar (OFX do Nubank, OFX e fatura xlsx do Itaú, com prévia, classificação das pendentes, confirmação e desfazer pelo histórico).
 
 **Como rodar (Compose):**
 
