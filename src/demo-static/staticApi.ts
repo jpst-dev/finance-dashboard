@@ -73,5 +73,13 @@ export function createStaticApi(f: DemoFixtures): ApiClient {
       confirm: readOnly,
       undo: readOnly,
     },
+    // Provisório (Task 8 servirá vínculos das fixtures): listas vazias; escritas somente leitura.
+    links: {
+      list: async (q) => ({ items: [], page: q.page ?? 1, size: q.size ?? DEFAULT_SIZE, total: 0 }),
+      confirm: readOnly,
+      reject: readOnly,
+      undo: readOnly,
+      reconcile: readOnly,
+    },
   };
 }

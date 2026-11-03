@@ -32,6 +32,17 @@ export type Checkpoint = S["CheckpointResponse"];
 /** Derivado do esquema gerado; o OpenAPI marca os campos como anuláveis, mas o cliente sempre os envia preenchidos. */
 export type NewCheckpoint = { [K in keyof S["CreateCheckpointRequest"]]-?: NonNullable<S["CreateCheckpointRequest"][K]> };
 
+export type LinkKind = S["LinkKind"];
+export type LinkState = S["LinkState"];
+export type LinkOrigin = S["LinkOrigin"];
+export type LinkLine = S["LinkLine"];
+export type LinkResponse = S["LinkResponse"];
+/** Selo de vínculo em TransactionResponse.link (ausente/null quando não há vínculo). */
+export type TransactionLink = S["TransactionLink"];
+export type LinkPage = Omit<IntFields<S["LinkPage"], "page" | "size" | "total">, "items"> & { items: LinkResponse[] };
+export type LinkQuery = { state?: LinkState; page?: number; size?: number };
+export type ReconcileResult = IntFields<S["ReconcileResult"], "linked" | "suggested">;
+
 export type Transaction = S["TransactionResponse"];
 export type NewTransaction = S["CreateTransactionRequest"];
 export type TransactionUpdate = S["UpdateTransactionRequest"];
@@ -69,7 +80,7 @@ export type ImportPreview = Omit<IntFields<S["ImportPreviewView"], "newCount" | 
 };
 /** Corpo do confirm com `overrides` no formato de ImportLineOverride acima (`ordinal` opcional). */
 export type ConfirmBody = Omit<S["ConfirmImportRequest"], "overrides"> & { overrides?: ImportLineOverride[] | null };
-export type ConfirmResult = IntFields<S["ConfirmResult"], "created" | "skipped">;
+export type ConfirmResult = IntFields<S["ConfirmResult"], "created" | "skipped" | "linked" | "suggested">;
 /** Corpo do 409 `blocking_warnings` do confirm. */
 export type BlockingWarnings = S["BlockingWarningsResponse"];
 

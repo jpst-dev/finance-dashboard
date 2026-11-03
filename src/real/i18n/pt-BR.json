@@ -39,7 +39,10 @@
       "hideValues": "Esconder valores",
       "showValues": "Mostrar valores",
       "language": "Idioma",
-      "lang": { "pt-BR": "Português", "en-US": "English" },
+      "lang": {
+        "pt-BR": "Português",
+        "en-US": "English"
+      },
       "logout": "Sair",
       "logoutFailed": "Não foi possível sair. Sua sessão pode continuar ativa; tente novamente."
     },
@@ -124,7 +127,8 @@
       "unsupported_layout": "O formato desta planilha não é reconhecido. Use a fatura .xlsx original do Itaú, sem edições.",
       "invalid_cell": "A planilha tem uma célula com valor inválido e não pode ser importada.",
       "one_file": "Envie um arquivo por vez.",
-      "invalid_account": "Escolha uma conta corrente ou de cartão de crédito ativa."
+      "invalid_account": "Escolha uma conta corrente ou de cartão de crédito ativa.",
+      "link_conflict": "O vínculo mudou enquanto você olhava. A lista foi atualizada."
     },
     "import": {
       "help": "Envie o extrato ou a fatura (.ofx do Nubank ou do Itaú; fatura do Itaú em .xlsx), um arquivo por vez, até 5 MB. Nada é gravado antes de você confirmar.",
@@ -228,7 +232,8 @@
         "undoNo": "Voltar",
         "deletedKeys": "Linhas que você excluiu e que pertencem a outras importações continuam ocupando a chave e não voltam ao reimportar; as excluídas desta importação voltam se você importar o arquivo de novo.",
         "undone": "Importação desfeita."
-      }
+      },
+      "resultLinks": "{linked} pares vinculados, {suggested} sugestões"
     },
     "pagination": {
       "label": "Paginação",
@@ -279,7 +284,11 @@
       "updated": "Lançamento atualizado.",
       "deleted": "Lançamento apagado.",
       "loading": "Carregando lançamentos…",
-      "empty": "Nenhum lançamento encontrado."
+      "empty": "Nenhum lançamento encontrado.",
+      "linkBadge": {
+        "OwnTransfer": "Transferência",
+        "InvoicePayment": "Pagamento de fatura"
+      }
     },
     "overview": {
       "accounts": "Contas",
@@ -310,6 +319,20 @@
       "emptyTitle": "Ainda não há lançamentos",
       "emptyBody": "Importe um extrato ou fatura para ver o resumo, os gráficos e os últimos lançamentos.",
       "emptyAction": "Ir para Importar"
+    },
+    "links": {
+      "suggestionsTitle": "Sugestões de vínculo",
+      "suggestionsHelp": "Pares que parecem ser a mesma movimentação (transferência entre suas contas ou pagamento de fatura). Confirme para tirá-los dos gastos e da fila.",
+      "linkedTitle": "Vinculados recentemente",
+      "out": "Saída",
+      "in": "Entrada",
+      "confirm": "Confirmar",
+      "reject": "Rejeitar",
+      "undo": "Desfazer",
+      "kind": {
+        "OwnTransfer": "Transferência",
+        "InvoicePayment": "Pagamento de fatura"
+      }
     }
   }
 }

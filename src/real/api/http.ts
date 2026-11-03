@@ -11,8 +11,11 @@ import type {
   CurrentUser,
   ImportBatch,
   ImportPreview,
+  LinkPage,
+  LinkResponse,
   LoginBody,
   Page,
+  ReconcileResult,
   Summary,
   Transaction,
 } from "./types";
@@ -229,6 +232,13 @@ export function createHttpApi(opts: HttpApiOptions = {}): ApiClient {
       get: (id) => request<ImportPreview>(`/api/imports/${enc(id)}`),
       confirm: (id, b) => request<ConfirmResult>(`/api/imports/${enc(id)}/confirm`, { method: "POST", json: b }),
       undo: (id) => request<void>(`/api/imports/${enc(id)}/undo`, { method: "POST" }),
+    },
+    links: {
+      list: (q) => request<LinkPage>("/api/links", { query: { ...q } }),
+      confirm: (id) => request<LinkResponse>(`/api/links/${enc(id)}/confirm`, { method: "POST" }),
+      reject: (id) => request<LinkResponse>(`/api/links/${enc(id)}/reject`, { method: "POST" }),
+      undo: (id) => request<void>(`/api/links/${enc(id)}`, { method: "DELETE" }),
+      reconcile: () => request<ReconcileResult>("/api/links/reconcile", { method: "POST" }),
     },
   };
 }
