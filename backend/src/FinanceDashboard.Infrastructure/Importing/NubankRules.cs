@@ -31,7 +31,7 @@ public static partial class NubankRules
         return m.Success ? (m.Groups["name"].Value.Trim(), m.Groups["doc"].Value) : (null, null);
     }
 
-    private static string Normalize(string text)
+    internal static string Normalize(string text)
     {
         var decomposed = text.Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder(decomposed.Length);
