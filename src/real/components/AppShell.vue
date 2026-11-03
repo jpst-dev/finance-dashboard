@@ -1,13 +1,17 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { RouterLink } from "vue-router";
 import { useSessionStore } from "../stores/session";
+import { useTransactionsStore } from "../stores/transactions";
 import { useValuesVisibility } from "../money/visibility";
 import { setLocale, type AppLocale } from "../i18n";
 
 const { t, locale } = useI18n();
 const session = useSessionStore();
 const visibility = useValuesVisibility();
+const tx = useTransactionsStore();
+onMounted(() => void tx.loadPendingCount());
 
 const items = [
   { to: "/", key: "overview" },
@@ -43,6 +47,9 @@ const focus = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo
           exact-active-class="!bg-gray-700 !text-gray-50 font-medium"
         >
           {{ t(`real.nav.${item.key}`) }}
+          <span v-if="item.key === 'pending' && tx.pendingCount" data-testid="pending-badge" class="ml-1 rounded-full bg-amber-700 px-1.5 text-xs text-white">
+            {{ tx.pendingCount }}<span class="sr-only"> {{ t("real.pending.badge") }}</span>
+          </span>
         </RouterLink>
       </nav>
 

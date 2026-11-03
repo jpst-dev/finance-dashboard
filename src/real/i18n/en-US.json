@@ -90,7 +90,57 @@
       "server": "Something went wrong. Try again.",
       "invalid_name": "Enter a name with 1 to 80 characters.",
       "invalid_amount": "Invalid amount. Use the format 1234.56.",
-      "invalid_date": "Invalid date."
+      "invalid_date": "Invalid date.",
+      "invalid_description": "The description must be 1 to 300 characters long."
+    },
+    "pagination": {
+      "label": "Pagination",
+      "prev": "Previous page",
+      "next": "Next page",
+      "info": "Page {page} of {pages}"
+    },
+    "pending": {
+      "help": "Transactions waiting to be classified. Adjust the state and category right on the row.",
+      "empty": "No pending transactions",
+      "saved": "Transaction updated.",
+      "badge": "pending"
+    },
+    "transactions": {
+      "filters": "Filters",
+      "all": "All",
+      "archived": "archived",
+      "month": "Month",
+      "account": "Account",
+      "category": "Category",
+      "state": "State",
+      "date": "Date",
+      "description": "Description",
+      "amount": "Amount",
+      "actions": "Actions",
+      "states": {
+        "Normal": "Normal",
+        "PendingClassification": "Pending"
+      },
+      "new": "New transaction",
+      "newTitle": "New transaction",
+      "editTitle": "Edit transaction",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteYes": "Yes, delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "kind": "Type",
+      "expense": "Expense",
+      "income": "Income",
+      "amountHint": "Type the amount without a sign and pick Expense or Income (or type - for an expense). E.g. 1234.56.",
+      "cardHint": "On a credit card, a purchase is a negative amount (expense).",
+      "deleteImported": "This transaction came from an import. It will be hidden and will not come back if the same file is imported again.",
+      "deleteManual": "This transaction will be permanently removed.",
+      "created": "Transaction created.",
+      "updated": "Transaction updated.",
+      "deleted": "Transaction deleted.",
+      "loading": "Loading transactions…",
+      "empty": "No transactions found."
     }
   }
 }
