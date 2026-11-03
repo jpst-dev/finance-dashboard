@@ -1,6 +1,6 @@
 # ADR 0007: Vínculos entre lançamentos e neutralidade derivada
 
-- Status: aceita
+- Status: aceita (estendida pelo [ADR 0008](0008-pendencias-residuais.md): `OwnTransfer` só confirma sozinho com nomes coerentes, vínculos de lado vazio, `PixCredit`)
 - Data: 2026-11-03
 
 ## Contexto
