@@ -13,6 +13,13 @@ public sealed record LinkResponse(
 
 public sealed record LinkPage(IReadOnlyList<LinkResponse> Items, int Page, int Size, int Total);
 
+/// <summary>
+/// HTTP shape of <c>POST /api/links/reconcile</c>, kept as in S3(a) for now (it shadows the service's
+/// <see cref="Infrastructure.Linking.ReconcileResult"/> inside this namespace). The S3(b) API task adds
+/// <c>reclassified</c> together with the OpenAPI snapshot.
+/// </summary>
+public sealed record ReconcileResult(int Linked, int Suggested);
+
 public static class LinkEndpoints
 {
     private const int MaxPageSize = 200;
@@ -89,8 +96,11 @@ public static class LinkEndpoints
         return Results.Ok(new LinkPage(items, pageNo, pageSize, total));
     }
 
-    private static async Task<IResult> ReconcileAsync(LinkService links, CancellationToken ct) =>
-        Results.Ok(await links.ReconcileAsync(ct));
+    private static async Task<IResult> ReconcileAsync(LinkService links, CancellationToken ct)
+    {
+        var result = await links.ReconcileAsync(ct);
+        return Results.Ok(new ReconcileResult(result.Linked, result.Suggested));
+    }
 
     private static Task<IResult> ConfirmAsync(Guid id, LinkService links, AppDbContext db, CancellationToken ct) =>
         DecideAsync(id, links.ConfirmAsync(id, ct), db);

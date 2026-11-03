@@ -149,9 +149,10 @@ public static class TransactionEndpoints
             return Results.NotFound();
         }
 
-        // A change to what the pairing is based on (amount, date, or the line leaving the queue) drops its links.
-        var invalidatesLinks = transaction.Amount != amount || transaction.Date != request.Date.Value
-            || (request.State == TransactionState.Normal && transaction.State != TransactionState.Normal);
+        // A change to what the pairing is based on (amount, date) or the line opting out (state → Normal) drops links;
+        // LinkService decides which ones per reason.
+        var valueOrDate = transaction.Amount != amount || transaction.Date != request.Date.Value;
+        var toNormal = request.State == TransactionState.Normal && transaction.State != TransactionState.Normal;
 
         transaction.Date = request.Date.Value;
         transaction.Amount = amount;
@@ -171,7 +172,8 @@ public static class TransactionEndpoints
         await using var tx = await db.Database.BeginTransactionAsync();
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { return Results.NotFound(); } // removed by an undo meanwhile
-        if (invalidatesLinks) await links.InvalidateAsync(id);
+        if (toNormal) await links.InvalidateAsync(id, InvalidateReason.StateToNormal);
+        if (valueOrDate) await links.InvalidateAsync(id, InvalidateReason.ValueOrDate);
         await tx.CommitAsync();
         return Results.Ok(await ToResponseAsync(db, transaction));
     }
@@ -188,7 +190,7 @@ public static class TransactionEndpoints
         await using var tx = await db.Database.BeginTransactionAsync();
         try { await db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { return Results.NotFound(); } // removed by an undo meanwhile
-        await links.InvalidateAsync(id);
+        await links.InvalidateAsync(id, InvalidateReason.Hidden);
         await tx.CommitAsync();
         return Results.NoContent();
     }

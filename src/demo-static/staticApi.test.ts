@@ -180,7 +180,8 @@ describe("createStaticApi", () => {
     expect(linked.length).toBeGreaterThan(0);
     const ids = new Set((await api().transactions.list({ state: "PendingClassification", size: 200 })).items.map((t) => t.id));
     for (const t of linked) expect(ids.has(t.id)).toBe(false);
-    for (const t of suggested) expect(ids.has(t.id)).toBe(true);
+    // A suggestion hides nothing: queue membership follows the state (Pix lines are Normal since S3(b)).
+    for (const t of suggested) expect(ids.has(t.id)).toBe(t.state === "PendingClassification");
   });
 
   const mutations: [string, (a: ApiClient) => Promise<unknown>][] = [

@@ -100,4 +100,42 @@ public sealed class PairingRulesTests
             Assert.Equal(role, PairingRules.RoleOf(s.Source, l.Memo, l.Amount));
         }
     }
+    // ---- SQL prefilter for Normal lines (S3(b)) ----
+
+    /// <summary>In-memory model of Postgres ILIKE: % = any run, _ = one char, case-insensitive, whole string.</summary>
+    private static bool ILike(string pattern, string text)
+    {
+        var regex = "^" + string.Concat(pattern.Select(ch => ch switch
+        {
+            '%' => ".*",
+            '_' => ".",
+            _ => System.Text.RegularExpressions.Regex.Escape(ch.ToString()),
+        })) + "$";
+        return System.Text.RegularExpressions.Regex.IsMatch(text, regex,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+    }
+
+    [Theory]
+    [InlineData(ImportSource.ItauChecking, "PIX TRANSF MARIA L10 10", -10.00)]
+    [InlineData(ImportSource.ItauChecking, "  pix   transf  joão", 10.00)]
+    [InlineData(ImportSource.NubankChecking, "Transferência enviada pelo Pix - ANA TESTE", -10.00)]
+    [InlineData(ImportSource.NubankChecking, "TRANSFERÊNCIA RECEBIDA pelo Pix - ANA", 10.00)]
+    [InlineData(ImportSource.NubankChecking, " transferencia recebida", 10.00)]
+    public void Transfer_like_patterns_cover_every_transfer_description(ImportSource source, string description, double amount)
+    {
+        Assert.Equal(PairingRole.Transfer, PairingRules.RoleOf(source, description, (decimal)amount));
+        Assert.Contains(PairingRules.TransferLikePatterns[source], p => ILike(p, description));
+    }
+
+    [Theory]
+    [InlineData(ImportSource.ItauChecking, "PAG BOLETO LOJA")]
+    [InlineData(ImportSource.ItauChecking, "PIX QRS LOJA")]
+    [InlineData(ImportSource.NubankChecking, "Compra no débito - Loja")]
+    public void Transfer_like_patterns_skip_ordinary_lines(ImportSource source, string description) =>
+        Assert.DoesNotContain(PairingRules.TransferLikePatterns[source], p => ILike(p, description));
+
+    [Fact]
+    public void Transfer_like_patterns_only_for_sources_with_transfer_role() =>
+        Assert.Equal(new[] { ImportSource.NubankChecking, ImportSource.ItauChecking },
+            PairingRules.TransferLikePatterns.Keys.Order().ToArray());
 }

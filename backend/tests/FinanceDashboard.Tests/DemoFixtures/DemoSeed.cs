@@ -329,17 +329,17 @@ public static class DemoSeed
         Line(CardId, ItauCardLinksBatchId, "demo-itau-cartao", new DateOnly(2026, 10, 11), invoiceTotal,
             "PAGAMENTO EFETUADO EXEMPLO", "Pagamento recebido (exemplo)", "pagamento-efetuado-exemplo", card: true);
 
-        // Own transfer, same day: auto-confirmed.
+        // Own transfer, same day, coherent names (PESSOA EXEMPLO on both sides): auto-confirmed.
         Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 12), -350.00m,
             "PIX TRANSF PESSOA EXEMPLO", "Pix para Conta Digital Exemplo", "pix-transf-pessoa-exemplo");
         Line(DigitalId, DigitalLinksBatchId, "demo-digital-cc", new DateOnly(2026, 10, 12), 350.00m,
-            "Transferência recebida pelo Pix", "Pix recebido da Conta Corrente Exemplo", "pix-recebido-350", "Pessoa Exemplo");
+            "Transferência recebida pelo Pix - PESSOA EXEMPLO - ***.000.000-** - BANCO EXEMPLO", "Pix recebido da Conta Corrente Exemplo", "pix-recebido-350", "Pessoa Exemplo");
 
         // Own transfer 2 days apart: only suggested.
         Line(CheckingId, ItauCheckingLinksBatchId, "demo-itau-cc", new DateOnly(2026, 10, 6), -180.00m,
             "PIX TRANSF OUTRA EXEMPLO", "Pix para Conta Digital Exemplo (reserva)", "pix-transf-outra-exemplo");
         Line(DigitalId, DigitalLinksBatchId, "demo-digital-cc", new DateOnly(2026, 10, 8), 180.00m,
-            "Transferência recebida pelo Pix", "Pix recebido da Conta Corrente Exemplo (reserva)", "pix-recebido-180", "Pessoa Exemplo");
+            "Transferência recebida pelo Pix - PESSOA EXEMPLO - ***.000.000-** - BANCO EXEMPLO", "Pix recebido da Conta Corrente Exemplo (reserva)", "pix-recebido-180", "Pessoa Exemplo");
 
         ImportBatch Batch(Guid id, Guid account, ImportSource source, string label, DateOnly end, int count) => new()
         {
