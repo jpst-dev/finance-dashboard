@@ -1,5 +1,11 @@
 {
   "real": {
-    "app": { "title": "Finance Dashboard", "placeholder": "Real mode under construction" }
+    "app": {
+      "title": "Finance Dashboard",
+      "placeholder": "Real mode under construction"
+    },
+    "money": {
+      "hidden": "hidden value"
+    }
   }
 }

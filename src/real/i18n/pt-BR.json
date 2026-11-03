@@ -1,5 +1,11 @@
 {
   "real": {
-    "app": { "title": "Finance Dashboard", "placeholder": "Modo real em construção" }
+    "app": {
+      "title": "Finance Dashboard",
+      "placeholder": "Modo real em construção"
+    },
+    "money": {
+      "hidden": "valor oculto"
+    }
   }
 }
