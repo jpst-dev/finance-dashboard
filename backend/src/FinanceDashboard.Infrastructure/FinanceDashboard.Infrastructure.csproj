@@ -4,6 +4,9 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="FinanceDashboard.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\FinanceDashboard.Domain\FinanceDashboard.Domain.csproj" />
   </ItemGroup>
 </Project>

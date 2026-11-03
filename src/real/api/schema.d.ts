@@ -477,11 +477,13 @@ export interface components {
             editedCount: number | string;
         };
         /** @enum {string} */
-        ImportSource: "NubankChecking" | "NubankCard";
+        ImportSource: "NubankChecking" | "NubankCard" | "ItauChecking" | "ItauCard";
         ImportWarning: {
             code: string;
             severity: string;
             message: string;
+            /** @default true */
+            overridable: boolean;
         };
         LoginRequest: {
             email: string;

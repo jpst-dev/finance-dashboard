@@ -148,7 +148,7 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
                 : PreviewOutcome.Fail(PreviewError.InvalidFile, e.Kind);
         }
 
-        var expectedType = parsed.Source == ImportSource.NubankCard ? AccountType.CreditCard : AccountType.Checking;
+        var expectedType = ImportSources.ExpectedAccountType(parsed.Source);
         if (account.Type != expectedType) return PreviewOutcome.Fail(PreviewError.AccountTypeMismatch, "account_type_mismatch");
 
         var now = time.GetUtcNow();
@@ -191,7 +191,7 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
         }
 
         if (!string.IsNullOrWhiteSpace(account.ExternalIdentifier) && !string.IsNullOrWhiteSpace(parsed.AccountExternalId)
-            && !string.Equals(account.ExternalIdentifier.Trim(), parsed.AccountExternalId.Trim(), StringComparison.Ordinal))
+            && !ImportSources.AccountIdMatches(parsed.Source, account.ExternalIdentifier, parsed.AccountExternalId))
         {
             warnings.Add(ImportWarning.AccountIdentifierMismatch());
         }
@@ -300,7 +300,7 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
             return ConfirmOutcome.Fail(ConfirmError.AlreadyImported);
         }
 
-        var blocking = await BlockingWarningsAsync(account, stored, ct);
+        var blocking = await BlockingWarningsAsync(account, batch.Source, stored, ct);
         if (blocking.Count > 0 && !acknowledgeBlockingWarnings) return ConfirmOutcome.Fail(ConfirmError.BlockingWarnings, blocking);
 
         // One row per FITID; sorted so concurrent confirms take the key locks in the same order (no deadlock).
@@ -421,11 +421,11 @@ public sealed partial class ImportService(AppDbContext db, TimeProvider time)
     }
 
     /// <summary>The blocking checks of the preview, recomputed against the current state.</summary>
-    private async Task<List<ImportWarning>> BlockingWarningsAsync(Account account, StoredPreview stored, CancellationToken ct)
+    private async Task<List<ImportWarning>> BlockingWarningsAsync(Account account, ImportSource source, StoredPreview stored, CancellationToken ct)
     {
         var warnings = new List<ImportWarning>();
         if (!string.IsNullOrWhiteSpace(account.ExternalIdentifier) && !string.IsNullOrWhiteSpace(stored.AccountExternalId)
-            && !string.Equals(account.ExternalIdentifier.Trim(), stored.AccountExternalId.Trim(), StringComparison.Ordinal))
+            && !ImportSources.AccountIdMatches(source, account.ExternalIdentifier, stored.AccountExternalId))
         {
             warnings.Add(ImportWarning.AccountIdentifierMismatch());
         }

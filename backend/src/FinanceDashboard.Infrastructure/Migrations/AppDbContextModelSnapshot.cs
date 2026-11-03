@@ -144,6 +144,12 @@ namespace FinanceDashboard.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal?>("DeclaredTotal")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date");
+
                     b.Property<int>("ExistingCount")
                         .HasColumnType("integer");
 
@@ -154,6 +160,12 @@ namespace FinanceDashboard.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
+
+                    b.Property<decimal?>("LedgerBalance")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateOnly?>("LedgerBalanceDate")
+                        .HasColumnType("date");
 
                     b.Property<int>("NewCount")
                         .HasColumnType("integer");
@@ -210,6 +222,14 @@ namespace FinanceDashboard.Infrastructure.Migrations
                     b.Property<Guid?>("BatchId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CardKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("CardSuffix")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
@@ -226,6 +246,12 @@ namespace FinanceDashboard.Infrastructure.Migrations
 
                     b.Property<bool>("EditedByUser")
                         .HasColumnType("boolean");
+
+                    b.Property<int?>("InstallmentNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("InstallmentTotal")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");

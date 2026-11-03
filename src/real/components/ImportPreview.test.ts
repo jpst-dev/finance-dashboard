@@ -91,8 +91,8 @@ describe("ImportPreview", () => {
     const { w, imports } = await setup(
       preview({
         warnings: [
-          { code: "FitidInOtherAccount", severity: "blocking", message: "2 line(s) of this file already exist in another account." },
-          { code: "PeriodGap", severity: "warning", message: "gap" },
+          { code: "FitidInOtherAccount", severity: "blocking", message: "2 line(s) of this file already exist in another account.", overridable: true },
+          { code: "PeriodGap", severity: "warning", message: "gap", overridable: true },
         ],
       }),
     );
@@ -149,8 +149,8 @@ describe("ImportPreview", () => {
         newCount: 0,
         existingCount: 0,
         warnings: [
-          { code: "AlreadyImported", severity: "warning", message: "x" },
-          { code: "FitidInOtherAccount", severity: "blocking", message: "y" },
+          { code: "AlreadyImported", severity: "warning", message: "x", overridable: true },
+          { code: "FitidInOtherAccount", severity: "blocking", message: "y", overridable: true },
         ],
       }),
     );

@@ -248,7 +248,7 @@ describe("imports store", () => {
 
   it("already_imported_preview_is_flagged", async () => {
     const { store } = await setup({
-      preview: preview({ newCount: 0, warnings: [{ code: "AlreadyImported", severity: "warning", message: "x" }] }),
+      preview: preview({ newCount: 0, warnings: [{ code: "AlreadyImported", severity: "warning", message: "x", overridable: true }] }),
     });
     await store.upload("a1", ofx());
     expect(store.alreadyImported).toBe(true);

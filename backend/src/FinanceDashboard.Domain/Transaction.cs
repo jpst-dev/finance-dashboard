@@ -19,6 +19,10 @@ public class Transaction : IUserOwned
     public int Ordinal { get; set; }
     public string? CounterpartyName { get; set; }
     public string? CounterpartyDocument { get; set; }
+    public int? InstallmentNumber { get; set; }
+    public int? InstallmentTotal { get; set; }
+    public string? CardSuffix { get; set; }
+    public CardKind? CardKind { get; set; }
     public bool IsDeleted { get; set; }
     public bool EditedByUser { get; set; }
 }

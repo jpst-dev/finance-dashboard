@@ -1653,7 +1653,9 @@
       "ImportSource": {
         "enum": [
           "NubankChecking",
-          "NubankCard"
+          "NubankCard",
+          "ItauChecking",
+          "ItauCard"
         ],
         "type": "string"
       },
@@ -1673,6 +1675,10 @@
           },
           "message": {
             "type": "string"
+          },
+          "overridable": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
