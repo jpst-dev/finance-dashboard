@@ -1,7 +1,12 @@
 {
   "real": {
-    "app": { "title": "Finance Dashboard", "placeholder": "Real mode under construction" },
-    "money": { "hidden": "hidden value" },
+    "app": {
+      "title": "Finance Dashboard",
+      "placeholder": "Real mode under construction"
+    },
+    "money": {
+      "hidden": "hidden value"
+    },
     "nav": {
       "overview": "Overview",
       "transactions": "Transactions",
@@ -35,6 +40,57 @@
       "language": "Language",
       "logout": "Sign out",
       "logoutFailed": "Could not sign out. Your session may still be active; try again."
+    },
+    "accounts": {
+      "loading": "Loading accounts…",
+      "retry": "Try again",
+      "empty": "No accounts yet. Create the first one below.",
+      "name": "Name",
+      "type": "Type",
+      "institution": "Institution (optional)",
+      "externalIdentifier": "External identifier (optional)",
+      "types": {
+        "Checking": "Checking account",
+        "CreditCard": "Credit card",
+        "Wallet": "Wallet"
+      },
+      "create": "Create account",
+      "created": "Account created.",
+      "newTitle": "New account",
+      "rename": "Rename",
+      "renamed": "Account renamed.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "archive": "Archive",
+      "archiveConfirm": "Archive this account? It leaves the list but its history is kept, and you can unarchive it later.",
+      "archiveYes": "Yes, archive",
+      "archivedDone": "Account archived.",
+      "archivedSection": "Archived",
+      "unarchive": "Unarchive",
+      "unarchivedDone": "Account unarchived.",
+      "debt": "Debt",
+      "registerBalance": "Record balance",
+      "checkpointHelp": "The amount is the balance at the end of the chosen day.",
+      "checkpointDate": "Date",
+      "checkpointAmount": "Balance at end of day",
+      "checkpointSave": "Record",
+      "checkpointDone": "Balance recorded."
+    },
+    "categories": {
+      "label": "Category",
+      "none": "No category",
+      "mismatch": "does not match the sign of the amount"
+    },
+    "errors": {
+      "network": "Could not connect. Check your connection and try again.",
+      "invalid": "The data was not accepted. Review it and try again.",
+      "not_found": "Item not found. Reload the page.",
+      "unauthorized": "Your session expired. Sign in again.",
+      "rate_limit": "Too many attempts. Wait a moment.",
+      "server": "Something went wrong. Try again.",
+      "invalid_name": "Enter a name with 1 to 80 characters.",
+      "invalid_amount": "Invalid amount. Use the format 1234.56.",
+      "invalid_date": "Invalid date."
     }
   }
 }

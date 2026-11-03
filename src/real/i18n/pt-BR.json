@@ -1,7 +1,12 @@
 {
   "real": {
-    "app": { "title": "Finance Dashboard", "placeholder": "Modo real em construção" },
-    "money": { "hidden": "valor oculto" },
+    "app": {
+      "title": "Finance Dashboard",
+      "placeholder": "Modo real em construção"
+    },
+    "money": {
+      "hidden": "valor oculto"
+    },
     "nav": {
       "overview": "Visão geral",
       "transactions": "Lançamentos",
@@ -35,6 +40,57 @@
       "language": "Idioma",
       "logout": "Sair",
       "logoutFailed": "Não foi possível sair. Sua sessão pode continuar ativa; tente novamente."
+    },
+    "accounts": {
+      "loading": "Carregando contas…",
+      "retry": "Tentar novamente",
+      "empty": "Nenhuma conta ainda. Crie a primeira abaixo.",
+      "name": "Nome",
+      "type": "Tipo",
+      "institution": "Instituição (opcional)",
+      "externalIdentifier": "Identificador externo (opcional)",
+      "types": {
+        "Checking": "Conta corrente",
+        "CreditCard": "Cartão de crédito",
+        "Wallet": "Carteira"
+      },
+      "create": "Criar conta",
+      "created": "Conta criada.",
+      "newTitle": "Nova conta",
+      "rename": "Renomear",
+      "renamed": "Conta renomeada.",
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "archive": "Arquivar",
+      "archiveConfirm": "Arquivar esta conta? Ela sai da lista, mas o histórico é mantido e você pode desarquivar depois.",
+      "archiveYes": "Sim, arquivar",
+      "archivedDone": "Conta arquivada.",
+      "archivedSection": "Arquivadas",
+      "unarchive": "Desarquivar",
+      "unarchivedDone": "Conta desarquivada.",
+      "debt": "Dívida",
+      "registerBalance": "Registrar saldo",
+      "checkpointHelp": "O valor informado é o saldo ao fim do dia escolhido.",
+      "checkpointDate": "Data",
+      "checkpointAmount": "Saldo ao fim do dia",
+      "checkpointSave": "Registrar",
+      "checkpointDone": "Saldo registrado."
+    },
+    "categories": {
+      "label": "Categoria",
+      "none": "Sem categoria",
+      "mismatch": "não combina com o sinal do valor"
+    },
+    "errors": {
+      "network": "Não foi possível conectar. Verifique a conexão e tente novamente.",
+      "invalid": "Os dados enviados não foram aceitos. Revise e tente novamente.",
+      "not_found": "Item não encontrado. Recarregue a página.",
+      "unauthorized": "Sua sessão expirou. Entre novamente.",
+      "rate_limit": "Muitas tentativas. Aguarde um pouco.",
+      "server": "Algo deu errado. Tente novamente.",
+      "invalid_name": "Informe um nome de 1 a 80 caracteres.",
+      "invalid_amount": "Valor inválido. Use o formato 1234,56.",
+      "invalid_date": "Data inválida."
     }
   }
 }
