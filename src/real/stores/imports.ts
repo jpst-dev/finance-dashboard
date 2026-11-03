@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { getApi } from "../api/context";
-import { ApiError, NETWORK_ERROR_CODE } from "../api/errors";
+import { ApiError, DEMO_READ_ONLY_CODE, NETWORK_ERROR_CODE } from "../api/errors";
 import type {
   Account,
   ConfirmBody,
@@ -50,7 +50,7 @@ const SERVER_CODES = [
 const CLIENT_CODES = ["no_file", "one_file", "invalid_account", "unsupported_file"] as const;
 
 /** Todos os códigos que a importação pode mostrar; cada um tem `real.errors.<code>` nos dois idiomas (teste garante). */
-export const IMPORT_ERROR_CODES: readonly string[] = [...SERVER_CODES, ...CLIENT_CODES];
+export const IMPORT_ERROR_CODES: readonly string[] = [...SERVER_CODES, ...CLIENT_CODES, "demo_read_only"];
 
 /** Códigos de aviso da prévia (ImportWarning.cs); cada um tem `real.import.warnings.<code>` nos dois idiomas. */
 export const IMPORT_WARNING_CODES: readonly string[] = [
@@ -96,6 +96,7 @@ export function validateFiles(files: ArrayLike<File> | null | undefined): string
 export function importErrorCode(e: unknown, ctx: "upload" | "confirm" | "undo"): string {
   if (!(e instanceof ApiError)) return "server";
   if (e.status === 0 || e.code === NETWORK_ERROR_CODE) return "network";
+  if (e.code === DEMO_READ_ONLY_CODE) return "demo_read_only";
   if (e.code && (SERVER_CODES as readonly string[]).includes(e.code)) return e.code;
   if (e.status === 410) return "preview_expired";
   if (e.status === 413) return "too_large";

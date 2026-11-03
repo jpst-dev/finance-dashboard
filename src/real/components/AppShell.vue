@@ -5,9 +5,11 @@ import { RouterLink } from "vue-router";
 import { useSessionStore } from "../stores/session";
 import { useTransactionsStore } from "../stores/transactions";
 import { useValuesVisibility } from "../money/visibility";
+import { useAppConfig } from "../appConfig";
 import { setLocale, type AppLocale } from "../i18n";
 
 const { t, locale } = useI18n();
+const config = useAppConfig();
 const session = useSessionStore();
 const visibility = useValuesVisibility();
 const tx = useTransactionsStore();
@@ -87,6 +89,7 @@ const focus = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo
           </button>
         </div>
         <button
+          v-if="!config.hideLogout"
           type="button"
           data-testid="logout"
           class="w-full rounded-lg border border-gray-700 px-3 py-2 text-sm hover:bg-gray-800"
@@ -99,6 +102,9 @@ const focus = "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo
       </div>
     </aside>
     <main id="conteudo" class="p-4 lg:p-8">
+      <p v-if="config.readOnly" role="status" data-testid="demo-banner" class="mb-4 rounded-lg border border-amber-700 bg-amber-950 px-3 py-2 text-sm text-amber-100">
+        {{ t("real.demo.banner") }}
+      </p>
       <slot />
     </main>
   </div>

@@ -2,12 +2,17 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { getApi } from "../api/context";
 import type { Summary, Transaction } from "../api/types";
-import { todayLocalISO } from "../money/today";
+import { todayISO, todayLocalISO } from "../money/today";
 import { errorCodeOf } from "./errorCode";
 
 /** Mês local (fuso do navegador) em YYYY-MM. */
 export function currentMonthLocal(d: Date = new Date()): string {
   return todayLocalISO(d).slice(0, 7);
+}
+
+/** Mês de "hoje" do app (respeita a data fixa da configuração). */
+export function currentMonth(): string {
+  return todayISO().slice(0, 7);
 }
 
 /** Aritmética pura sobre "YYYY-MM" (sem Date, logo sem armadilha de fuso). */
@@ -39,7 +44,7 @@ export interface HistoryEntry {
 export const HISTORY_MONTHS = 6;
 
 export const useSummaryStore = defineStore("fd-summary", () => {
-  const month = ref(currentMonthLocal());
+  const month = ref(currentMonth());
   const current = ref<Summary | null>(null);
   const history = ref<HistoryEntry[]>([]);
   const loading = ref(false);
@@ -51,7 +56,7 @@ export const useSummaryStore = defineStore("fd-summary", () => {
   const recentTotal = ref<number | null>(null);
   const recentError = ref<string | null>(null);
 
-  const canGoNext = computed(() => month.value < currentMonthLocal());
+  const canGoNext = computed(() => month.value < currentMonth());
 
   // Contador de requisições: respostas de uma seleção anterior são descartadas.
   let seq = 0;
@@ -100,7 +105,7 @@ export const useSummaryStore = defineStore("fd-summary", () => {
   }
 
   async function setMonth(next: string): Promise<void> {
-    if (!MONTH_RE.test(next) || next > currentMonthLocal()) return;
+    if (!MONTH_RE.test(next) || next > currentMonth()) return;
     month.value = next;
     await loadAll();
   }

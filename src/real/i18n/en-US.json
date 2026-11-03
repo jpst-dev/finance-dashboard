@@ -83,7 +83,11 @@
       "none": "No category",
       "mismatch": "does not match the sign of the amount"
     },
+    "demo": {
+      "banner": "Demo with fictitious data, read-only"
+    },
     "errors": {
+      "demo_read_only": "Read-only demo: changes are not saved.",
       "network": "Could not connect. Check your connection and try again.",
       "invalid": "The data was not accepted. Review it and try again.",
       "not_found": "Item not found. Reload the page.",

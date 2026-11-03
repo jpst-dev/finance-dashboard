@@ -2,13 +2,13 @@
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { parseMoneyInput } from "../money/input";
-import { todayLocalISO } from "../money/today";
+import { todayISO } from "../money/today";
 
 const props = defineProps<{ accountId: string; busy: boolean }>();
 const emit = defineEmits<{ submit: [date: string, amount: string]; cancel: [] }>();
 const { t } = useI18n();
 
-const date = ref(todayLocalISO());
+const date = ref(todayISO());
 const amount = ref("");
 const errorKey = ref<string | null>(null);
 const field =
