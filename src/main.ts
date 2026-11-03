@@ -1,57 +1,8 @@
-import { createApp } from "vue";
-import { createPinia } from "pinia";
-import App from "./App.vue";
-import router from "./router";
-import "./assets/main.css";
-import Toast from "vue-toastification";
-import "vue-toastification/dist/index.css";
-import { useInvestmentStore } from "./store/investments";
-import i18n from "./i18n";
-import { semearSeVazio } from "./demo/exemplo";
-
-// Primeira visita: preenche com dados de exemplo antes de os stores lerem o localStorage.
-semearSeVazio(localStorage);
-
-const app = createApp(App);
-const pinia = createPinia();
-
-// Initialize store before mounting app
-const initializeStore = async () => {
-  try {
-    const investmentStore = useInvestmentStore(pinia);
-    await investmentStore.initializeStore();
-  } catch (error) {
-    console.error("Error initializing store:", error);
-  }
-};
-
-const toastOptions = {
-  position: "top-right",
-  timeout: 3000,
-  closeOnClick: true,
-  pauseOnFocusLoss: true,
-  pauseOnHover: true,
-  draggable: true,
-  draggablePercent: 0.6,
-  showCloseButtonOnHover: false,
-  hideProgressBar: true,
-  closeButton: "button",
-  icon: true,
-  rtl: false,
-};
-
-app.use(i18n);
-app.use(pinia);
-app.use(router);
-app.use(Toast, toastOptions);
-
-// Initialize store and then mount app
-initializeStore()
-  .then(() => {
-    app.mount("#app");
-  })
-  .catch((error) => {
-    console.error("Failed to initialize store:", error);
-    // Still mount the app even if store initialization fails
-    app.mount("#app");
-  });
+// A comparação literal com import.meta.env é substituída em build, então o Rollup
+// elimina o ramo (e o chunk dinâmico) do modo não selecionado. Equivale a
+// resolveMode(import.meta.env) === "real" (src/real/mode.ts), que não é dobrável em build.
+if (import.meta.env.VITE_APP_MODE === "real") {
+  import("./real/boot").then((m) => m.bootReal());
+} else {
+  import("./demo/boot").then((m) => m.bootDemo());
+}

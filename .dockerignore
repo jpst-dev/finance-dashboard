@@ -1,10 +1,12 @@
 .git
 node_modules
 dist
+dist-real
 finance-samples
 private
 backups
 .env*
+!.env.real
 .superpowers
 .vercel
 **/bin

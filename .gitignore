@@ -9,6 +9,7 @@ node_modules
 # Production
 /build
 /dist
+/dist-real
 
 # Misc
 .DS_Store
@@ -44,6 +45,7 @@ private/
 
 # Exemplo versionado (precisa vir depois de .env*)
 !.env.example
+!.env.real
 
 # Ledger local do fluxo de agentes
 .superpowers/

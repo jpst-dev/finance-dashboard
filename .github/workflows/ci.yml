@@ -38,7 +38,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # Tipos gerados do contrato OpenAPI não podem divergir do snapshot.
+      - run: npm run api:types
+      - run: git diff --exit-code src/real/api/schema.d.ts
       - run: npm run build
+      - run: npm run build:real
+      - run: node scripts/check-bundles.mjs
 
   secrets:
     runs-on: ubuntu-latest
