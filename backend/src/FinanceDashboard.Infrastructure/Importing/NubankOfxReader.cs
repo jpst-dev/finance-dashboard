@@ -48,25 +48,47 @@ public static class NubankOfxReader
         var head = new StringBuilder();
         for (var i = offset; i < content.Length && i < offset + 2048 && content[i] != (byte)'<'; i++)
             head.Append((char)content[i]);
-        var charset = HeaderValue(head.ToString(), "CHARSET");
+        var (charset, charsetLine) = HeaderValue(head.ToString(), "CHARSET");
+        var (encoding, encodingLine) = HeaderValue(head.ToString(), "ENCODING");
+        var cs = Classify(charset, charsetLine);
+        var en = Classify(encoding, encodingLine);
 
         Encoding enc;
-        if (!bom && string.Equals(charset, "1252", StringComparison.Ordinal))
-            enc = Encoding.GetEncoding(1252);
-        else
-            enc = new UTF8Encoding(false);
+        if (bom || en == Kind.Utf8) enc = new UTF8Encoding(false);
+        else if (cs == Kind.Cp1252 || en == Kind.Cp1252) enc = Encoding.GetEncoding(1252);
+        else enc = new UTF8Encoding(false);
         return enc.GetString(content[offset..]);
     }
 
-    private static string? HeaderValue(string head, string key)
+    private enum Kind { Defer, Utf8, Cp1252 }
+
+    private static Kind Classify(string? value, int line)
     {
-        foreach (var raw in head.Split('\n'))
+        if (string.IsNullOrEmpty(value)) return Kind.Defer;
+        switch (value.ToLowerInvariant())
         {
+            case "none" or "usascii":
+                return Kind.Defer;
+            case "utf-8" or "utf8":
+                return Kind.Utf8;
+            case "1252" or "windows-1252" or "cp1252" or "iso-8859-1" or "latin1" or "8859-1":
+                return Kind.Cp1252;
+            default:
+                throw new ImportFormatException("malformed", line);
+        }
+    }
+
+    private static (string? Value, int Line) HeaderValue(string head, string key)
+    {
+        var n = 0;
+        foreach (var raw in head.Split((char)10))
+        {
+            n++;
             var line = raw.Trim();
             if (line.StartsWith(key + ":", StringComparison.OrdinalIgnoreCase))
-                return line[(key.Length + 1)..].Trim();
+                return (line[(key.Length + 1)..].Trim(), n);
         }
-        return null;
+        return (null, 0);
     }
 
     private static int LineAt(string text, int index)

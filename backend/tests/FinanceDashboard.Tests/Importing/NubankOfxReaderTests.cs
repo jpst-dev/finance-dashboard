@@ -153,6 +153,42 @@ public class NubankOfxReaderTests
     }
 
     [Fact]
+    public void Encoding_utf8_wins_over_charset_1252()
+    {
+        var utf8 = OfxTestFile.Checking().Encoding("UTF-8").Charset("NONE")
+            .Line("20261031000000", "-1.00", "Transferência enviada").Build();
+        var text = Encoding.UTF8.GetString(utf8).Replace("CHARSET:NONE", "CHARSET:1252");
+        Assert.Equal("Transferência enviada", Parse(Encoding.UTF8.GetBytes(text)).Lines[0].Memo);
+    }
+
+    [Theory]
+    [InlineData("windows-1252")]
+    [InlineData("CP1252")]
+    [InlineData("ISO-8859-1")]
+    [InlineData("latin1")]
+    [InlineData("8859-1")]
+    public void Accepts_cp1252_and_latin1_aliases(string charset)
+    {
+        var bytes = OfxTestFile.Checking().Charset("1252").Line("20261031000000", "-1.00", "Crédito").Build();
+        var text = Encoding.GetEncoding(1252).GetString(bytes).Replace("CHARSET:1252", "CHARSET:" + charset);
+        Assert.Equal("Crédito", Parse(Encoding.GetEncoding(1252).GetBytes(text)).Lines[0].Memo);
+    }
+
+    [Theory]
+    [InlineData("CHARSET", "KOI8-R")]
+    [InlineData("ENCODING", "UTF-16")]
+    public void Unknown_charset_or_encoding_is_malformed_with_header_line_and_no_content(string key, string value)
+    {
+        var text = OfxTestFile.Checking().Build();
+        var s = Encoding.GetEncoding(1252).GetString(text);
+        s = key == "CHARSET" ? s.Replace("CHARSET:1252", "CHARSET:" + value) : s.Replace("ENCODING:USASCII", "ENCODING:" + value);
+        var ex = Assert.Throws<ImportFormatException>(() => Parse(Encoding.ASCII.GetBytes(s)));
+        Assert.Equal("malformed", ex.Kind);
+        Assert.Equal(key == "ENCODING" ? 5 : 6, ex.Line);
+        Assert.DoesNotContain(value, ex.Message);
+    }
+
+    [Fact]
     public void Exception_message_has_kind_and_line_but_no_content()
     {
         const string marker = "ZXQ-MARKER-9137";
