@@ -37,13 +37,13 @@ const empty = computed(() => summary.recentTotal === 0 && !summary.recentError);
 
     <MonthPicker :month="summary.month" :can-next="summary.canGoNext" @prev="summary.prev()" @next="summary.next()" />
 
-    <p v-if="summary.error" class="text-sm text-red-300" role="alert" data-test="summary-error">
+    <p v-if="summary.error && !summary.loading" class="text-sm text-red-300" role="alert" data-test="summary-error">
       {{ t(`real.errors.${summary.error}`) }}
       <button type="button" class="ml-2 underline" data-test="summary-retry" @click="summary.loadAll()">
         {{ t("real.overview.retry") }}
       </button>
     </p>
-    <p v-else-if="!summary.current" class="text-sm text-gray-400" role="status" data-test="summary-loading">
+    <p v-else-if="summary.loading || !summary.current" class="text-sm text-gray-400" role="status" aria-busy="true" data-test="summary-loading">
       {{ t("real.overview.loading") }}
     </p>
     <SummaryCards v-else :summary="summary.current" />
@@ -55,7 +55,7 @@ const empty = computed(() => summary.recentTotal === 0 && !summary.recentError);
         t("real.overview.emptyAction")
       }}</RouterLink>
     </section>
-    <template v-else>
+    <template v-else-if="!summary.loading">
       <SixMonthChart v-if="summary.history.some((h) => h.summary)" :history="summary.history" @retry="summary.retryMonth($event)" />
       <CategoryChart v-if="summary.current" :summary="summary.current" />
       <RecentTransactions />

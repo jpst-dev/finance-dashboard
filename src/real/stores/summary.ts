@@ -63,6 +63,9 @@ export const useSummaryStore = defineStore("fd-summary", () => {
     const m = month.value;
     loading.value = true;
     error.value = null;
+    // Nunca mostrar dados do mês anterior sob o novo mês.
+    current.value = null;
+    history.value = [];
     const months = windowOf(m);
     const api = getApi();
     const results = await Promise.allSettled(months.map(async (x) => api.summary.month(x)));

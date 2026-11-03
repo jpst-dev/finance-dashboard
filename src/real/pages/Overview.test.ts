@@ -132,6 +132,38 @@ describe("Overview", () => {
     expect(api.summary.month).toHaveBeenCalledTimes(12);
   });
 
+  it("no_values_from_previous_month_while_loading_new_month", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const { w } = await setup({
+      summaryImpl: async (m) => {
+        if (m <= "2026-10") await gate; // só depois de navegar
+        return sum(m, { income: m === "2026-11" ? "7777.77" : "3333.33", expenses: "-1.00", net: "1.00" });
+      },
+    });
+    release();
+    await flushPromises();
+    expect(w.text()).toMatch(/7\.777,77/);
+    let gate2!: () => void;
+    const blocked = new Promise<void>((r) => (gate2 = r));
+    const api = (await import("../api/context")).getApi() as any;
+    api.summary.month.mockImplementation(async (m: string) => {
+      await blocked;
+      return sum(m, { income: "4444.44", expenses: "-1.00", net: "1.00" });
+    });
+    await w.find("[data-test=month-prev]").trigger("click");
+    await flushPromises();
+    expect(w.text()).not.toMatch(/7\.777,77|3\.333,33/);
+    expect(w.find("[data-test=summary-loading]").exists()).toBe(true);
+    expect(w.find("[data-test=summary-cards]").exists()).toBe(false);
+    expect(w.find("[data-test=six-month]").exists()).toBe(false);
+    expect(w.find("[data-test=category-chart]").exists()).toBe(false);
+    gate2();
+    await flushPromises();
+    expect(w.text()).toMatch(/4\.444,44/);
+    expect(w.find("[data-test=summary-loading]").exists()).toBe(false);
+  });
+
   it("locale_and_hidden_toggles_do_not_refetch", async () => {
     const { w, api } = await setup();
     const calls = api.summary.month.mock.calls.length;
