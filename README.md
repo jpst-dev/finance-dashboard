@@ -216,6 +216,39 @@ Regras e limites:
 - **Desfazer**: `POST /api/imports/{id}/undo` apaga as linhas criadas pelo lote (inclusive as excluídas logicamente) e o checkpoint de saldo que ele gerou, e libera o arquivo para reimportar. Atenção: se outro lote sobreposto "pulou" linhas que o primeiro criou, desfazer o primeiro **remove essas linhas também**; reimporte o arquivo para recuperá-las. Desfazer uma prévia apenas a descarta.
 - **Documentação interativa**: abra **http://127.0.0.1:8080/api/docs** (Scalar). Faça login pelas rotas `/api/auth/*` e use o campo de cabeçalho `X-XSRF-TOKEN` nas chamadas que alteram dados; a especificação OpenAPI fica em `/api/openapi/v1.json`.
 
+### Importando Itaú (S2)
+
+O mesmo `POST /api/imports` aceita os arquivos do Itaú. O leitor é escolhido pelo **conteúdo** (nunca pela extensão):
+
+| Arquivo | Conta | Como é lido |
+|---|---|---|
+| Extrato da conta, `.ofx` (`BANKID` 0341) | `Checking` | OFX tolerante (SGML, CP1252); `LEDGERBAL` vira checkpoint só se nenhuma linha for posterior ao `DTASOF` |
+| Fatura do cartão, `.xlsx` | `CreditCard` | Primeira planilha visível; colunas pelo rótulo do cabeçalho (`Data`, `Lançamento`, `Parcelamento`, `Valor`, `Tipo do cartão`, `Número do cartão`); resumo com `Cartão`/`Valor`/`Vencimento` |
+
+Fonte e tipo de conta precisam combinar (`422 account_type_mismatch`). Os passos 1–3 e 5–7 são os do Nubank acima; só muda a conta e o arquivo:
+
+```bash
+# conta do cartão
+CARD=$(curl -s -c $J -b $J -X POST $B/api/accounts -H "Content-Type: application/json" -H "X-XSRF-TOKEN: $T" \
+  -d '{"name":"Itaú cartão","type":"CreditCard","institution":"Itaú"}' | sed -E 's/.*"id":"([^"]+)".*/\1/')
+
+# prévia da fatura (o arquivo não é guardado)
+BATCH=$(curl -s -c $J -b $J -X POST $B/api/imports -H "X-XSRF-TOKEN: $T" \
+  -F "accountId=$CARD" -F "file=@fatura.xlsx" | sed -E 's/.*"batchId":"([^"]+)".*/\1/')
+curl -s -b $J $B/api/imports/$BATCH   # vencimento, total declarado, linhas com parcela/cartão e avisos
+```
+
+Regras:
+
+- **Identidade por conteúdo**: o Itaú não tem ID confiável por linha, então cada lançamento é identificado por um hash do conteúdo normalizado + a ordem da repetição no arquivo (dois Pix idênticos no mesmo dia são duas linhas). Reimportar o mesmo arquivo, outra exportação do mesmo período ou uma fatura aberta que cresceu insere só o que falta. Os mesmos bytes já confirmados respondem `409 already_imported`. Detalhes no [ADR 0005](docs/adr/0005-identidade-por-conteudo-e-leitores-itau.md).
+- **Sinais**: a fatura do Itaú vem com cobrança positiva; o leitor inverte (cobrança negativa, pagamento/estorno positivo).
+- **Pendentes de classificação**: na conta, `FATURA PAGA`, `PIX TRANSF`, `PIX CARTAO`, `PAG BOLETO`, `CREDITO LIBERAD`, `EST CRED`, `CREDITO CONSIGNADO`, `APLICACAO` e `RESGATE`; na fatura, o pagamento da fatura anterior e `SALDO ANTERIOR`/rotativo. O resto entra como `Normal`.
+- **Parcelas**: guardam número/total, data da compra e vencimento; a parcela 2 em diante conta no resumo em "vencimento − 1 mês".
+- **Avisos**: `InvoiceTotalMismatch` (total declarado ≠ soma das linhas que não são pagamento; bloqueia, aceita `acknowledgeBlockingWarnings`), `LedgerBalanceBeforeLastLine`, `PossibleDuplicate`, `UnknownLineKinds` e `UnknownCardSuffix` (só avisam), além dos do Nubank.
+- **Fatura com linhas faltando**: se a fatura (mesma conta e vencimento) já tem linhas confirmadas que não aparecem no arquivo novo, a prévia mostra `InvoiceHasMissingLines`, que **bloqueia sem override** (o confirm dá `409 blocking_warnings` mesmo com `acknowledgeBlockingWarnings`). Desfaça o lote anterior dessa fatura e importe de novo. Nada é apagado ou substituído sozinho. Use uma conta `CreditCard` por cartão: dois cartões com o mesmo vencimento na mesma conta se bloqueiam.
+- **Desfazer**: igual ao Nubank. Linhas que você **excluiu** continuam ocupando a chave e não voltam ao reimportar.
+- **Erros de arquivo** (`422`, só com o código): `unsupported_bank`, `not_xlsx`, `encrypted_xlsx`, `xlsx_limits_exceeded`, `xlsx_unsafe_content` (macro, link externo, conteúdo embutido), `unsupported_layout` (layout desconhecido) e `invalid_cell` (com o número da linha da planilha). Fórmulas nunca são avaliadas.
+
 ### Desenvolvimento
 
 O `db` do Compose precisa estar rodando (`docker compose up -d db`; fica em `127.0.0.1:5432`). A API local usa a porta 5288 (perfil `http`) e o serviço `api` do Compose não publica porta no host, então não há conflito e não é preciso parar a stack. O Vite encaminha `/api` para `http://localhost:5288`.
@@ -256,6 +289,12 @@ dotnet test backend/FinanceDashboard.sln
 
 Os testes de integração usam Postgres real via Testcontainers, então o **Docker precisa estar rodando**. A CI (`.github/workflows/ci.yml`) roda backend, front e gitleaks.
 
+Na máquina que tem `finance-samples/` (ignorada pelo git), a suíte `LocalSamples` lê os extratos e faturas reais, confere chaves, ordinais, sinais, total da fatura e datas de parcela, e reimporta cada arquivo numa base do Testcontainers; sem a pasta (e sempre na CI) ela é pulada. As mensagens de falha são fixas e nunca mostram conteúdo dos arquivos:
+
+```bash
+dotnet test backend/FinanceDashboard.sln --filter "FullyQualifiedName~LocalSamples"
+```
+
 O contrato OpenAPI fica versionado em `backend/openapi/v1.json` e um teste falha se ele divergir da API. Depois de mudar endpoints ou DTOs, regenere o arquivo (o front gera os tipos a partir dele):
 
 ```bash
@@ -277,7 +316,7 @@ Extratos e faturas reais ficam apenas em `finance-samples/` ou `private/`, ambos
 
 ### Roteiro
 
-Entregue: S0 fundação, S1a API de núcleo + importação Nubank e S1b interface do modo real. Próximas fatias: S1c demo estático com a nova interface, S2 Itaú, S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
+Entregue: S0 fundação, S1a API de núcleo + importação Nubank, S1b interface do modo real e S2 importadores do Itaú (conta OFX e fatura xlsx). Próximas fatias: S1c demo estático com a nova interface, S3 conciliação, S4 investimentos e patrimônio. Detalhes no [design da v2](docs/superpowers/specs/2026-11-02-finance-v2-backend-design.md) e no [plano da fundação (S0)](docs/superpowers/plans/2026-11-02-finance-v2-s0-fundacao.md).
 
 ## 🤝 Contribuindo
 
