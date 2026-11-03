@@ -37,13 +37,43 @@ const SERVER_CODES = [
   "invalid_override",
   "preview_expired",
   "blocking_warnings",
+  "unsupported_bank",
+  "not_xlsx",
+  "encrypted_xlsx",
+  "xlsx_limits_exceeded",
+  "xlsx_unsafe_content",
+  "unsupported_layout",
+  "invalid_cell",
 ] as const;
 
 /** Códigos só do navegador (validação antes de enviar). */
-const CLIENT_CODES = ["no_file", "one_file", "invalid_account"] as const;
+const CLIENT_CODES = ["no_file", "one_file", "invalid_account", "unsupported_file"] as const;
 
 /** Todos os códigos que a importação pode mostrar; cada um tem `real.errors.<code>` nos dois idiomas (teste garante). */
 export const IMPORT_ERROR_CODES: readonly string[] = [...SERVER_CODES, ...CLIENT_CODES];
+
+/** Códigos de aviso da prévia (ImportWarning.cs); cada um tem `real.import.warnings.<code>` nos dois idiomas. */
+export const IMPORT_WARNING_CODES: readonly string[] = [
+  "AlreadyImported",
+  "AccountIdentifierMismatch",
+  "FitidInOtherAccount",
+  "DateOutsidePeriod",
+  "BalanceMismatch",
+  "PeriodGap",
+  "PeriodOverlap",
+  "InvoiceTotalMismatch",
+  "InvoiceHasMissingLines",
+  "LedgerBalanceBeforeLastLine",
+  "PossibleDuplicate",
+  "UnknownLineKinds",
+  "UnknownCardSuffix",
+];
+
+/** Identidade de uma linha: o sourceKey pode se repetir no mesmo arquivo; o ordinal desempata. */
+export type LineRef = Pick<ImportLine, "sourceKey" | "ordinal">;
+export function lineId(l: LineRef): string {
+  return `${l.sourceKey}#${l.ordinal}`;
+}
 
 export type LineOverride = { state?: TransactionState; categoryId?: string | null };
 
@@ -52,7 +82,7 @@ export function validateFiles(files: ArrayLike<File> | null | undefined): string
   if (!files || files.length === 0) return "no_file";
   if (files.length > 1) return "one_file";
   const f = files[0];
-  if (!/\.ofx$/i.test(f.name)) return "not_ofx";
+  if (!/\.(ofx|xlsx)$/i.test(f.name)) return "unsupported_file";
   if (f.size === 0) return "empty";
   if (f.size > MAX_FILE_BYTES) return "too_large";
   return null;
@@ -81,7 +111,7 @@ const IMPORTABLE: Account["type"][] = ["Checking", "CreditCard"];
 
 export const useImportsStore = defineStore("fd-imports", () => {
   const preview = ref<ImportPreview | null>(null);
-  /** Classificação escolhida na prévia, por sourceKey (estado de UI; só vai ao servidor no confirm). */
+  /** Classificação escolhida na prévia, por lineId (estado de UI; só vai ao servidor no confirm). */
   const overrides = ref(new Map<string, LineOverride>());
   const result = ref<ConfirmResult | null>(null);
   /** Código do último erro da importação (upload/confirm/cancelar); a tela traduz. */
@@ -110,36 +140,40 @@ export const useImportsStore = defineStore("fd-imports", () => {
   const existingLines = computed(() => lines.value.filter((l) => l.existing));
   const warnings = computed(() => preview.value?.warnings ?? []);
   const hasBlocking = computed(() => warnings.value.some((w) => w.severity === "blocking"));
+  /** Aviso bloqueante que o servidor não aceita sobrepor (overridable === false): o confirm nunca será aceito. */
+  const blockedForGood = computed(() => warnings.value.some((w) => w.severity === "blocking" && w.overridable === false));
   const ackRequired = computed(() => hasBlocking.value || serverAck.value);
   /** Arquivo já importado (aviso AlreadyImported): o servidor zera newCount e o confirm seria recusado. */
   const alreadyImported = computed(() => warnings.value.some((w) => w.code === "AlreadyImported"));
 
-  /** Linha NOVA da prévia atual com esse sourceKey (as existentes nunca recebem override). */
-  function newLine(sourceKey: string): ImportLine | undefined {
-    return lines.value.find((l) => l.sourceKey === sourceKey && !l.existing);
+  /** Linha NOVA da prévia atual com esse id (as existentes nunca recebem override). */
+  function newLine(id: string): ImportLine | undefined {
+    return lines.value.find((l) => lineId(l) === id && !l.existing);
   }
 
-  function setOverride(sourceKey: string, patch: LineOverride): void {
-    const cur = overrides.value.get(sourceKey) ?? {};
+  function setOverride(l: LineRef, patch: LineOverride): void {
+    const id = lineId(l);
+    const cur = overrides.value.get(id) ?? {};
     const next: LineOverride = { ...cur, ...patch };
-    const base = newLine(sourceKey);
+    const base = newLine(id);
     if (base && next.state === base.state) delete next.state;
     if (next.categoryId === null || next.categoryId === undefined) delete next.categoryId;
-    if (next.state === undefined && next.categoryId === undefined) overrides.value.delete(sourceKey);
-    else overrides.value.set(sourceKey, next);
+    if (next.state === undefined && next.categoryId === undefined) overrides.value.delete(id);
+    else overrides.value.set(id, next);
   }
 
-  function clearOverride(sourceKey: string): void {
-    overrides.value.delete(sourceKey);
+  function clearOverride(l: LineRef): void {
+    overrides.value.delete(lineId(l));
   }
 
   /** Corpo do confirm: só linhas que, na prévia ATUAL, são novas e diferem do padrão proposto. */
   function confirmBody(ack: boolean): ConfirmBody {
     const out: ImportLineOverride[] = [];
-    for (const [sourceKey, o] of overrides.value) {
-      const base = newLine(sourceKey);
+    for (const [id, o] of overrides.value) {
+      const base = newLine(id);
       if (!base) continue;
-      const item: ImportLineOverride = { sourceKey };
+      const item: ImportLineOverride = { sourceKey: base.sourceKey };
+      if (base.ordinal !== 0) item.ordinal = base.ordinal;
       if (o.state && o.state !== base.state) item.state = o.state;
       if (o.categoryId) item.categoryId = o.categoryId;
       if (item.state !== undefined || item.categoryId !== undefined) out.push(item);
@@ -321,7 +355,7 @@ export const useImportsStore = defineStore("fd-imports", () => {
   return {
     preview, overrides, result, error, notice, expired, busy, lastAccountId,
     history, historyLoading, historyError, undoing,
-    importableAccounts, newLines, pendingLines, existingLines, warnings, hasBlocking, ackRequired, alreadyImported,
+    importableAccounts, newLines, pendingLines, existingLines, warnings, hasBlocking, blockedForGood, ackRequired, alreadyImported,
     setOverride, clearOverride, confirmBody, upload, confirm, cancel, backToUpload,
     loadHistory, editedCount, undo, reset,
   };

@@ -47,6 +47,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
             e.Property(x => x.SourceKey).HasMaxLength(200);
             e.Property(x => x.CounterpartyName).HasMaxLength(200);
             e.Property(x => x.CounterpartyDocument).HasMaxLength(64);
+            e.Property(x => x.CardSuffix).HasMaxLength(4);
+            e.Property(x => x.CardKind).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.Origin).HasConversion<string>().HasMaxLength(32);
             e.HasOne<Account>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
@@ -77,6 +79,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser c
             e.Property(x => x.FileHash).HasMaxLength(64);
             e.Property(x => x.Source).HasConversion<string>().HasMaxLength(32);
             e.Property(x => x.State).HasConversion<string>().HasMaxLength(32);
+            e.Property(x => x.DeclaredTotal).HasColumnType("numeric(18,2)");
+            e.Property(x => x.LedgerBalance).HasColumnType("numeric(18,2)");
             e.Property(x => x.PreviewJson).HasColumnType("jsonb");
             e.Property(x => x.WarningsJson).HasColumnType("jsonb");
             e.HasOne<Account>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);

@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import i18n from "../i18n";
 import { ApiError } from "../api/errors";
 import { acc } from "../testing";
+import { useValuesVisibility } from "../money/visibility";
 import { batch, fakeImportApi, ofx, preview } from "../testingImport";
 import Import from "./Import.vue";
 
@@ -45,6 +46,29 @@ beforeEach(() => {
 });
 
 describe("Import page", () => {
+  it("file_input_accepts_ofx_and_xlsx", async () => {
+    const { w } = await setup();
+    expect(w.find("input[type=file]").attributes("accept")).toBe(".ofx,.xlsx");
+  });
+
+  it("file_hint_follows_selected_account_type", async () => {
+    const { w } = await setup({
+      accounts: [
+        acc({ id: "a1", name: "Conta Exemplo", type: "Checking" }),
+        acc({ id: "card", name: "Cartão Exemplo", type: "CreditCard" }),
+      ],
+    });
+    const none = w.find("[data-test=file-hint]").text();
+    await w.find("[data-test=account]").setValue("a1");
+    const chk = w.find("[data-test=file-hint]").text();
+    await w.find("[data-test=account]").setValue("card");
+    const card = w.find("[data-test=file-hint]").text();
+    expect(card).toContain(".xlsx");
+    expect(chk).not.toContain(".xlsx");
+    expect(chk).toContain(".ofx");
+    expect(new Set([none, chk, card]).size).toBe(3);
+  });
+
   it("Upload_sends_account_and_file_and_shows_tabs_with_counts", async () => {
     const { w, imports } = await setup({
       accounts: [
@@ -135,6 +159,21 @@ describe("Import page", () => {
     expect(w.find("a[href='/pending']").exists()).toBe(true);
   });
 
+  it("history_period_shows_invoice_summary_and_masks_total", async () => {
+    const { w } = await setup({
+      history: [batch({ batchId: "h1", source: "ItauCard", invoice: { dueDate: "2026-04-10", declaredTotal: "7654.32" } })],
+    });
+    const cell = () => w.findAll("[data-test=history-row] td")[2];
+    expect(cell().text()).toContain("10/04/2026");
+    expect(cell().text()).toContain("7.654,32");
+    useValuesVisibility().toggle();
+    await flushPromises();
+    expect(cell().text()).toContain("10/04/2026");
+    expect(cell().text()).toContain("••••");
+    expect(cell().html()).not.toMatch(/7654|7\.654|76543/);
+    useValuesVisibility().toggle();
+  });
+
   it("Undo_confirmation_shows_editedCount_and_cross_batch_warning", async () => {
     const { w, imports } = await setup({
       history: [batch({ batchId: "h1" }), batch({ batchId: "h2", state: "Undone" }), batch({ batchId: "h3", state: "Preview" })],
@@ -151,6 +190,7 @@ describe("Import page", () => {
     expect(dlg.exists()).toBe(true);
     expect(dlg.text()).toContain("4");
     expect(dlg.text()).toContain("outro lote");
+    expect(dlg.text()).toContain("as excluídas desta importação voltam se você importar o arquivo de novo");
     expect(document.activeElement).toBe(w.find("[data-test=undo-yes]").element);
 
     await w.find("[data-test=undo-yes]").trigger("click");

@@ -7,10 +7,11 @@ namespace FinanceDashboard.Api.Imports;
 public sealed record ImportErrorResponse(string Error);
 
 /// <summary>
-/// <c>overrides</c> (optional): classification of the preview's new lines by <c>sourceKey</c>; ignored for lines that
-/// turn out to exist already (their classification is not applied), but a category on such a line is still validated:
-/// a category the user does not own is rejected even for a line that already exists.
-/// Unknown or repeated <c>sourceKey</c>, or a category the user does not own:
+/// <c>overrides</c> (optional): classification of the preview's new lines by the pair (<c>sourceKey</c>,
+/// <c>ordinal</c>); <c>ordinal</c> defaults to 0 (always 0 for Nubank). Ignored for lines that turn out to exist
+/// already (their classification is not applied), but a category on such a line is still validated: a category the
+/// user does not own is rejected even for a line that already exists.
+/// A pair not in the preview, a repeated pair, a negative <c>ordinal</c>, or a category the user does not own:
 /// <c>422 {error: "invalid_override"}</c> and nothing is recorded.
 /// </summary>
 public sealed record ConfirmImportRequest(
@@ -21,7 +22,7 @@ public sealed record BlockingWarningsResponse(string Error, IReadOnlyList<Import
 public static class ImportEndpoints
 {
     /// <summary>Whole multipart request: the 5 MB file plus a small envelope (boundaries, accountId).</summary>
-    public const long MaxRequestBytes = NubankOfxReader.MaxBytes + 64 * 1024;
+    public const long MaxRequestBytes = StatementReader.MaxBytes + 64 * 1024;
 
     public static IEndpointRouteBuilder MapImports(this IEndpointRouteBuilder app)
     {
@@ -54,7 +55,7 @@ public static class ImportEndpoints
                 valueCountLimit: 8)
             .Accepts<IFormFile>("multipart/form-data")
             .WithName("UploadImport")
-            .WithSummary("Upload a Nubank OFX (multipart: file, accountId) and get a preview; nothing is recorded yet")
+            .WithSummary("Upload a Nubank or Itaú OFX, or an Itaú credit card invoice xlsx (multipart: file, accountId; format detected by content), and get a preview; nothing is recorded yet")
             .Produces<ImportPreviewView>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -145,7 +146,7 @@ public static class ImportEndpoints
         if (ids.Count != 1 || !Guid.TryParse(ids[0], out var accountId)) return Results.BadRequest();
 
         var file = form.Files[0];
-        if (file.Length > NubankOfxReader.MaxBytes) return TooLarge();
+        if (file.Length > StatementReader.MaxBytes) return TooLarge();
         var content = new byte[file.Length];
         await using (var stream = file.OpenReadStream())
         {

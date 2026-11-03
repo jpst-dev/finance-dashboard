@@ -6,21 +6,21 @@ using FinanceDashboard.Domain;
 namespace FinanceDashboard.Infrastructure.Importing;
 
 /// <summary>
-/// Tolerant OFX 1.02 (SGML-style) reader for Nubank exports. Does not use an XML parser:
+/// Tolerant OFX 1.02 (SGML-style) reader, bank-agnostic. Does not use an XML parser:
 /// scans tags, with or without closing tags. Never includes file content in exceptions.
+/// Bank-specific interpretation (identity, state, balance) lives in the <see cref="IOfxBankProfile"/>s.
 /// </summary>
-public static class NubankOfxReader
+public static class OfxReader
 {
-    public const int MaxBytes = 5 * 1024 * 1024;
     public const int MaxFieldChars = 2000;
     private const int MaxTagChars = 64;
     private const int MaxDepth = 64;
 
-    static NubankOfxReader() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    static OfxReader() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-    public static ParsedStatement Parse(ReadOnlySpan<byte> content)
+    public static OfxDocument Parse(ReadOnlySpan<byte> content)
     {
-        if (content.Length > MaxBytes) throw new ImportFormatException("too_large", null);
+        if (content.Length > StatementReader.MaxBytes) throw new ImportFormatException("too_large", null);
         if (content.IsEmpty) throw new ImportFormatException("empty", null);
 
         var text = Decode(content);
@@ -102,18 +102,19 @@ public static class NubankOfxReader
     private sealed class TrnBuilder(int line)
     {
         public int Line { get; } = line;
-        public string? FitId, Posted, Amount, Memo;
+        public string? FitId, TrnType, Posted, Amount, Memo;
     }
 
-    private static ParsedStatement Scan(string text)
+    private static OfxDocument Scan(string text)
     {
         var stack = new List<string>();
         var line = 1;
         var statements = 0;
-        var source = (ImportSource?)null;
-        string? acctId = null, balAmt = null, balDate = null, dtStart = null, dtEnd = null;
+        var isCard = false;
+        var sawStatement = false;
+        string? bankId = null, acctId = null, balAmt = null, balDate = null, dtStart = null, dtEnd = null;
         int balLine = 0;
-        var lines = new List<ParsedLine>();
+        var raw = new List<OfxTransaction>();
         TrnBuilder? trn = null;
 
         void FinishTrn()
@@ -121,9 +122,11 @@ public static class NubankOfxReader
             if (trn is null) return;
             var t = trn;
             trn = null;
-            if (string.IsNullOrEmpty(t.FitId) || t.Posted is null || t.Amount is null)
+            if (t.Posted is null || t.Amount is null)
                 throw new ImportFormatException("malformed", t.Line);
-            lines.Add(new ParsedLine(t.FitId, ParseDate(t.Posted, t.Line), ParseAmount(t.Amount, t.Line), t.Memo ?? ""));
+            raw.Add(new OfxTransaction(
+                string.IsNullOrEmpty(t.FitId) ? null : t.FitId, t.TrnType,
+                ParseDate(t.Posted, t.Line), ParseAmount(t.Amount, t.Line), t.Memo ?? "", t.Line));
         }
 
         var pos = text.IndexOf("<OFX>", StringComparison.OrdinalIgnoreCase);
@@ -173,7 +176,8 @@ public static class NubankOfxReader
                 {
                     statements++;
                     if (statements > 1) throw new ImportFormatException("unsupported_multiple_statements", tagLine);
-                    source = upper == "STMTRS" ? ImportSource.NubankChecking : ImportSource.NubankCard;
+                    sawStatement = true;
+                    isCard = upper == "CCSTMTRS";
                 }
                 stack.Add(upper);
                 continue;
@@ -186,12 +190,14 @@ public static class NubankOfxReader
             var top = stack.Count > 0 ? stack[^1] : "";
             switch (upper)
             {
+                case "BANKID" when top is "BANKACCTFROM" or "CCACCTFROM": bankId = value; break;
                 case "ACCTID" when top is "BANKACCTFROM" or "CCACCTFROM": acctId = value; break;
                 case "DTSTART" when top == "BANKTRANLIST": dtStart = value; break;
                 case "DTEND" when top == "BANKTRANLIST": dtEnd = value; break;
                 case "BALAMT" when top == "LEDGERBAL": balAmt = value; balLine = tagLine; break;
                 case "DTASOF" when top == "LEDGERBAL": balDate = value; balLine = tagLine; break;
                 case "FITID" when trn is not null && top == "STMTTRN": trn.FitId = value; break;
+                case "TRNTYPE" when trn is not null && top == "STMTTRN": trn.TrnType = value; break;
                 case "DTPOSTED" when trn is not null && top == "STMTTRN": trn.Posted = value; break;
                 case "TRNAMT" when trn is not null && top == "STMTTRN": trn.Amount = value; break;
                 case "MEMO" when trn is not null && top == "STMTTRN": trn.Memo = value; break;
@@ -199,19 +205,17 @@ public static class NubankOfxReader
         }
         FinishTrn();
 
-        if (source is null) throw new ImportFormatException("malformed", null);
+        if (!sawStatement) throw new ImportFormatException("malformed", null);
 
         ParsedBalance? ledger = null;
         if (balAmt is not null && balDate is not null)
             ledger = new ParsedBalance(ParseAmount(balAmt, balLine), ParseDate(balDate, balLine));
 
-        return new ParsedStatement(
-            source.Value,
-            acctId,
+        return new OfxDocument(
+            bankId, isCard, acctId,
             dtStart is null ? null : ParseDate(dtStart, null),
             dtEnd is null ? null : ParseDate(dtEnd, null),
-            lines,
-            ledger);
+            raw, ledger);
     }
 
     private static DateOnly ParseDate(string value, int? line)
@@ -232,3 +236,14 @@ public static class NubankOfxReader
         return d;
     }
 }
+
+public sealed record OfxTransaction(string? FitId, string? TrnType, DateOnly Posted, decimal Amount, string Memo, int Line);
+
+public sealed record OfxDocument(
+    string? BankId,
+    bool IsCard,
+    string? AccountId,
+    DateOnly? PeriodStart,
+    DateOnly? PeriodEnd,
+    IReadOnlyList<OfxTransaction> Transactions,
+    ParsedBalance? Ledger);

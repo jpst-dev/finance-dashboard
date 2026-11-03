@@ -145,4 +145,55 @@ public sealed class ConstraintTests(PostgresFixture postgres)
         var raw = await db.Database.SqlQueryRaw<string>("SELECT \"Type\" AS \"Value\" FROM \"Accounts\"").SingleAsync();
         Assert.Equal("CreditCard", raw);
     }
+
+    [Fact]
+    public async Task Installment_and_card_columns_roundtrip()
+    {
+        await using var db = await NewDbAsync();
+        var a = NewAccount();
+        db.Accounts.Add(a);
+        var t = Tx(a.Id, "k", 0);
+        t.InstallmentNumber = 2; t.InstallmentTotal = 10; t.CardSuffix = "1234"; t.CardKind = CardKind.VirtualRecurring;
+        db.Transactions.Add(t);
+        await db.SaveChangesAsync();
+
+        var back = await db.Transactions.AsNoTracking().SingleAsync(x => x.Id == t.Id);
+        Assert.Equal(2, back.InstallmentNumber);
+        Assert.Equal(10, back.InstallmentTotal);
+        Assert.Equal("1234", back.CardSuffix);
+        Assert.Equal(CardKind.VirtualRecurring, back.CardKind);
+        var raw = await db.Database.SqlQuery<string>($"SELECT \"CardKind\" AS \"Value\" FROM \"Transactions\" WHERE \"Id\" = {t.Id}").SingleAsync();
+        Assert.Equal("VirtualRecurring", raw);
+    }
+
+    [Fact]
+    public async Task Card_suffix_longer_than_four_is_rejected()
+    {
+        await using var db = await NewDbAsync();
+        var a = NewAccount();
+        db.Accounts.Add(a);
+        var t = Tx(a.Id, "k", 0);
+        t.CardSuffix = "12345";
+        db.Transactions.Add(t);
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task Batch_invoice_and_ledger_columns_roundtrip()
+    {
+        await using var db = await NewDbAsync();
+        var a = NewAccount();
+        db.Accounts.Add(a);
+        var b = Batch(a.Id, "h1", ImportBatchState.Preview);
+        b.DueDate = new DateOnly(2026, 11, 10); b.DeclaredTotal = 1234.56m;
+        b.LedgerBalance = -99.10m; b.LedgerBalanceDate = new DateOnly(2026, 10, 31);
+        db.ImportBatches.Add(b);
+        await db.SaveChangesAsync();
+
+        var back = await db.ImportBatches.AsNoTracking().SingleAsync(x => x.Id == b.Id);
+        Assert.Equal(new DateOnly(2026, 11, 10), back.DueDate);
+        Assert.Equal(1234.56m, back.DeclaredTotal);
+        Assert.Equal(-99.10m, back.LedgerBalance);
+        Assert.Equal(new DateOnly(2026, 10, 31), back.LedgerBalanceDate);
+    }
 }

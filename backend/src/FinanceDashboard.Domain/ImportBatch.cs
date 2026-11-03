@@ -9,6 +9,10 @@ public class ImportBatch : IUserOwned
     public string FileHash { get; set; } = "";
     public DateOnly? PeriodStart { get; set; }
     public DateOnly? PeriodEnd { get; set; }
+    public DateOnly? DueDate { get; set; }
+    public decimal? DeclaredTotal { get; set; }
+    public decimal? LedgerBalance { get; set; }
+    public DateOnly? LedgerBalanceDate { get; set; }
     public ImportBatchState State { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? ExpiresAt { get; set; }

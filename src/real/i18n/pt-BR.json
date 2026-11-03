@@ -110,17 +110,30 @@
       "invalid_override": "A classificação escolhida não foi aceita (linha ou categoria inválida). Revise e tente de novo.",
       "preview_expired": "A prévia expirou ou não existe mais. Envie o arquivo de novo.",
       "blocking_warnings": "Há avisos que exigem sua confirmação. Leia a aba Avisos e marque a caixa para confirmar.",
-      "no_file": "Escolha um arquivo .ofx.",
+      "no_file": "Escolha um arquivo .ofx ou .xlsx.",
+      "unsupported_file": "Tipo de arquivo não suportado. Envie um arquivo .ofx ou .xlsx.",
+      "unsupported_bank": "Não foi possível identificar um banco suportado neste arquivo. Há suporte para Nubank (.ofx) e Itaú (.ofx e fatura .xlsx).",
+      "not_xlsx": "O arquivo não é uma planilha .xlsx válida.",
+      "encrypted_xlsx": "A planilha está protegida por senha e não pode ser lida. Exporte uma cópia sem senha.",
+      "xlsx_limits_exceeded": "A planilha passa dos limites de tamanho aceitos e não pode ser importada.",
+      "xlsx_unsafe_content": "A planilha contém conteúdo não permitido e foi recusada por segurança.",
+      "unsupported_layout": "O formato desta planilha não é reconhecido. Use a fatura .xlsx original do Itaú, sem edições.",
+      "invalid_cell": "A planilha tem uma célula com valor inválido e não pode ser importada.",
       "one_file": "Envie um arquivo por vez.",
       "invalid_account": "Escolha uma conta corrente ou de cartão de crédito ativa."
     },
     "import": {
-      "help": "Envie o extrato .ofx do Nubank (um arquivo por vez, até 5 MB). Nada é gravado antes de você confirmar.",
+      "help": "Envie o extrato ou a fatura (.ofx do Nubank ou do Itaú; fatura do Itaú em .xlsx), um arquivo por vez, até 5 MB. Nada é gravado antes de você confirmar.",
       "account": "Conta",
       "chooseAccount": "Escolha a conta",
       "accountHint": "Extrato de conta → conta corrente; fatura de cartão → conta de cartão de crédito.",
       "noAccounts": "Nenhuma conta corrente ou de cartão ativa. Crie uma na tela Contas.",
-      "file": "Arquivo .ofx",
+      "file": "Arquivo (.ofx ou .xlsx)",
+      "fileHint": {
+        "none": "Escolha a conta para ver qual arquivo enviar.",
+        "Checking": "Conta corrente: envie o extrato .ofx (Nubank ou Itaú).",
+        "CreditCard": "Cartão de crédito: envie a fatura .ofx (Nubank) ou .xlsx (Itaú)."
+      },
       "upload": "Enviar e ver prévia",
       "uploading": "Enviando…",
       "previewTitle": "Prévia da importação",
@@ -144,6 +157,15 @@
       "blocking": "Exige confirmação",
       "notice": "Aviso",
       "ack": "Entendo os avisos e quero confirmar",
+      "blockedHelp": "Esta importação não pode ser confirmada: desfaça a importação anterior desta fatura e importe de novo.",
+      "installment": "Parcela {n} de {total}",
+      "cardKinds": {
+        "Physical": "Cartão físico",
+        "Virtual": "Cartão virtual",
+        "VirtualRecurring": "Cartão virtual recorrente",
+        "Other": "Outro cartão"
+      },
+      "invoice": "Fatura com vencimento em {due}, total declarado:",
       "state": "Estado",
       "keepPending": "Manter pendente",
       "normal": "Normal",
@@ -168,6 +190,12 @@
         "BalanceMismatch": "O saldo do arquivo não bate com o último saldo registrado mais os lançamentos seguintes.",
         "PeriodGap": "Há um intervalo sem importação entre este arquivo e os períodos já importados desta conta.",
         "PeriodOverlap": "O período deste arquivo se sobrepõe a períodos já importados desta conta.",
+        "InvoiceTotalMismatch": "A soma das linhas da fatura não bate com o total da fatura informado no arquivo.",
+        "InvoiceHasMissingLines": "Faltam nesta fatura linhas que já foram importadas antes; a importação não pode continuar. Desfaça a importação anterior desta fatura e importe novamente (o arquivo deve estar completo).",
+        "LedgerBalanceBeforeLastLine": "O saldo informado no arquivo é anterior à última linha e não será usado como ponto de conferência.",
+        "PossibleDuplicate": "Algumas linhas parecem duplicar lançamentos já existentes.",
+        "UnknownLineKinds": "O arquivo tem tipos de linha desconhecidos, tratados como lançamentos comuns.",
+        "UnknownCardSuffix": "Algumas linhas têm final de cartão ainda não visto nesta conta.",
         "unknown": "Aviso sobre o arquivo."
       },
       "history": {
@@ -194,6 +222,7 @@
         "crossBatch": "Atenção: linhas que outro lote deixou de importar por já existirem também serão removidas, porque foram criadas por esta importação.",
         "undoYes": "Sim, desfazer",
         "undoNo": "Voltar",
+        "deletedKeys": "Linhas que você excluiu e que pertencem a outras importações continuam ocupando a chave e não voltam ao reimportar; as excluídas desta importação voltam se você importar o arquivo de novo.",
         "undone": "Importação desfeita."
       }
     },

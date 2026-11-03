@@ -19,6 +19,7 @@ export type TransactionState = S["TransactionState"];
 export type TransactionOrigin = S["TransactionOrigin"];
 export type CheckpointOrigin = S["CheckpointOrigin"];
 export type ImportSource = S["ImportSource"];
+export type CardKind = S["CardKind"];
 export type ImportBatchState = S["ImportBatchState"];
 
 export type Account = S["AccountResponse"];
@@ -49,12 +50,25 @@ export type PendingSummary = IntFields<S["PendingSummary"], "count">;
 export type Summary = Omit<S["SummaryResponse"], "pending"> & { pending: PendingSummary };
 
 export type ImportWarning = S["ImportWarning"];
-export type ImportLine = S["ImportLineView"];
+/** Linha da prévia: `ordinal` e parcela estreitados para number (ver IntFields), preservando o `null` da parcela. */
+export type ImportLine = Omit<S["ImportLineView"], "ordinal" | "installmentNumber" | "installmentTotal"> & {
+  ordinal: number;
+  installmentNumber: number | null;
+  installmentTotal: number | null;
+};
 export type ImportCheckpoint = S["ImportCheckpointView"];
-export type ImportLineOverride = S["ImportLineOverride"];
+export type ImportInvoice = S["ImportInvoiceView"];
+/**
+ * `ordinal` tem padrão 0 no servidor; o openapi-typescript torna obrigatório todo campo com `default`, então aqui ele
+ * volta a ser opcional (o corpo do Nubank, sempre ordinal 0, continua sem o campo) e estreitado para number.
+ */
+export type ImportLineOverride = Omit<S["ImportLineOverride"], "ordinal"> & { ordinal?: number };
 export type ImportBatch = IntFields<S["ImportBatchSummary"], "newCount" | "existingCount">;
-export type ImportPreview = IntFields<S["ImportPreviewView"], "newCount" | "existingCount" | "editedCount">;
-export type ConfirmBody = S["ConfirmImportRequest"];
+export type ImportPreview = Omit<IntFields<S["ImportPreviewView"], "newCount" | "existingCount" | "editedCount">, "lines"> & {
+  lines: ImportLine[];
+};
+/** Corpo do confirm com `overrides` no formato de ImportLineOverride acima (`ordinal` opcional). */
+export type ConfirmBody = Omit<S["ConfirmImportRequest"], "overrides"> & { overrides?: ImportLineOverride[] | null };
 export type ConfirmResult = IntFields<S["ConfirmResult"], "created" | "skipped">;
 /** Corpo do 409 `blocking_warnings` do confirm. */
 export type BlockingWarnings = S["BlockingWarningsResponse"];

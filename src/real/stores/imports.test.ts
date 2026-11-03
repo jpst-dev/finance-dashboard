@@ -7,7 +7,7 @@ import { acc } from "../testing";
 import { fakeImportApi, line, ofx, preview } from "../testingImport";
 import { useAccountsStore } from "./accounts";
 import { useTransactionsStore } from "./transactions";
-import { IMPORT_ERROR_CODES, MAX_FILE_BYTES, importErrorCode, useImportsStore, validateFiles } from "./imports";
+import { IMPORT_ERROR_CODES, IMPORT_WARNING_CODES, MAX_FILE_BYTES, importErrorCode, lineId, useImportsStore, validateFiles } from "./imports";
 
 async function setup(opts: Parameters<typeof fakeImportApi>[0] = {}) {
   setActivePinia(createPinia());
@@ -30,7 +30,7 @@ describe("imports store", () => {
     expect(MAX_FILE_BYTES).toBe(5 * 1024 * 1024);
     expect(validateFiles([sized("a.ofx", MAX_FILE_BYTES + 1)])).toBe("too_large");
     expect(validateFiles([sized("a.ofx", MAX_FILE_BYTES)])).toBeNull();
-    expect(validateFiles([ofx("a.csv")])).toBe("not_ofx");
+    expect(validateFiles([ofx("a.csv")])).toBe("unsupported_file");
     expect(validateFiles([ofx("A.OFX")])).toBeNull();
     expect(validateFiles([ofx("a.ofx", "")])).toBe("empty");
     expect(validateFiles([])).toBe("no_file");
@@ -39,7 +39,7 @@ describe("imports store", () => {
     expect(await store.upload("a1", sized("a.ofx", MAX_FILE_BYTES + 1))).toBe(false);
     expect(store.error).toBe("too_large");
     expect(await store.upload("a1", ofx("extrato.txt"))).toBe(false);
-    expect(store.error).toBe("not_ofx");
+    expect(store.error).toBe("unsupported_file");
     expect(imports.preview).not.toHaveBeenCalled();
   });
 
@@ -64,11 +64,11 @@ describe("imports store", () => {
   it("Pending_tab_override_is_sent_on_confirm_only_for_new_lines", async () => {
     const { store, imports } = await setup();
     await store.upload("a1", ofx());
-    store.setOverride("p1", { state: "Normal" });
-    store.setOverride("p1", { categoryId: "c-exp" });
-    store.setOverride("e1", { state: "PendingClassification", categoryId: "c-exp" }); // existente: nunca enviado
-    store.setOverride("zz", { state: "Normal" }); // fora da prévia
-    store.setOverride("n1", { state: "Normal", categoryId: null }); // igual ao padrão: descartado
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { state: "Normal" });
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { categoryId: "c-exp" });
+    store.setOverride({ sourceKey: "e1", ordinal: 0 }, { state: "PendingClassification", categoryId: "c-exp" }); // existente: nunca enviado
+    store.setOverride({ sourceKey: "zz", ordinal: 0 }, { state: "Normal" }); // fora da prévia
+    store.setOverride({ sourceKey: "n1", ordinal: 0 }, { state: "Normal", categoryId: null }); // igual ao padrão: descartado
     await store.confirm(false);
     expect(imports.confirm).toHaveBeenCalledWith("b1", {
       acknowledgeBlockingWarnings: false,
@@ -79,7 +79,7 @@ describe("imports store", () => {
   it("overrides_dropped_for_lines_no_longer_new", async () => {
     const { store, imports } = await setup();
     await store.upload("a1", ofx());
-    store.setOverride("p1", { categoryId: "c-exp" });
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { categoryId: "c-exp" });
     // Reenvio: agora a mesma linha já existe.
     imports.preview.mockResolvedValueOnce(
       preview({ batchId: "b2", lines: [line({ sourceKey: "p1", state: "PendingClassification", existing: true })] }),
@@ -93,12 +93,12 @@ describe("imports store", () => {
   it("override_back_to_default_clears_entry", async () => {
     const { store } = await setup();
     await store.upload("a1", ofx());
-    store.setOverride("p1", { state: "Normal" });
-    expect(store.overrides.has("p1")).toBe(true);
-    store.setOverride("p1", { state: "PendingClassification" });
-    expect(store.overrides.has("p1")).toBe(false);
-    store.setOverride("p1", { categoryId: "c-exp" });
-    store.clearOverride("p1");
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { state: "Normal" });
+    expect(store.overrides.has("p1#0")).toBe(true);
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { state: "PendingClassification" });
+    expect(store.overrides.has("p1#0")).toBe(false);
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { categoryId: "c-exp" });
+    store.clearOverride({ sourceKey: "p1", ordinal: 0 });
     expect(store.overrides.size).toBe(0);
   });
 
@@ -124,12 +124,12 @@ describe("imports store", () => {
   it("confirm_errors_keep_preview_and_overrides", async () => {
     const { store, imports } = await setup();
     await store.upload("a1", ofx());
-    store.setOverride("p1", { state: "Normal" });
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { state: "Normal" });
     imports.confirm.mockRejectedValueOnce(new ApiError(422, "invalid_override"));
     expect(await store.confirm(false)).toBe(false);
     expect(store.error).toBe("invalid_override");
     expect(store.preview?.batchId).toBe("b1");
-    expect(store.overrides.get("p1")).toEqual({ state: "Normal" });
+    expect(store.overrides.get("p1#0")).toEqual({ state: "Normal" });
 
     imports.confirm.mockRejectedValueOnce(new ApiError(409, "blocking_warnings"));
     await store.confirm(false);
@@ -152,11 +152,78 @@ describe("imports store", () => {
     expect(importErrorCode(new ApiError(409, "already_undone"), "undo")).toBe("already_undone");
   });
 
+  it("Each_warning_code_has_a_translation_in_both_languages", () => {
+    // Atualize este número ao acrescentar códigos de aviso no servidor (ImportWarning.cs).
+    expect(IMPORT_WARNING_CODES.length).toBe(13);
+    const ws = (o: unknown) => (o as { real: { import: { warnings: Record<string, string> } } }).real.import.warnings;
+    for (const c of IMPORT_WARNING_CODES) {
+      expect(typeof ws(pt)[c], `pt-BR ${c}`).toBe("string");
+      expect(typeof ws(en)[c], `en-US ${c}`).toBe("string");
+    }
+  });
+
+  it("validate_accepts_ofx_and_xlsx_any_case", () => {
+    expect(validateFiles([ofx("FATURA.XLSX")])).toBeNull();
+    expect(validateFiles([ofx("a.OFX")])).toBeNull();
+    expect(validateFiles([ofx("fatura.xls")])).toBe("unsupported_file");
+    expect(validateFiles([ofx("x.csv")])).toBe("unsupported_file");
+  });
+
+  it("overrides_are_keyed_by_source_key_and_ordinal", async () => {
+    const { store } = await setup({
+      preview: preview({
+        lines: [
+          line({ sourceKey: "k", ordinal: 0, state: "PendingClassification" }),
+          line({ sourceKey: "k", ordinal: 1, state: "PendingClassification" }),
+        ],
+      }),
+    });
+    await store.upload("a1", ofx());
+    store.setOverride({ sourceKey: "k", ordinal: 0 }, { state: "Normal" });
+    store.setOverride({ sourceKey: "k", ordinal: 1 }, { categoryId: "c-exp" });
+    expect(store.overrides.size).toBe(2);
+    expect(lineId({ sourceKey: "k", ordinal: 1 })).toBe("k#1");
+  });
+
+  it("confirm_body_omits_ordinal_zero_and_sends_nonzero", async () => {
+    const { store, imports } = await setup({
+      preview: preview({
+        lines: [
+          line({ sourceKey: "k", ordinal: 0, state: "PendingClassification" }),
+          line({ sourceKey: "k", ordinal: 1, state: "PendingClassification" }),
+        ],
+      }),
+    });
+    await store.upload("a1", ofx());
+    store.setOverride({ sourceKey: "k", ordinal: 0 }, { state: "Normal" });
+    store.setOverride({ sourceKey: "k", ordinal: 1 }, { state: "Normal" });
+    await store.confirm(false);
+    expect(imports.confirm.mock.calls[0][1]).toEqual({
+      acknowledgeBlockingWarnings: false,
+      overrides: [{ sourceKey: "k", state: "Normal" }, { sourceKey: "k", ordinal: 1, state: "Normal" }],
+    });
+  });
+
+  it("blocked_for_good_when_non_overridable_blocking_warning", async () => {
+    const w = (over: object) => ({ code: "X", severity: "blocking", message: "m", overridable: true, ...over });
+    const { store } = await setup({ preview: preview({ warnings: [w({})] as never }) });
+    await store.upload("a1", ofx());
+    expect(store.blockedForGood).toBe(false);
+    const s2 = await setup({ preview: preview({ warnings: [w({ overridable: false })] as never }) });
+    await s2.store.upload("a1", ofx());
+    expect(s2.store.blockedForGood).toBe(true);
+    const s3 = await setup({ preview: preview({ warnings: [w({ severity: "warning", overridable: false })] as never }) });
+    await s3.store.upload("a1", ofx());
+    expect(s3.store.blockedForGood).toBe(false);
+  });
+
   it("Each_known_error_code_has_a_translation_in_both_languages", () => {
     const brief = [
       "not_ofx", "empty", "too_large", "malformed", "forbidden_dtd", "unsupported_multiple_statements",
       "account_type_mismatch", "already_imported", "already_confirmed", "already_undone", "account_archived",
       "unsupported_amount_precision", "unsupported_line", "invalid_override", "preview_expired",
+      "unsupported_bank", "not_xlsx", "encrypted_xlsx", "xlsx_limits_exceeded", "xlsx_unsafe_content",
+      "unsupported_layout", "invalid_cell", "unsupported_file",
     ];
     for (const c of brief) expect(IMPORT_ERROR_CODES).toContain(c);
     const errs = (o: unknown) => (o as { real: { errors: Record<string, string> } }).real.errors;
@@ -180,7 +247,7 @@ describe("imports store", () => {
   it("cancel_when_get_reports_Preview_calls_undo_once", async () => {
     const { store, imports } = await setup();
     await store.upload("a1", ofx());
-    store.setOverride("p1", { state: "Normal" });
+    store.setOverride({ sourceKey: "p1", ordinal: 0 }, { state: "Normal" });
     imports.get.mockResolvedValueOnce(preview({ batchId: "b1", state: "Preview" }));
     await store.cancel();
     expect(imports.get).toHaveBeenCalledWith("b1");
@@ -248,7 +315,7 @@ describe("imports store", () => {
 
   it("already_imported_preview_is_flagged", async () => {
     const { store } = await setup({
-      preview: preview({ newCount: 0, warnings: [{ code: "AlreadyImported", severity: "warning", message: "x" }] }),
+      preview: preview({ newCount: 0, warnings: [{ code: "AlreadyImported", severity: "warning", message: "x", overridable: true }] }),
     });
     await store.upload("a1", ofx());
     expect(store.alreadyImported).toBe(true);

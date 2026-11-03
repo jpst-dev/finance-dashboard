@@ -9,7 +9,8 @@ import { setApi } from "./api/context";
 import { setRouter } from "./routerRef";
 import type { ApiClient } from "./api";
 import type { Account, Category, ConfirmBody, ConfirmResult, ImportBatch, ImportLine, ImportPreview, Summary, Transaction, TransactionQuery } from "./api/types";
-import { line, ofx, preview } from "./testingImport";
+import { invoicePreview, line, ofx, preview, xlsx } from "./testingImport";
+import { acc } from "./testing";
 import { tx } from "./testingTx";
 
 // Gráficos dependem de canvas (inexistente no jsdom); o resto da Visão geral é real.
@@ -147,6 +148,12 @@ function createServer() {
       preview: async (accountId: string, file: File) => {
         previewCalls.push({ accountId, fileName: file.name });
         const id = `b${++seq}`;
+        if (file.name.endsWith(".xlsx")) {
+          const base = invoicePreview().lines.map((l) => ({ ...l, state: "PendingClassification" as const }));
+          const ip = invoicePreview({ batchId: id, accountId, lines: base });
+          batches.set(id, ip);
+          return ip;
+        }
         const lines = FILE_LINES.map((l) => ({ ...l, existing: l.existing || txs.some((t) => t.sourceKey === l.sourceKey) }));
         const p = preview({ batchId: id, accountId, lines, editedCount: 0 });
         batches.set(id, p);
@@ -164,6 +171,7 @@ function createServer() {
           existingCount: p.existingCount,
           createdAt: p.createdAt,
           expiresAt: p.expiresAt,
+          invoice: p.invoice,
         })),
       get: async (id: string) => {
         const p = batches.get(id);
@@ -387,5 +395,49 @@ describe("Modo real: fluxo ponta a ponta com API simulada", () => {
     expect(w.text()).not.toContain("Mercado Exemplo");
     await go(w, "/");
     expect(w.find("[data-test=empty-state]").exists()).toBe(true);
+  });
+
+  it("importa fatura .xlsx: parcela, cartão, override por ordinal, total escondido", async () => {
+    const server = createServer();
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    setApi(server.api);
+    const router = createRealRouter(createMemoryHistory());
+    await router.push("/import");
+    await router.isReady();
+    const w = mount(RealApp, { global: { plugins: [pinia, router, i18n] } });
+    await flushPromises();
+    await w.find("#login-email").setValue("user@example.test");
+    await w.find("#login-password").setValue("senha-de-teste");
+    await w.find("form").trigger("submit");
+    await flushPromises();
+    server.accounts.push(acc({ id: "cc1", name: "Cartão Exemplo", type: "CreditCard" }));
+    await go(w, "/accounts");
+    await go(w, "/import");
+
+    await w.find("[data-test=account]").setValue("cc1");
+    await pickFile(w, [xlsx("fatura.xlsx")]);
+    await w.find("[data-test=upload-form]").trigger("submit");
+    await flushPromises();
+    expect(server.previewCalls).toEqual([{ accountId: "cc1", fileName: "fatura.xlsx" }]);
+
+    expect(w.text()).toContain("10/04/2026");
+    expect(w.text()).toContain("150,00");
+    expect(w.text()).toContain("Parcela 1 de 3");
+    expect(w.text()).toContain("•••• 1234");
+
+    // duas linhas pendentes com a mesma chave: o select da segunda gera override só no ordinal 1
+    await w.find("#imp-tab-pending").trigger("click");
+    const rows = w.findAll("[data-test=pending-line]");
+    expect(rows).toHaveLength(2);
+    await rows[1].find("[data-test=line-state]").setValue("Normal");
+    await w.find("[data-test=confirm]").trigger("click");
+    await flushPromises();
+    expect(server.confirmCalls).toHaveLength(1);
+    expect(server.confirmCalls[0].body.overrides).toEqual([{ sourceKey: "i1", ordinal: 1, state: "Normal" }]);
+
+    await w.find("[data-testid=toggle-values]").trigger("click");
+    expect(w.find("[data-test=history-row]").exists()).toBe(true);
+    expectNoMoney(w);
   });
 });

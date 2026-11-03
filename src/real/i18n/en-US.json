@@ -110,17 +110,30 @@
       "invalid_override": "The chosen classification was not accepted (invalid line or category). Review and try again.",
       "preview_expired": "The preview expired or no longer exists. Upload the file again.",
       "blocking_warnings": "Some warnings need your confirmation. Read the Warnings tab and tick the box to confirm.",
-      "no_file": "Choose an .ofx file.",
+      "no_file": "Choose an .ofx or .xlsx file.",
+      "unsupported_file": "Unsupported file type. Upload an .ofx or .xlsx file.",
+      "unsupported_bank": "Could not identify a supported bank in this file. Nubank (.ofx) and Itaú (.ofx and .xlsx card bill) are supported.",
+      "not_xlsx": "The file is not a valid .xlsx spreadsheet.",
+      "encrypted_xlsx": "The spreadsheet is password-protected and cannot be read. Export an unprotected copy.",
+      "xlsx_limits_exceeded": "The spreadsheet exceeds the accepted size limits and cannot be imported.",
+      "xlsx_unsafe_content": "The spreadsheet contains forbidden content and was rejected for safety.",
+      "unsupported_layout": "This spreadsheet layout is not recognized. Use the original Itaú .xlsx card bill, unedited.",
+      "invalid_cell": "The spreadsheet has a cell with an invalid value and cannot be imported.",
       "one_file": "Upload one file at a time.",
       "invalid_account": "Choose an active checking or credit card account."
     },
     "import": {
-      "help": "Upload the Nubank .ofx statement (one file at a time, up to 5 MB). Nothing is recorded until you confirm.",
+      "help": "Upload the statement or card bill (.ofx from Nubank or Itaú; Itaú card bill as .xlsx), one file at a time, up to 5 MB. Nothing is recorded until you confirm.",
       "account": "Account",
       "chooseAccount": "Choose the account",
       "accountHint": "Account statement → checking account; card bill → credit card account.",
       "noAccounts": "No active checking or credit card account. Create one on the Accounts screen.",
-      "file": ".ofx file",
+      "file": "File (.ofx or .xlsx)",
+      "fileHint": {
+        "none": "Choose the account to see which file to upload.",
+        "Checking": "Checking account: upload the .ofx statement (Nubank or Itaú).",
+        "CreditCard": "Credit card: upload the .ofx bill (Nubank) or .xlsx bill (Itaú)."
+      },
       "upload": "Upload and preview",
       "uploading": "Uploading…",
       "previewTitle": "Import preview",
@@ -144,6 +157,15 @@
       "blocking": "Needs confirmation",
       "notice": "Notice",
       "ack": "I understand the warnings and want to confirm",
+      "blockedHelp": "This import cannot be confirmed: undo the previous import of this bill and import again.",
+      "installment": "Installment {n} of {total}",
+      "cardKinds": {
+        "Physical": "Physical card",
+        "Virtual": "Virtual card",
+        "VirtualRecurring": "Recurring virtual card",
+        "Other": "Other card"
+      },
+      "invoice": "Bill due on {due}, declared total:",
       "state": "State",
       "keepPending": "Keep pending",
       "normal": "Normal",
@@ -168,6 +190,12 @@
         "BalanceMismatch": "The file balance does not match the last recorded balance plus the transactions after it.",
         "PeriodGap": "There is a gap between this file and the periods already imported for this account.",
         "PeriodOverlap": "This file's period overlaps periods already imported for this account.",
+        "InvoiceTotalMismatch": "The sum of the bill lines does not match the bill total declared in the file.",
+        "InvoiceHasMissingLines": "This bill is missing lines that were imported before; the import cannot proceed. Undo the previous import of this bill and import again with the complete file.",
+        "LedgerBalanceBeforeLastLine": "The balance reported in the file predates the last line and will not be used as a balance checkpoint.",
+        "PossibleDuplicate": "Some lines look like duplicates of existing transactions.",
+        "UnknownLineKinds": "The file has unknown line kinds, treated as ordinary transactions.",
+        "UnknownCardSuffix": "Some lines have card last digits not yet seen on this account.",
         "unknown": "Notice about the file."
       },
       "history": {
@@ -194,6 +222,7 @@
         "crossBatch": "Note: lines that another batch skipped because they already existed will also be removed, since this import created them.",
         "undoYes": "Yes, undo",
         "undoNo": "Back",
+        "deletedKeys": "Lines you deleted that belong to other imports keep occupying their key and do not come back when you re-import; lines deleted from this import come back if you import the file again.",
         "undone": "Import undone."
       }
     },
